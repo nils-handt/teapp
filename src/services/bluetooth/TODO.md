@@ -1,0 +1,2 @@
+- oldWeight / smoothedWeight / oldSmoothed cleanup
+- consistent logging

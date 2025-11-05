@@ -23,7 +23,7 @@ export function initializeDatabase(): Promise<SQLiteDBConnection> {
         await db.initWebStore();
       }
 
-      const conn = await db.createConnection('teapp.db', false, 'no-encryption', 1);
+      const conn = await db.createConnection('teapp.db', false, 'no-encryption', 1, false);
       await conn.open();
       connection = conn;
       initializing = null;
