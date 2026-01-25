@@ -34,22 +34,22 @@ export abstract class BluetoothScale {
   public tareEvent: Observable<TareEvent> = this.tareEventSubject.asObservable();
 
   constructor(
-    public peripheral: PeripheralData,
+    public peripheral: Partial<PeripheralData>,
     public scaleType: ScaleType
   ) {
     this.logger = new Logger(this.scaleType);
   }
 
   get device_id(): string {
-    return this.peripheral.id;
+    return this.peripheral.id || '';
   }
 
   get device_name(): string {
-    return this.peripheral.name;
+    return this.peripheral.name || '';
   }
 
   get device_address(): string {
-    return this.peripheral.id; // Capacitor uses ID for address
+    return this.peripheral.id || ''; // Capacitor uses ID for address
   }
 
   abstract connect(): Promise<void>;

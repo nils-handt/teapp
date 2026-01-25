@@ -3,12 +3,13 @@ import { BluetoothScale } from '../../base/BluetoothScale';
 import { Logger } from '../../utils/Logger';
 import { ScaleType, SCALE_TIMER_COMMAND } from '../../types/scale.types';
 import { bleAdapter } from '../../adapters/BleAdapter';
+import { numberToUUID } from '@capacitor-community/bluetooth-le';
 
 export class BokooScale extends BluetoothScale {
-  public static DEVICE_NAME = 'bokoo_sc';
-  public static SERVICE_UUID = '0FFE';
-  public static CHAR_UUID = 'FF11';
-  public static CMD_UUID = 'FF12';
+  public static DEVICE_NAME = 'bookoo_sc';
+  public static SERVICE_UUID = numberToUUID(0x0FFE);
+  public static CHAR_UUID = numberToUUID(0xFF11);
+  public static CMD_UUID = numberToUUID(0xFF12);
 
   constructor(peripheral: PeripheralData) {
     super(peripheral, ScaleType.BOKOO);
@@ -36,11 +37,11 @@ export class BokooScale extends BluetoothScale {
   }
 
   async setLed(_on: boolean): Promise<void> {
-      // Not supported
+    // Not supported
   }
 
   async getWeight(): Promise<void> {
-      // Weight is pushed via notifications
+    // Weight is pushed via notifications
   }
 
   disconnectTriggered(): void {

@@ -105,7 +105,7 @@
 
 ### Phase 5: Weight Logger Dev Mode Functionality
 - **Priority:** High (critical enabler for efficient development)
-- **Dependencies:** Phase 4 complete (need real hardware data first)
+- **Dependencies:** Phase 3 complete (need real hardware data first)
 - **Deliverables:**
   - Create WeightLoggerService that records timestamped weight data during real brewing sessions
   - Implement UI toggle in SettingsScreen to enable/disable weight logging mode

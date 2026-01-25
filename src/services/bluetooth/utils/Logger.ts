@@ -20,7 +20,7 @@ export class Logger {
     return this.logEnabled;
   }
 
-  public static attachOnLog(callback: (log: { level: string; message: string; optionalParams: any[] }) => void): void {
+  public static attachOnLog(callback: (log: { level: string; message: string }) => void): void {
     this.logSubject.subscribe(callback);
   }
 

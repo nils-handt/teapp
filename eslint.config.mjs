@@ -53,6 +53,15 @@ export default defineConfig([{
     },
 
     rules: {
-        "react/react-in-jsx-scope": "off"
+        "react/react-in-jsx-scope": "off",
+        "@typescript-eslint/no-unused-vars": [
+            "error",
+            { "argsIgnorePattern": "^_" }
+        ]
     },
+    ignores: [
+        'dist/**',
+        "eslint.config.mjs",
+        "jest.config.js",
+    ],
 }]);

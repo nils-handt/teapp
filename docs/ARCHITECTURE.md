@@ -26,10 +26,20 @@
 
 1. **Service Layer**
     *   **`BluetoothScaleService`:**
-        *   Device discovery and connection management using Beanconqueror's BluetoothScale implementations
-        *   Real-time weight data streaming from connected scale
-        *   Connection state management (scanning, connecting, connected, disconnected)
-        *   Device pairing and preferred device persistence
+        *   **Implementation**: Implemented as a module-level singleton, exported from `src/services/index.ts`.
+        *   **Device Discovery**: Manages device discovery by using `BleClient` to scan for advertising packets. It identifies scale types by iterating through `AVAILABLE_SCALES` and calling their static `test()` methods. Discovered devices are stored as `DiscoveredDevice` objects in the Zustand store.
+        *   **Connection Management**: Handles the full connection lifecycle (`scanning`, `connecting`, `connected`, `disconnected`). It instantiates the correct `BluetoothScale` class for a given device and manages the underlying BLE connection via the `BleAdapter`.
+        *   **Automatic Reconnection**: On unexpected disconnections, it automatically attempts to reconnect with an exponential backoff strategy (1s, 2s, 4s) for a maximum of 3 attempts.
+        *   **Event Subscription**: Subscribes to RxJS Observables (`weightChange`, `tareEvent`, etc.) from the active `BluetoothScale` instance and updates the Zustand store accordingly.
+        *   **Public API**:
+            *   `startScan(): Promise<void>`
+            *   `stopScan(): Promise<void>`
+            *   `connect(deviceId: string): Promise<void>`
+            *   `disconnect(): Promise<void>`
+            *   `tare(): Promise<void>`
+            *   `getConnectionStatus()`
+            *   `getConnectedDevice()`
+        *   **Note**: Preferred device persistence will be integrated in a future phase with `SettingsRepository`.
     *   **`BrewingSessionService`:**
         *   Session lifecycle management (start, pause, end)
         *   Automatic detection logic for vessel weight, lid weight, water addition, and tea pouring
@@ -55,6 +65,12 @@
             *   Provide replay controls (start, pause, resume, restart, seek)
             *   Support playback speed multipliers (1x, 10x, 50x, 100x)
         *   **Note:** Integrates transparently with BrewingSessionService - no service layer changes needed when switching between real and mock scale
+
+## Service Layer Patterns
+
+*   **Singleton Services**: Services are implemented as module-level singletons. A single instance is created and exported from `src/services/index.ts`. This provides a single, shared entry point for all UI components and other services.
+*   **Service-to-Store Integration**: Services are responsible for managing business logic and directly updating the Zustand store (e.g., via `useStore.setState()`). This keeps state mutations centralized and predictable.
+*   **Clean Imports**: UI components and other services should import service instances directly from `src/services/index.ts` (e.g., `import { bluetoothScaleService } from '../services';`).
 
 ## Domain Models
 
@@ -138,12 +154,13 @@ sequenceDiagram
 ## Component Interaction Details
 
 - **Bluetooth Scale Integration workflow**:
-  - SettingsScreen initiates device scan via BluetoothScaleService
-  - Service uses Beanconqueror's BluetoothDevice implementations for device discovery
-  - User selects device, service establishes connection and saves as preferred device via SettingsRepository
-  - BrewingScreen attempts to auto-connect to the preferred device on mount if an `autoConnect` setting is enabled; otherwise, it presents a quick connect action. The `autoConnect` preference is stored in the SettingsRepository.
-  - Service maintains persistent connection and handles reconnection on disconnects
-  - Weight data streams continuously to BrewingSessionService when connected
+  - SettingsScreen initiates a device scan via `bluetoothScaleService.startScan()`.
+  - The service uses `BleAdapter` to find devices. For each result, it tests against all `AVAILABLE_SCALES` to identify the device type.
+  - The UI displays the list of available devices from the Zustand store.
+  - User selects a device, and the UI calls `bluetoothScaleService.connect(deviceId)`.
+  - The service establishes a connection and updates the store. Preferred device persistence will be handled by `SettingsRepository` in a future phase.
+  - The service maintains the connection and handles automatic reconnections.
+  - Weight data streams continuously to the Zustand store, which can then be consumed by `BrewingSessionService` or other parts of the application.
 
 - **Automatic Session Tracking workflow aligned with FEATURES.md GongFu process**:
   - **Setup Phase**: User starts session in BrewingScreen, places vessel on scale → BrewingSessionService detects stable weight and records vesselWeight

@@ -1,3 +1,5 @@
+import { ScaleType } from './scale.types';
+
 export type UUID = string;
 
 export enum Property {
@@ -36,4 +38,12 @@ export interface LimitedPeripheralData {
 export interface PeripheralData extends LimitedPeripheralData {
   services: UUID[];
   characteristics: Characteristic[];
+}
+
+export interface DiscoveredDevice {
+  id: string; // MAC address on Android, UUID on iOS
+  name: string;
+  rssi: number;
+  scaleType: ScaleType | null; // Null if not a recognized scale
+  peripheral: LimitedPeripheralData;
 }

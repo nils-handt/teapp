@@ -28,5 +28,19 @@ import { Skale } from './devices/skale/Skale';
 import { SmartChefScale } from './devices/smartchef/SmartChefScale';
 import { TimemoreScale } from './devices/timemore/TimemoreScale';
 import { WeighMyBruScale } from './devices/weighmybru/WeighMyBruScale';
+import { ScaleType } from './types/scale.types';
 
-export const AVAILABLE_SCALES = [DecentScale, FelicitaScale, BlackCoffeeScale, BokooScale, EspressiScale, EurekaPrecisaScale, JimmyScale, LunarScale, Skale, SmartChefScale, TimemoreScale, WeighMyBruScale];
+export const AVAILABLE_SCALES = [
+  { scaleType: ScaleType.DECENT, class: DecentScale },
+  { scaleType: ScaleType.FELICITA, class: FelicitaScale },
+  { scaleType: ScaleType.BLACKCOFFEE, class: BlackCoffeeScale },
+  { scaleType: ScaleType.BOKOO, class: BokooScale },
+  { scaleType: ScaleType.ESPRESSI, class: EspressiScale },
+  { scaleType: ScaleType.EUREKA_PRECISA, class: EurekaPrecisaScale },
+  { scaleType: ScaleType.JIMMY, class: JimmyScale },
+  { scaleType: ScaleType.LUNAR, class: LunarScale },
+  { scaleType: ScaleType.SKALE, class: Skale },
+  { scaleType: ScaleType.SMARTCHEF, class: SmartChefScale },
+  { scaleType: ScaleType.TIMEMORE, class: TimemoreScale },
+  { scaleType: ScaleType.WEIGHMYBRU, class: WeighMyBruScale },
+];
