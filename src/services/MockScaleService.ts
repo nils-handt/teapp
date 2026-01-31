@@ -19,7 +19,7 @@ export class MockScaleService implements IScaleService {
     private startTime = 0;
     private recordingDuration = 0;
     private lastEmitIndex = 0;
-    private animationFrameId: number | null = null;
+    private timeoutId: NodeJS.Timeout | null = null;
     private currentVirtualTime = 0;
     private loop = false;
 
@@ -102,17 +102,28 @@ export class MockScaleService implements IScaleService {
         }
 
         this.isPlaying = true;
+        // Resume from current virtual time
         this.startTime = Date.now() - this.currentVirtualTime;
-        this.lastEmitIndex = 0;
 
-        this.animate();
+        // If we were at end, reset (unless explicitly paused, but here startReplay implies play)
+        if (this.currentVirtualTime >= this.recordingDuration) {
+            this.startTime = Date.now();
+            this.currentVirtualTime = 0;
+            this.lastEmitIndex = 0;
+        }
+
+        this.scheduleNext();
     }
 
     pauseReplay() {
         this.isPlaying = false;
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
+        if (this.timeoutId) {
+            clearTimeout(this.timeoutId);
+            this.timeoutId = null;
+        }
+        // Save current virtual time relative to when we started
+        if (this.startTime > 0) {
+            this.currentVirtualTime = Date.now() - this.startTime;
         }
     }
 
@@ -120,9 +131,10 @@ export class MockScaleService implements IScaleService {
         this.pauseReplay();
         this.currentVirtualTime = 0;
         this.lastEmitIndex = 0;
+        this.startTime = 0;
     }
 
-    private animate = () => {
+    private scheduleNext = () => {
         if (!this.isPlaying) return;
 
         const now = Date.now();
@@ -137,12 +149,13 @@ export class MockScaleService implements IScaleService {
             } else {
                 logger.log('Replay finished.');
                 this.pauseReplay();
+                // Ensure we emit the final state
+                this.currentVirtualTime = this.recordingDuration;
                 return;
             }
         }
 
-        // Find events to emit
-        // Simple linear scan from last index - efficient enough for strictly increasing timestamps
+        // Emit events relevant for current time
         while (
             this.lastEmitIndex < this.recording.length &&
             this.recording[this.lastEmitIndex].timestamp <= this.currentVirtualTime
@@ -152,8 +165,20 @@ export class MockScaleService implements IScaleService {
             this.lastEmitIndex++;
         }
 
-        // this links weight update frequency to the frame rate - we can replace this with a timer if needed
-        this.animationFrameId = requestAnimationFrame(this.animate);
+        // Calculate delay to next event
+        if (this.lastEmitIndex < this.recording.length) {
+            const nextEvent = this.recording[this.lastEmitIndex];
+            // When should this event happen?
+            const targetTime = this.startTime + nextEvent.timestamp;
+            const delay = Math.max(0, targetTime - Date.now());
+
+            this.timeoutId = setTimeout(this.scheduleNext, delay);
+        } else {
+            // End of recording reached, wait until duration end to loop or finish?
+            // Actually the duration check at top handles it. We can just schedule a check for end.
+            const delay = Math.max(0, (this.startTime + this.recordingDuration) - Date.now());
+            this.timeoutId = setTimeout(this.scheduleNext, delay + 10); // +10 buffer
+        }
     }
 
     private emitWeight(weight: number) {
