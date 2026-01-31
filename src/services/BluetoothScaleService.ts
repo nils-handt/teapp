@@ -1,45 +1,29 @@
-import { BleDevice } from '@capacitor-community/bluetooth-le';
-import { Subscription, Subject } from 'rxjs';
-import { useStore } from '../stores/useStore';
-import { bleAdapter } from './bluetooth/adapters/BleAdapter';
-import { BluetoothScale } from './bluetooth/base/BluetoothScale';
-import { AVAILABLE_SCALES } from './bluetooth/index';
-import { DiscoveredDevice, LimitedPeripheralData, PeripheralData } from './bluetooth/types/ble.types';
-import { ScaleType, WeightChangeEvent } from './bluetooth/types/scale.types';
-import { Logger } from './bluetooth/utils/Logger';
-import { settingsRepository } from '../repositories/SettingsRepository';
-import { ScaleDevice } from '../models/ScaleDevice';
-import { numberToUUID } from '@capacitor-community/bluetooth-le';
+import { Subject } from 'rxjs';
+import { IScaleService } from './interfaces/IScaleService';
+import { RealScaleService } from './RealScaleService';
+import { MockScaleService } from './MockScaleService';
+import { DiscoveredDevice } from './bluetooth/types/ble.types';
 
-const logger = new Logger('BluetoothScaleService');
-const RECONNECT_DELAY_MS = [1000, 2000, 4000];
-const MAX_RECONNECT_ATTEMPTS = 3;
-
-// Collected Service UUIDs for optionalServices to ensure communication after connection
-// todo load dynamically from available scales
-const SCALE_OPTIONAL_SERVICES = [
-  // '1820', // Acaia
-  // '1825', // Felicita
-  // '181d', // Timemore
-  // 'ff08', // Skale
-  // '06c31822-8682-4744-9211-febc93e3bece', // Jimmy
-  // 'fff0', // Decent, Espressi, Eureka, SmartChef
-  // '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // WeighMyBru
-  '0000ffb0-0000-1000-8000-00805f9b34fb', // BlackCoffee
-  numberToUUID(0x0FFE), // Bokoo
-];
-
-class BluetoothScaleService {
+class BluetoothScaleService implements IScaleService {
   private static instance: BluetoothScaleService;
+  private realService: RealScaleService;
+  private mockService: MockScaleService;
+  private activeService: IScaleService;
+
   public weight$ = new Subject<number>();
-  private currentScale: BluetoothScale | null = null;
-  private subscriptions: Subscription[] = [];
-  private reconnectAttempts = 0;
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private lastDevice: DiscoveredDevice | null = null;
 
   private constructor() {
-    // Private constructor for singleton
+    this.realService = new RealScaleService();
+    this.mockService = new MockScaleService();
+    this.activeService = this.realService;
+
+    // Propagate weight updates from active service
+    this.realService.weight$.subscribe(w => {
+      if (this.activeService === this.realService) this.weight$.next(w);
+    });
+    this.mockService.weight$.subscribe(w => {
+      if (this.activeService === this.mockService) this.weight$.next(w);
+    });
   }
 
   public static getInstance(): BluetoothScaleService {
@@ -49,262 +33,61 @@ class BluetoothScaleService {
     return BluetoothScaleService.instance;
   }
 
+  // Proxy methods
   async initialize(): Promise<void> {
-    const preferredId = await settingsRepository.getPreferredDeviceId();
-    if (!preferredId) {
-      logger.log('No preferred device saved.');
-      return;
-    }
-
-    const savedDevice = await settingsRepository.getScaleDevice(preferredId);
-    if (!savedDevice) {
-      logger.log(`Preferred device ${preferredId} not found in known devices.`);
-      return;
-    }
-
-    logger.log(`Attempting to auto-connect to preferred device: ${savedDevice.name}`);
-
-    try {
-      const connectedDevices = await bleAdapter.getDevices();
-      const deviceAvailable = connectedDevices.find(d => d.deviceId === savedDevice.deviceId);
-
-      if (!deviceAvailable) {
-        logger.log(`Device ${savedDevice.deviceId} not found in permitted devices. Skipping auto-connect.`);
-        return;
-      }
-
-      // Reconstruct a DiscoveredDevice from the saved info
-      const device: DiscoveredDevice = {
-        id: savedDevice.deviceId,
-        name: savedDevice.name || 'Unknown Device',
-        rssi: -100, // Placeholder
-        scaleType: savedDevice.scaleType || (savedDevice as any).type, // Fallback for older saved data if needed
-        peripheral: {
-          id: savedDevice.deviceId,
-          name: savedDevice.name || 'Unknown Device',
-          advertising: new ArrayBuffer(0),
-          rssi: -100
-        }
-      };
-
-      await this.connect(device);
-    } catch (error) {
-      logger.error('Auto-connect failed:', error);
-    }
+    return this.activeService.initialize();
   }
 
-
   async connectNewDevice(): Promise<void> {
-    if (this.getConnectionStatus() === 'connected') {
-      logger.log('Already connected to a device. Disconnect first.');
-      return;
-    }
-
-    try {
-      logger.log('Requesting device...');
-      const device: BleDevice = await bleAdapter.requestDevice({
-        // acceptAllDevices: true,
-        optionalServices: SCALE_OPTIONAL_SERVICES,
-        // optionalServices: SCALE_OPTIONAL_SERVICES.map(uuid => ({ services: [uuid] })), // Removed in favor of acceptAllDevices
-      });
-
-      if (!device) {
-        logger.log('No device selected.');
-        return;
-      }
-
-      logger.log(`Device selected: ${device.name} (${device.deviceId})`);
-
-      const peripheral: LimitedPeripheralData = {
-        id: device.deviceId,
-        name: device.name || 'Unknown Device',
-        advertising: new ArrayBuffer(0), // Not available from requestDevice usually
-        rssi: 0,
-      };
-
-      const scaleType = this.identifyScale(peripheral);
-
-      if (!scaleType) {
-        throw new Error(`Device ${device.name} is not a supported scale.`);
-      }
-
-      const discoveredDevice: DiscoveredDevice = {
-        id: device.deviceId,
-        name: device.name || 'Unknown Device',
-        rssi: 0,
-        scaleType,
-        peripheral,
-      };
-
-      await this.connect(discoveredDevice);
-
-    } catch (error) {
-      logger.error('Failed to connect to new device:', error);
-      useStore.getState().setConnectionStatus('disconnected');
-    }
+    return this.activeService.connectNewDevice();
   }
 
   async connect(device: DiscoveredDevice): Promise<void> {
-    if (!device.scaleType) {
-      throw new Error(`Device ${device.id} is not a supported scale.`);
-    }
-
-    useStore.getState().setConnectionStatus('connecting');
-
-    const scaleInfo = AVAILABLE_SCALES.find((s) => s.scaleType === device.scaleType);
-    if (!scaleInfo) {
-      throw new Error(`Implementation for scale type ${device.scaleType} not found.`);
-    }
-
-    // The constructor expects PeripheralData, but we only have LimitedPeripheralData.
-    // We cast it for now.
-    this.currentScale = new scaleInfo.class(device.peripheral as PeripheralData);
-    if (!this.currentScale) {
-      throw new Error('Failed to instantiate scale class.');
-    }
-    logger.log(`Connecting to ${this.currentScale.device_name}...`);
-
-    try {
-      await this.currentScale.connect();
-      this.subscribeToScaleEvents();
-      useStore.getState().setConnectionStatus('connected');
-      useStore.getState().setConnectedDevice(device);
-      this.lastDevice = device; // Persist last connected device
-      this.reconnectAttempts = 0; // Reset on successful manual connection
-      logger.log(`Successfully connected to ${this.currentScale.device_name}.`);
-
-      // Save as preferred device
-      const scaleDevice: ScaleDevice = {
-        deviceId: device.id,
-        name: device.name,
-        address: device.id,
-        isPreferred: true,
-        lastConnected: new Date().toISOString(),
-        scaleType: device.scaleType || undefined,
-      };
-      await settingsRepository.saveScaleDevice(scaleDevice);
-
-    } catch (error) {
-      logger.error(`Connection to ${device.name} failed:`, error);
-      await this.handleDisconnect(false);
-      throw error; // Re-throw to allow UI to handle it
-    }
+    return this.activeService.connect(device);
   }
 
   async disconnect(): Promise<void> {
-    if (!this.currentScale) return;
-    const connectedDevice = this.getConnectedDevice();
-    logger.log(`Disconnecting from ${this.currentScale.device_name}...`);
-    // Attempt graceful disconnect if supported
-    try {
-      await this.currentScale.disconnectTriggered();
-    } catch (err) {
-      logger.error('Error during scale specific disconnect cleanup:', err);
-    }
-
-    if (connectedDevice) {
-      await bleAdapter.disconnect(connectedDevice.id);
-    }
-    await this.handleDisconnect(false);
+    return this.activeService.disconnect();
   }
 
   async tare(): Promise<void> {
-    if (!this.currentScale || this.getConnectionStatus() !== 'connected') {
-      throw new Error('Not connected to any scale.');
-    }
-    await this.currentScale.tare();
+    return this.activeService.tare();
   }
 
   getConnectionStatus() {
-    return useStore.getState().connectionStatus;
+    return this.activeService.getConnectionStatus();
   }
 
   getConnectedDevice() {
-    return useStore.getState().connectedDevice;
+    return this.activeService.getConnectedDevice();
   }
 
+  // Mode switching
+  async setMockMode(enabled: boolean) {
+    if (this.isMockMode === enabled) return;
 
-
-  private identifyScale(peripheral: LimitedPeripheralData): ScaleType | null {
-    for (const scale of AVAILABLE_SCALES) {
-      if (scale.class.test(peripheral as PeripheralData)) {
-        return scale.scaleType;
-      }
+    // Disconnect current service before switching
+    if (this.getConnectionStatus() === 'connected' || this.getConnectionStatus() === 'connecting') {
+      await this.disconnect();
     }
-    return null;
-  }
 
-  private subscribeToScaleEvents() {
-    if (!this.currentScale) return;
-    this.cleanupSubscriptions();
-
-    this.subscriptions.push(
-      this.currentScale.weightChange.subscribe((event: WeightChangeEvent) => {
-        useStore.getState().setCurrentWeight(event.weight.actual);
-        this.weight$.next(event.weight.actual);
-      }),
-      this.currentScale.tareEvent.subscribe(() => logger.log('Tare event received')),
-      this.currentScale.timerEvent.subscribe(() => logger.log('Timer event received')),
-      this.currentScale.flowChange.subscribe(() => logger.log('Flow change event received'))
-    );
-  }
-
-  private async handleDisconnect(unexpected: boolean) {
-    const lastConnectedDevice = this.lastDevice;
-    this.cleanup();
-
-    useStore.getState().setConnectionStatus('disconnected');
-    useStore.getState().setConnectedDevice(null);
-    useStore.getState().setCurrentWeight(0);
-
-    if (unexpected && lastConnectedDevice) {
-      logger.log('Unexpected disconnection. Attempting to reconnect...');
-      this.attemptReconnect(lastConnectedDevice);
+    if (enabled) {
+      this.activeService = this.mockService;
     } else {
-      logger.log('Scale disconnected.');
-      // If it was a manual disconnect, cancel any pending reconnects
-      if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-      this.reconnectAttempts = 0;
+      this.activeService = this.realService;
     }
+
+    // Initialize the new service if needed
+    await this.activeService.initialize();
   }
 
-  private attemptReconnect(device: DiscoveredDevice) {
-    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      logger.error('Max reconnection attempts reached. Giving up.');
-      this.reconnectAttempts = 0;
-      return;
-    }
-
-    const delay = RECONNECT_DELAY_MS[this.reconnectAttempts];
-    this.reconnectAttempts++;
-
-    logger.log(`Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts})...`);
-
-    this.reconnectTimer = setTimeout(async () => {
-      try {
-        await this.connect(device);
-      } catch {
-        logger.error(`Reconnect attempt ${this.reconnectAttempts} failed.`);
-        // connect() calls handleDisconnect on failure, which will schedule the next attempt
-      }
-    }, delay);
+  get isMockMode(): boolean {
+    return this.activeService === this.mockService;
   }
 
-  private cleanupSubscriptions() {
-    this.subscriptions.forEach((sub) => sub.unsubscribe());
-    this.subscriptions = [];
-  }
-
-  private cleanup() {
-    this.cleanupSubscriptions();
-    if (this.currentScale) {
-      this.currentScale.cleanup();
-      this.currentScale = null;
-    }
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+  // Expose mock service for specific operations (loading recordings)
+  get mock(): MockScaleService {
+    return this.mockService;
   }
 }
 

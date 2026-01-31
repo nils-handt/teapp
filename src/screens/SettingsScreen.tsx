@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -9,7 +10,10 @@ import {
   IonLabel,
   IonButton,
   IonListHeader,
-  IonToggle
+  IonToggle,
+  IonToast,
+  IonCard,
+  IonCardContent
 } from '@ionic/react';
 import { useHistory } from 'react-router';
 import { useStore } from '../stores/useStore';
@@ -22,11 +26,45 @@ const SettingsScreen: React.FC = () => {
     connectedDevice,
     devMode,
     weightLoggerEnabled,
-    updateSettings // Assuming updateSettings is available in useStore
+    updateSettings
   } = useStore();
+
+  const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
 
   const handleConnectNew = async () => {
     await bluetoothScaleService.connectNewDevice();
+  };
+
+  const toggleMockMode = async (enabled: boolean) => {
+    await bluetoothScaleService.setMockMode(enabled);
+    setIsMockMode(enabled);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        // Basic validation: check for data array and timestamp in first element
+        if (json && Array.isArray(json.data) && json.data.length > 0 && typeof json.data[0].timestamp === 'number' && typeof json.data[0].weight === 'number') {
+          bluetoothScaleService.mock.loadRecording(json.data);
+          setToastMessage(`Loaded recording with ${json.data.length} samples.`);
+          setShowToast(true);
+        } else {
+          setToastMessage('Invalid recording file format: Missing data array or timestamps or weights.');
+          setShowToast(true);
+        }
+      } catch (err) {
+        setToastMessage('Failed to parse JSON file.');
+        setShowToast(true);
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -52,6 +90,7 @@ const SettingsScreen: React.FC = () => {
             <IonLabel>
               <h2>Status</h2>
               <p>{connectionStatus}</p>
+              {isMockMode && <p style={{ color: 'orange' }}>Mock Mode Active</p>}
             </IonLabel>
             {connectionStatus === 'connected' && (
               <IonButton slot="end" color="danger" onClick={() => bluetoothScaleService.disconnect()}>
@@ -73,7 +112,7 @@ const SettingsScreen: React.FC = () => {
           {connectionStatus !== 'connected' && (
             <IonItem lines="none">
               <IonButton expand="block" onClick={handleConnectNew} disabled={connectionStatus === 'connecting'}>
-                Connect New Scale
+                {isMockMode ? 'Connect Mock Scale' : 'Connect New Scale'}
               </IonButton>
             </IonItem>
           )}
@@ -96,6 +135,32 @@ const SettingsScreen: React.FC = () => {
           {devMode && (
             <>
               <IonItem>
+                <IonLabel>Use Mock Scale</IonLabel>
+                <IonToggle
+                  slot="end"
+                  checked={isMockMode}
+                  onIonChange={e => toggleMockMode(e.detail.checked)}
+                />
+              </IonItem>
+
+              {isMockMode && (
+                <IonCard>
+                  <IonCardContent>
+                    <IonLabel><h2>Mock Scale Controls</h2></IonLabel>
+                    <div style={{ marginTop: '10px' }}>
+                      <p>Load Recording (.json)</p>
+                      <input type="file" accept=".json" onChange={handleFileUpload} />
+                    </div>
+                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+                      <IonButton size="small" onClick={() => bluetoothScaleService.mock.startReplay()}>Play</IonButton>
+                      <IonButton size="small" color="warning" onClick={() => bluetoothScaleService.mock.pauseReplay()}>Pause</IonButton>
+                      <IonButton size="small" color="medium" onClick={() => bluetoothScaleService.mock.stopReplay()}>Stop</IonButton>
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+              )}
+
+              <IonItem>
                 <IonLabel>Enable Weight Logger</IonLabel>
                 <IonToggle
                   slot="end"
@@ -112,6 +177,13 @@ const SettingsScreen: React.FC = () => {
             </>
           )}
         </IonList>
+
+        <IonToast
+          isOpen={showToast}
+          onDidDismiss={() => setShowToast(false)}
+          message={toastMessage}
+          duration={2000}
+        />
       </IonContent>
     </IonPage>
   );

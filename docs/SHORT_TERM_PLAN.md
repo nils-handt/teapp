@@ -146,12 +146,12 @@
   - ✅ At least 5 diverse brewing sessions are recorded.
   - ✅ Recordings are documented and organized for use in development.
 
-### Phase 7: Import Time series and Create MockScale
+### Phase 7: Import recordings and Create MockScale
 - **Priority:** High (enables hardware-free development)
 - **Dependencies:** Phase 6 complete
 - **Deliverables:**
   - Create MockScaleService that implements the same interface as BluetoothScaleService
-  - Implement time series import functionality: load recorded JSON weight data into MockScaleService
+  - Implement recordings replay functionality: load recorded JSON weight data into MockScaleService
   - Add replay logic: emit weight updates at recorded timestamps to simulate real scale behavior
   - Implement replay controls: start, pause, resume, restart, seek to timestamp
   - Create dev mode toggle in SettingsScreen to switch between real BluetoothScaleService and MockScaleService
@@ -269,7 +269,7 @@
 
 ### Phase 12: Create Logic for Automatic Tracking
 - **Priority:** Critical (core feature)
-- **Dependencies:** Phase 2 complete, Phase 9 complete, Phase 10 complete
+- **Dependencies:** Phase 2 complete, Phase 9 complete
 - **Deliverables:**
   - Implement `BrewingSessionService` with complete automatic detection logic following the [GongFu Brewing Tracking Process](./FEATURES.md#gongfu-brewing-tracking-process):
     - Setup phase: detect stable vessel weight, detect lid removal and calculate `lidWeight`, track tea addition
