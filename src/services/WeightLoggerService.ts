@@ -1,6 +1,7 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { bluetoothScaleService } from './BluetoothScaleService';
 import { Subscription } from 'rxjs';
+import { Capacitor } from '@capacitor/core';
 
 export interface WeightDataPoint {
     timestamp: number;
@@ -128,6 +129,20 @@ class WeightLoggerService {
 
     public async getRecordingUri(fileName: string): Promise<string> {
         try {
+            if (Capacitor.getPlatform() === 'android') {
+                await Filesystem.copy({
+                    from: `recordings/${fileName}`,
+                    to: fileName,
+                    directory: Directory.Data,
+                    toDirectory: Directory.Cache
+                });
+                const result = await Filesystem.getUri({
+                    path: fileName,
+                    directory: Directory.Cache
+                });
+                return result.uri;
+            }
+
             const result = await Filesystem.getUri({
                 path: `recordings/${fileName}`,
                 directory: Directory.Data
