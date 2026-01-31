@@ -22,12 +22,17 @@ export class MockScaleService implements IScaleService {
     private timeoutId: NodeJS.Timeout | null = null;
     private currentVirtualTime = 0;
     private loop = false;
+    private playbackSpeed = 1;
 
     constructor() { }
 
     async initialize(): Promise<void> {
         logger.log('MockScaleService initialized.');
-        // No auto-connect logic for mock yet, or maybe load default recording?
+        // Initialize with store value if possible, but store accessed via hook or getState usually
+        const storeSpeed = useStore.getState().playbackSpeed;
+        if (storeSpeed) {
+            this.playbackSpeed = storeSpeed;
+        }
     }
 
     async connectNewDevice(): Promise<void> {
@@ -77,6 +82,58 @@ export class MockScaleService implements IScaleService {
 
     // Mock Specific Methods
 
+    setPlaybackSpeed(speed: number) {
+        if (speed <= 0) return;
+        logger.log(`Setting playback speed to ${speed}x`);
+
+        // If playing, we need to adjust startTime so that the current virtual time remains the same
+        // but future time progresses faster.
+        if (this.isPlaying) {
+            const now = Date.now();
+            // Current virtual time achieved with old speed
+            // currentVirtualTime = (now - startTime) * oldSpeed
+            // We want new equation to hold:
+            // currentVirtualTime = (now - newStartTime) * newSpeed
+            // => newStartTime = now - (currentVirtualTime / newSpeed)
+
+            // Recalculate current virtual time based on *actual* elapsed time since last start/adjustment
+            // NOTE: This simple linear model (now - start) * speed works if speed is constant.
+            // If speed changes dynamic, we need to anchor 'now' as the new base.
+
+            // Let's use the anchor approach:
+            // At this moment 'now', we are at 'currentVirtualTime'.
+            // We want to continue from 'currentVirtualTime' but with 'newSpeed'.
+            // So, effectively, we are treating 'now' as a fresh start point (startTime),
+            // but with an initial offset of 'currentVirtualTime'.
+            // Wait, the logic in scheduleNext is: currentVirtualTime = (now - this.startTime) * speed is NOT sufficient if speed changes.
+            // It assumes speed was constant since startTime.
+
+            // Correct logic for variable speed:
+            // 1. Calculate where we are NOW in virtual time.
+            this.currentVirtualTime = (now - this.startTime) * this.playbackSpeed;
+
+            // 2. Update speed
+            this.playbackSpeed = speed;
+
+            // 3. Reset startTime so that at 'now', (now - startTime) * speed == currentVirtualTime
+            // => 0 * speed == currentVirtualTime (Incorrect if we just set startTime=now)
+            // We want: (now - newStartTime) * newSpeed = currentVirtualTime
+            // => now - newStartTime = currentVirtualTime / newSpeed
+            // => newStartTime = now - (currentVirtualTime / newSpeed)
+
+            this.startTime = now - (this.currentVirtualTime / this.playbackSpeed);
+
+            // Cancel current timeout and reschedule immediately to apply new speed
+            if (this.timeoutId) {
+                clearTimeout(this.timeoutId);
+                this.timeoutId = null;
+            }
+            this.scheduleNext();
+        } else {
+            this.playbackSpeed = speed;
+        }
+    }
+
     loadRecording(data: RecordingData[]) {
         if (!data || data.length === 0) {
             logger.error('Invalid recording data loaded.');
@@ -102,10 +159,13 @@ export class MockScaleService implements IScaleService {
         }
 
         this.isPlaying = true;
-        // Resume from current virtual time
-        this.startTime = Date.now() - this.currentVirtualTime;
+        // Resume logic:
+        // We are at this.currentVirtualTime.
+        // We want (Date.now() - this.startTime) * this.playbackSpeed = this.currentVirtualTime
+        // => this.startTime = Date.now() - (this.currentVirtualTime / this.playbackSpeed)
+        this.startTime = Date.now() - (this.currentVirtualTime / this.playbackSpeed);
 
-        // If we were at end, reset (unless explicitly paused, but here startReplay implies play)
+        // If we were at end, reset
         if (this.currentVirtualTime >= this.recordingDuration) {
             this.startTime = Date.now();
             this.currentVirtualTime = 0;
@@ -121,10 +181,9 @@ export class MockScaleService implements IScaleService {
             clearTimeout(this.timeoutId);
             this.timeoutId = null;
         }
-        // Save current virtual time relative to when we started
-        if (this.startTime > 0) {
-            this.currentVirtualTime = Date.now() - this.startTime;
-        }
+        // Save current virtual time
+        // currentVirtualTime = (Date.now() - startTime) * speed
+        this.currentVirtualTime = (Date.now() - this.startTime) * this.playbackSpeed;
     }
 
     stopReplay() {
@@ -138,7 +197,8 @@ export class MockScaleService implements IScaleService {
         if (!this.isPlaying) return;
 
         const now = Date.now();
-        this.currentVirtualTime = now - this.startTime;
+        // Virtual time calculation must account for speed
+        this.currentVirtualTime = (now - this.startTime) * this.playbackSpeed;
 
         if (this.currentVirtualTime > this.recordingDuration) {
             if (this.loop) {
@@ -169,14 +229,19 @@ export class MockScaleService implements IScaleService {
         if (this.lastEmitIndex < this.recording.length) {
             const nextEvent = this.recording[this.lastEmitIndex];
             // When should this event happen?
-            const targetTime = this.startTime + nextEvent.timestamp;
-            const delay = Math.max(0, targetTime - Date.now());
+            // targetVirtualTime = nextEvent.timestamp
+            // We need: (targetRealTime - startTime) * speed = targetVirtualTime
+            // => targetRealTime = startTime + (targetVirtualTime / speed)
+
+            const targetRealTime = this.startTime + (nextEvent.timestamp / this.playbackSpeed);
+            const delay = Math.max(0, targetRealTime - Date.now());
 
             this.timeoutId = setTimeout(this.scheduleNext, delay);
         } else {
-            // End of recording reached, wait until duration end to loop or finish?
-            // Actually the duration check at top handles it. We can just schedule a check for end.
-            const delay = Math.max(0, (this.startTime + this.recordingDuration) - Date.now());
+            // Schedule check for end of duration
+            // EndTime = startTime + (duration / speed)
+            const endRealTime = this.startTime + (this.recordingDuration / this.playbackSpeed);
+            const delay = Math.max(0, endRealTime - Date.now());
             this.timeoutId = setTimeout(this.scheduleNext, delay + 10); // +10 buffer
         }
     }

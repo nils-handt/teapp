@@ -13,7 +13,9 @@ import {
   IonToggle,
   IonToast,
   IonCard,
-  IonCardContent
+  IonCardContent,
+  IonSelect,
+  IonSelectOption
 } from '@ionic/react';
 import { useHistory } from 'react-router';
 import { useStore } from '../stores/useStore';
@@ -26,6 +28,7 @@ const SettingsScreen: React.FC = () => {
     connectedDevice,
     devMode,
     weightLoggerEnabled,
+    playbackSpeed,
     updateSettings
   } = useStore();
 
@@ -40,6 +43,11 @@ const SettingsScreen: React.FC = () => {
   const toggleMockMode = async (enabled: boolean) => {
     await bluetoothScaleService.setMockMode(enabled);
     setIsMockMode(enabled);
+  };
+
+  const handleSpeedChange = (speed: number) => {
+    bluetoothScaleService.mock.setPlaybackSpeed(speed);
+    updateSettings({ playbackSpeed: speed });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,6 +163,20 @@ const SettingsScreen: React.FC = () => {
                       <IonButton size="small" onClick={() => bluetoothScaleService.mock.startReplay()}>Play</IonButton>
                       <IonButton size="small" color="warning" onClick={() => bluetoothScaleService.mock.pauseReplay()}>Pause</IonButton>
                       <IonButton size="small" color="medium" onClick={() => bluetoothScaleService.mock.stopReplay()}>Stop</IonButton>
+                    </div>
+                    <div style={{ marginTop: '15px' }}>
+                      <IonLabel>Playback Speed</IonLabel>
+                      <IonSelect
+                        value={playbackSpeed}
+                        placeholder="Select Speed"
+                        onIonChange={e => handleSpeedChange(e.detail.value)}
+                        interface="popover"
+                      >
+                        <IonSelectOption value={1}>1x (Real-time)</IonSelectOption>
+                        <IonSelectOption value={10}>10x</IonSelectOption>
+                        <IonSelectOption value={50}>50x</IonSelectOption>
+                        <IonSelectOption value={100}>100x</IonSelectOption>
+                      </IonSelect>
                     </div>
                   </IonCardContent>
                 </IonCard>

@@ -37,6 +37,7 @@ interface SettingsState {
   timerPreferences: any;
   devMode: boolean;
   weightLoggerEnabled: boolean;
+  playbackSpeed: number;
   updateSettings: (settings: Partial<SettingsState>) => void;
 }
 
@@ -96,6 +97,7 @@ export const useStore = create<StoreState>((set, get) => ({
   timerPreferences: {},
   devMode: false,
   weightLoggerEnabled: false,
+  playbackSpeed: 1,
   updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
 
   // WeightLoggerState
