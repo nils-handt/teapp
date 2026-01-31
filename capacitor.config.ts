@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Teapp',
   webDir: 'dist',
   server: {
-    url: 'http://192.168.1.100:5173',
+    // url: 'http://192.168.1.100:5173', // could enable live reload for android
     cleartext: true,
     androidScheme: 'https'
   },

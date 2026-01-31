@@ -31,5 +31,9 @@ yarn-error.log*
 .vite-inspect/
 
 # Capacitor
-/android
 /ios
+
+# IDE
+.idea
+.vscode
+.gemini
