@@ -201,15 +201,14 @@
 - **Dependencies:** Phase 1 complete (can be done in parallel with Phases 2-8)
 - **Deliverables:**
   - Implement SQLite schema based on [Domain Models](./ARCHITECTURE.md#domain-models):
-    - `BrewingSessionEntity` table: `sessionId` (PK), `teaId` (FK, optional for MVP), `teaName`, `startTime`, `endTime`, `vesselWeight`, `lidWeight`, `teaWeight`, `notes`, `status`
-    - `InfusionEntity` table: `infusionId` (PK), `sessionId` (FK), `infusionNumber`, `waterWeight`, `startTime`, `duration`, `restDuration`, `wetLeavesWeight`
+    - `BrewingSessionEntity` table: `sessionId` (PK),  `teaName`, `startTime`, `endTime`, `vesselWeight`, `lidWeight`, `dryTeaLeavesWeight`, `notes`, `status`, `waterTemperature`
+    - `InfusionEntity` table: `infusionId` (PK), `sessionId` (FK), `infusionNumber`, `waterWeight`, `startTime`, `duration`, `restDuration`, `wetTeaLeavesWeight`
     - `ScaleDeviceEntity` table: `deviceId` (PK), `name`, `address`, `isPreferred`, `lastConnected`
     - `SettingsEntity` table: key-value pairs for scale configuration and timer preferences
-    - **Note on `TeaEntity`:** The `TeaEntity` table and its foreign key relationship (`teaId`) are optional for the MVP. Initially, `teaName` can be stored as plain text. The full tea library can be introduced in a later migration.
+  - Use TypeORM to generate the schema
   - Create TypeScript entity classes with proper typing
   - Implement database migration scripts for schema creation
   - Set up foreign key relationships: Infusion → BrewingSession
-  - Add indexes for common queries: `sessionId`, `startTime`
 - **Architectural References:**
   - [Domain Models section](./ARCHITECTURE.md#domain-models)
   - [Technology Stack](./ARCHITECTURE.md#technology-stack) specifying SQLite via Capacitor Community SQLite
@@ -420,3 +419,4 @@
   - Cloud sync and backup
   - iOS support
   - Multi-device support
+  - timer functionality

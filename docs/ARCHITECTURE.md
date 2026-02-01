@@ -74,9 +74,9 @@
 
 ## Domain Models
 
-- **BrewingSession model**: sessionId, teaId, teaName, startTime, endTime, vesselWeight, lidWeight, teaWeight, infusions array, notes, status (active/completed)
-- **Infusion model**: infusionNumber, waterWeight, startTime, duration, restDuration, wetLeavesWeight
-- **Tea model**: teaId, name, type, defaultBrewingParameters, notes
+- **BrewingSession model**: sessionId, teaName, startTime, endTime, vesselWeight, lidWeight, dryTeaLeavesWeight, infusions array, notes, status (active/completed)
+- **Infusion model**: infusionNumber, waterWeight, startTime, duration, restDuration, wetTeaLeavesWeight
+- **Tea model**: teaName, type, defaultBrewingParameters, notes
 - **ScaleDevice model**: deviceId, name, address, isPreferred, lastConnected
 - **Settings model**: scale configuration (tare behavior, sensitivity, minEndInfusionWeight), timer preferences (alerts enabled, sound/vibration)
 - These models map to SQLite tables (or entities) for persistence, where each model corresponds to a table (e.g., BrewingSessionEntity for BrewingSession), with relationships handled via foreign keys (e.g., infusions linked to BrewingSession via sessionId, and BrewingSession linked to Tea via teaId).
