@@ -5,11 +5,11 @@ import HelloWorld from './HelloWorld';
 test('renders default greeting', () => {
     render(<HelloWorld />);
     const linkElement = screen.getByText(/Hello World!/i);
-    expect(linkElement).toBeInTheDocument();
+    expect(linkElement).not.toBeNull();
 });
 
 test('renders personalized greeting', () => {
     render(<HelloWorld name="Jest" />);
     const linkElement = screen.getByText(/Hello Jest!/i);
-    expect(linkElement).toBeInTheDocument();
+    expect(linkElement).not.toBeNull();
 });

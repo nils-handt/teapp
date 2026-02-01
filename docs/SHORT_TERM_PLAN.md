@@ -222,23 +222,13 @@
 - **Priority:** Medium (enables user configuration)
 - **Dependencies:** Phase 9 complete, Phase 3 complete
 - **Deliverables:**
-  - Expand SettingsScreen with comprehensive configuration UI:
-    - Scale Configuration section:
-      - Tare behavior toggle
-      - Sensitivity slider for pour detection (minimum weight change threshold)
-      - `minEndInfusionWeight` input for infusion end detection threshold
-    - Timer Preferences section:
-      - Sound alerts toggle
-      - Vibration alerts toggle
-    - Dev Mode section (if enabled):
-      - Mock scale toggle
-      - Recording selector
-      - Playback speed control
-      - Weight logger toggle
+  - Dev Mode section (if enabled):
+    - Mock scale toggle
+    - Recording selector
+    - Playback speed control
+    - Weight logger toggle
   - Implement SettingsState store slice
-  - Create SettingsRepository to persist settings to `SettingsEntity`
-  - Wire up settings to BrewingSessionService for threshold-based detection
-  - Add input validation and sensible default values
+  - Persist and load settings to/from SQLite via `Settings.Entity.ts`
 - **Architectural References:**
   - [SettingsScreen](./ARCHITECTURE.md#core-components) in UI Layer
   - [SettingsRepository](./ARCHITECTURE.md#core-components) in Data Layer
@@ -255,16 +245,16 @@
 - **Priority:** High (enables automated testing)
 - **Dependencies:** Phase 1 complete
 - **Deliverables:**
-  - Install and configure Jest and React Testing Library.
-  - Set up mock configurations for services and libraries (e.g., mock for Capacitor plugins).
+  - Install and configure Vitest and React Testing Library.
+  - Set up mock configurations for services and libraries where required (e.g., mock for Capacitor plugins).
   - Create a sample unit test for a simple component to verify the setup.
   - Add test scripts to `package.json` (e.g., `test`, `test:watch`).
 - **Architectural References:**
   - Testing Strategy section [`testing-strategy`](./SHORT_TERM_PLAN.md#testing-strategy)
 - **Acceptance Criteria:**
-  - ✅ `npm test` command runs successfully.
-  - ✅ A sample component unit test passes.
-  - ✅ Mocks for Capacitor plugins are working correctly in the test environment.
+  - [x] `npm test` command runs successfully.
+  - [x] A sample component unit test passes.
+  - [x] Mocks for Capacitor plugins are working correctly in the test environment.
 
 ### Phase 12: Create Logic for Automatic Tracking
 - **Priority:** Critical (core feature)
@@ -420,3 +410,5 @@
   - iOS support
   - Multi-device support
   - timer functionality
+- clean up ui
+- zen brew mode

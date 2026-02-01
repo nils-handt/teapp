@@ -33,14 +33,12 @@
     "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "types": [
-      "jest",
-      "@testing-library/jest-dom"
+      "vitest/globals"
     ]
   },
   "include": [
     "src",
-    "capacitor.config.ts",
-    "jest.config.js"
+    "capacitor.config.ts"
   ],
   "references": [
     {

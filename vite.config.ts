@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite'
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path';
 import fs from 'fs';
@@ -48,4 +49,14 @@ export default defineConfig({
     include: ['@ionic/react', '@ionic/react-router', 'ionicons'],
     exclude: ['@capacitor-community/sqlite', 'jeep-sqlite']
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupMocks.ts', './src/setupTests.ts'],
+    server: {
+      deps: {
+        inline: ['@ionic/react', '@ionic/react-router', 'ionicons', '@stencil/core', 'tslib'],
+      },
+    },
+  }
 })
