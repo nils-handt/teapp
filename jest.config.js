@@ -1,5 +1,5 @@
 module.exports = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/js-with-ts',
   testEnvironment: 'jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -9,7 +9,8 @@ module.exports = {
   collectCoverageFrom: ['src/**/*.{ts,tsx}'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/*.test.ts?(x)'],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    "node_modules/ionic/.+\\.(j|t)sx?$": "ts-jest"
   },
+  transformIgnorePatterns: ['node_modules/(?!@ionic/.*)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 };
