@@ -34,7 +34,7 @@ export class RealScaleService implements IScaleService {
     private currentScale: BluetoothScale | null = null;
     private subscriptions: Subscription[] = [];
     private reconnectAttempts = 0;
-    private reconnectTimer: NodeJS.Timeout | null = null;
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private lastDevice: DiscoveredDevice | null = null;
 
     constructor() { }

@@ -8,7 +8,7 @@ const BrewingScreen: React.FC = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isRecording) {
       interval = setInterval(() => {
         setElapsedTime(prev => prev + 1); // todo this will create a delay if the app is not in focus, use recordingStartTime instead

@@ -19,7 +19,7 @@ export class MockScaleService implements IScaleService {
     private startTime = 0;
     private recordingDuration = 0;
     private lastEmitIndex = 0;
-    private timeoutId: NodeJS.Timeout | null = null;
+    private timeoutId: ReturnType<typeof setTimeout> | null = null;
     private currentVirtualTime = 0;
     private loop = false;
     private playbackSpeed = 1;
