@@ -8,7 +8,7 @@ import fs from 'fs';
 // todo not sure if this is smart, maybe there is a better way
 const copySqliteAssets = () => ({
   name: 'copy-sqlite-assets',
-  configureServer(server) {
+  configureServer(_server) {
     const src = path.resolve(__dirname, 'node_modules/sql.js/dist/sql-wasm.wasm');
     const destDir = path.resolve(__dirname, 'public/assets');
     const dest = path.join(destDir, 'sql-wasm.wasm');

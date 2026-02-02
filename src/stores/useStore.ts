@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { DiscoveredDevice } from '../services/bluetooth/types/ble.types';
 import { weightLoggerService } from '../services/WeightLoggerService';
+import { BrewingSession } from '../entities/BrewingSession.entity';
+import { Infusion } from '../entities/Infusion.entity';
 
 // As per ARCHITECTURE.md
 interface BluetoothState {
@@ -19,22 +21,21 @@ interface BluetoothState {
 }
 
 interface BrewingState {
-  activeSession: any | null;
-  currentInfusion: any | null;
+  activeSession: BrewingSession | null;
+  currentInfusion: Infusion | null;
   timerStatus: 'stopped' | 'running' | 'paused';
   brewingPhase: 'setup' | 'infusion' | 'rest' | 'ended';
   startSession: () => void;
 }
 
 interface HistoryState {
-  sessionList: any[];
-  selectedSession: any | null;
+  sessionList: BrewingSession[];
+  selectedSession: BrewingSession | null;
   loadHistory: () => void;
 }
 
 interface SettingsState {
-  scaleConfig: any;
-  timerPreferences: any;
+  scaleConfig: Record<string, unknown>;
   devMode: boolean;
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
@@ -94,7 +95,6 @@ export const useStore = create<StoreState>((set, get) => ({
 
   // SettingsState
   scaleConfig: {},
-  timerPreferences: {},
   devMode: false,
   weightLoggerEnabled: false,
   playbackSpeed: 1,

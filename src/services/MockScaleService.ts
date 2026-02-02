@@ -42,9 +42,9 @@ export class MockScaleService implements IScaleService {
             id: 'mock-device-id',
             name: 'Mock Scale',
             rssi: -50,
-            scaleType: undefined, // Type check might need loose typing or Mock type
+            scaleType: null, // Type check might need loose typing or Mock type
             peripheral: { id: 'mock', name: 'Mock', advertising: new ArrayBuffer(0), rssi: -50 }
-        } as any);
+        });
     }
 
     async connect(device: DiscoveredDevice): Promise<void> {

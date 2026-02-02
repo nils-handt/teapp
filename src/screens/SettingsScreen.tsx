@@ -67,7 +67,7 @@ const SettingsScreen: React.FC = () => {
           setToastMessage('Invalid recording file format: Missing data array or timestamps or weights.');
           setShowToast(true);
         }
-      } catch (err) {
+      } catch {
         setToastMessage('Failed to parse JSON file.');
         setShowToast(true);
       }

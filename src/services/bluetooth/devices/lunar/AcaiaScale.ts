@@ -36,9 +36,9 @@ export class AcaiaScale {
   public auto_off: boolean | null = null;
   public beep_on: boolean | null = null;
 
-  private callback: (eventType: EventType, data?: any) => any;
+  private callback: (eventType: EventType, data?: unknown) => void;
 
-  constructor(deviceId: string, characteristics: Characteristic[], callback: (eventType: EventType, data?: any) => any) {
+  constructor(deviceId: string, characteristics: Characteristic[], callback: (eventType: EventType, data?: unknown) => void) {
     this.device_id = deviceId;
     this.characteristics = characteristics;
     this.callback = callback;

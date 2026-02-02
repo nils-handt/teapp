@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { MockScaleService } from './MockScaleService';
 import { useStore } from '../stores/useStore';
 
@@ -11,9 +11,9 @@ vi.mock('../stores/useStore', () => ({
 
 describe('MockScaleService', () => {
     let service: MockScaleService;
-    let mockSetCurrentWeight: any;
-    let mockSetConnectionStatus: any;
-    let mockSetConnectedDevice: any;
+    let mockSetCurrentWeight: Mock;
+    let mockSetConnectionStatus: Mock;
+    let mockSetConnectedDevice: Mock;
 
     const originalRecordingData = [
         { "timestamp": 1760000001000, "weight": 50 },
@@ -41,7 +41,7 @@ describe('MockScaleService', () => {
         mockSetConnectionStatus = vi.fn();
         mockSetConnectedDevice = vi.fn();
 
-        (useStore.getState as any).mockReturnValue({
+        (useStore.getState as Mock).mockReturnValue({
             playbackSpeed: 1,
             setConnectionStatus: mockSetConnectionStatus,
             setConnectedDevice: mockSetConnectedDevice,

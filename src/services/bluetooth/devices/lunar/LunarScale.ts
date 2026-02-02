@@ -42,7 +42,7 @@ export class LunarScale extends BluetoothScale {
     // Weight is pushed via events
   }
 
-  private onEvent(eventType: EventType, data: any) {
+  private onEvent(eventType: EventType, data: unknown) {
     switch (eventType) {
       case EventType.WEIGHT:
         this.setWeight(data as number, true); // Acaia doesn't seem to provide stability flag
@@ -59,9 +59,11 @@ export class LunarScale extends BluetoothScale {
       case EventType.TIMER_RESET:
         this.timerEventSubject.next({ command: SCALE_TIMER_COMMAND.RESET, timestamp: Date.now() });
         break;
-      case EventType.SETTINGS:
-        if (data.battery) this.batteryLevel = data.battery;
+      case EventType.SETTINGS: {
+        const settings = data as { battery?: number };
+        if (settings.battery) this.batteryLevel = settings.battery;
         break;
+      }
     }
   }
 }

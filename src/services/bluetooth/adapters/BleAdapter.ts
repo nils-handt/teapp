@@ -6,7 +6,7 @@ const logger = new Logger('BleAdapter');
 
 interface RequestLEScanParams {
   callback: (result: ScanResult) => void;
-  options?: any;
+  options?: RequestBleDeviceOptions;
 }
 
 class BleAdapter {
@@ -35,7 +35,7 @@ class BleAdapter {
     }
   }
 
-  async requestLEScan({ callback, options = { allowDuplicates: false, acceptAllAdvertisements: true } }: RequestLEScanParams): Promise<void> {
+  async requestLEScan({ callback, options = { allowDuplicates: false } }: RequestLEScanParams): Promise<void> {
     await this.ensureInitialized();
     try {
       await BleClient.requestLEScan(options, callback);

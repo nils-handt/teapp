@@ -11,7 +11,7 @@ export enum Property {
 
 export interface Descriptor {
   uuid: UUID;
-  value?: any; // Adjust based on actual usage
+  value?: unknown; // Adjust based on actual usage
 }
 
 export interface Characteristic {

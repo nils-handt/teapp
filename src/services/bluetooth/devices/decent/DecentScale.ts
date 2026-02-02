@@ -12,7 +12,7 @@ const HEADER = 0x03;
 export class DecentScale extends BluetoothScale {
   private tareCounter: number = 0;
   private apiVersion: string | undefined = undefined;
-  private heartbeatTimer: any = undefined;
+  private heartbeatTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 
   constructor(peripheral: PeripheralData) {
     super(peripheral, ScaleType.DECENT);

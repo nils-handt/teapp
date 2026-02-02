@@ -71,7 +71,7 @@ export class RealScaleService implements IScaleService {
                 id: savedDevice.deviceId,
                 name: savedDevice.name || 'Unknown Device',
                 rssi: -100, // Placeholder
-                scaleType: savedDevice.scaleType || (savedDevice as any).type,
+                scaleType: savedDevice.scaleType,
                 peripheral: {
                     id: savedDevice.deviceId,
                     name: savedDevice.name || 'Unknown Device',

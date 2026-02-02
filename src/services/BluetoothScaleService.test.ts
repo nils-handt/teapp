@@ -1,23 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { bluetoothScaleService } from './BluetoothScaleService';
+import { RealScaleService } from './RealScaleService';
+import { MockScaleService } from './MockScaleService';
 import { DiscoveredDevice, LimitedPeripheralData } from './bluetooth/types/ble.types';
 
 vi.mock('./RealScaleService', { spy: true });
 vi.mock('./MockScaleService', { spy: true });
 
 describe('BluetoothScaleService', () => {
-    let realService: any;
-    let mockService: any;
+    let realService: RealScaleService;
+    let mockService: MockScaleService;
 
     beforeEach(() => {
         vi.clearAllMocks();
 
         // Access private instances
-        realService = (bluetoothScaleService as any).realService;
-        mockService = (bluetoothScaleService as any).mockService;
+        realService = (bluetoothScaleService as unknown as { realService: RealScaleService }).realService;
+        mockService = (bluetoothScaleService as unknown as { mockService: MockScaleService }).mockService;
 
         // Reset the mode to Real (default)
-        (bluetoothScaleService as any).activeService = realService;
+        (bluetoothScaleService as unknown as { activeService: RealScaleService }).activeService = realService;
     });
 
     it('should be defined', () => {
@@ -36,7 +38,7 @@ describe('BluetoothScaleService', () => {
 
             expect(bluetoothScaleService.isMockMode).toBe(true);
             expect(mockService.initialize).toHaveBeenCalled();
-            expect((bluetoothScaleService as any).activeService).toBe(mockService);
+            expect((bluetoothScaleService as unknown as { activeService: MockScaleService }).activeService).toBe(mockService);
         });
 
         it('should switch back to real mode', async () => {
@@ -47,11 +49,11 @@ describe('BluetoothScaleService', () => {
 
             expect(bluetoothScaleService.isMockMode).toBe(false);
             expect(realService.initialize).toHaveBeenCalled();
-            expect((bluetoothScaleService as any).activeService).toBe(realService);
+            expect((bluetoothScaleService as unknown as { activeService: RealScaleService }).activeService).toBe(realService);
         });
 
         it('should disconnect current service before switching', async () => {
-            realService.getConnectionStatus.mockReturnValue('connected');
+            (realService.getConnectionStatus as unknown as Mock).mockReturnValue('connected');
             await bluetoothScaleService.setMockMode(true);
             expect(realService.disconnect).toHaveBeenCalled();
         });

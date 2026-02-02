@@ -16,6 +16,14 @@ const compat = new FlatCompat({
 });
 
 export default defineConfig([{
+    ignores: [
+        'dist/**',
+        "eslint.config.mjs",
+        "jest.config.js",
+        "android/**",
+        "public/**"
+    ],
+}, {
     extends: fixupConfigRules(compat.extends(
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
@@ -59,9 +67,4 @@ export default defineConfig([{
             { "argsIgnorePattern": "^_" }
         ]
     },
-    ignores: [
-        'dist/**',
-        "eslint.config.mjs",
-        "jest.config.js",
-    ],
 }]);

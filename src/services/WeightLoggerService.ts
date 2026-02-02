@@ -95,7 +95,7 @@ class WeightLoggerService {
                 directory: Directory.Data
             });
             return result.files.map(f => f.name);
-        } catch (e) {
+        } catch {
             // Directory might not exist yet
             return [];
         }
