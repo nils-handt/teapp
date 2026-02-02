@@ -1,6 +1,6 @@
 import { IonApp, IonRouterOutlet } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Switch, Route, Redirect } from 'react-router-dom';
+import { Route, Redirect } from 'react-router-dom';
 import Tabs from './screens/Tabs';
 import RecordingsScreen from './screens/RecordingsScreen';
 
@@ -16,11 +16,9 @@ const App: React.FC = () => {
     <IonApp>
       <IonReactRouter>
         <IonRouterOutlet>
-          <Switch>
-            <Route path="/tabs" component={Tabs} />
-            <Route path="/recordings" component={RecordingsScreen} />
-            <Route path="/" render={() => <Redirect to="/tabs/brewing" />} exact={true} />
-          </Switch>
+          <Route path="/tabs" component={Tabs} />
+          <Route path="/recordings" component={RecordingsScreen} />
+          <Route path="/" render={() => <Redirect to="/tabs/brewing" />} exact={true} />
         </IonRouterOutlet>
       </IonReactRouter>
     </IonApp>
