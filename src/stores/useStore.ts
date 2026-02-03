@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DiscoveredDevice } from '../services/bluetooth/types/ble.types';
 import { weightLoggerService } from '../services/WeightLoggerService';
+import { BrewingPhase } from '../services/interfaces/brewing.types';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
 
@@ -24,8 +25,9 @@ interface BrewingState {
   activeSession: BrewingSession | null;
   currentInfusion: Infusion | null;
   timerStatus: 'stopped' | 'running' | 'paused';
-  brewingPhase: 'setup' | 'infusion' | 'rest' | 'ended';
-  startSession: () => void;
+  brewingPhase: BrewingPhase;
+  timerValue: number;
+  setBrewingState: (state: Partial<BrewingState>) => void;
 }
 
 interface HistoryState {
@@ -85,8 +87,10 @@ export const useStore = create<StoreState>((set, get) => ({
   activeSession: null,
   currentInfusion: null,
   timerStatus: 'stopped',
-  brewingPhase: 'ended',
-  startSession: () => set({ brewingPhase: 'setup' }),
+  brewingPhase: BrewingPhase.IDLE,
+  timerValue: 0,
+
+  setBrewingState: (newState) => set((state) => ({ ...state, ...newState })),
 
   // HistoryState
   sessionList: [],

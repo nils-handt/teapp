@@ -30,12 +30,14 @@ This document outlines the core features of the Teapp application. For a detaile
   * Start Session in App
   * Put brewing vessel on Scale to automatically initiate vessel Weight
   * Remove brewing vessel Lid from brewing vessel to automatically initiate vessel lid weight
+    * alternatively add and remove brewing vessel lid from brewing vessel
   * Weigh out tea for Session
   * Start infusion tracking by pressing button
 * **Infusions (repeating)**
   * Pour water into brewing vessel, note amount of water used and start infusion timer
     * Add and (optional) remove the brewing vessel lid without influencing the timer 
-    * When the whole brewing vessel is removed save timer duration without stoping timer
+    * ignore random weight fluctuations
+    * When the whole brewing vessel is removed save timer duration without stopping timer
       * After the brewing Vessel is put back on the scale check if tea soup was poured out
       * If yes, end infusion timer, save infusion time, increase infusion counter by one
       * If no continue infusion timer

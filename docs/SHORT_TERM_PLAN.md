@@ -264,29 +264,24 @@
     - Setup phase: detect stable vessel weight, detect lid removal and calculate `lidWeight`, track tea addition
     - Infusion detection: detect water addition (significant weight increase above sensitivity threshold), auto-start infusion timer
     - Lid handling: ignore weight changes matching `lidWeight` during infusion
-    - Vessel removal: detect weight drop to near zero, pause timer without stopping
+    - Vessel removal: detect weight drop to near zero, create timer checkpoint without stopping the timer
     - Pour detection: on vessel return, check if weight decreased by `minEndInfusionWeight`, end infusion if yes, resume if no
     - Post-infusion: calculate and save `wetLeavesWeight`, start rest timer
     - Next infusion: detect new water addition, stop rest timer, save `restDuration`, start new infusion timer
-  - Implement `TimerService` for infusion and rest timers with alert notifications
   - Create `BrewingState` store slice to track active session, current infusion, timer status, brewing phase
   - Implement `SessionRepository` to persist infusions and complete sessions to database
   - Add debouncing and threshold logic to handle weight fluctuations and ambiguous scenarios
   - Implement manual override capabilities for edge cases
-- **Architectural References:**
-  - [BrewingSessionService](./ARCHITECTURE.md#core-components) in Service Layer
-  - [TimerService](./ARCHITECTURE.md#core-components) in Service Layer
-  - [SessionRepository](./ARCHITECTURE.md#core-components) in Data Layer
-  - [BrewingState](./ARCHITECTURE.md#state-management) in State Management
-  - [BrewingSession and Infusion models](./ARCHITECTURE.md#domain-models) in Domain Models
-  - [Complete Automatic Session Tracking workflow](./ARCHITECTURE.md#component-interaction-details) in Component Interaction Details section
-  - [Data Flow sequence diagram](./ARCHITECTURE.md#data-flow) showing service interactions
 - **Feature References:**
   - [Complete GongFu Brewing Tracking Process](./FEATURES.md#gongfu-brewing-tracking-process)
-  - [Automatic Session Tracking feature requirements](./FEATURES.md#core-functionality)
+- **Architectural References:**
+  - [BrewingSessionService](./ARCHITECTURE.md#core-components) in Service Layer
+  - [Complete Automatic Session Tracking workflow](./ARCHITECTURE.md#component-interaction-details) in Component Interaction Details section
+  - [Data Flow sequence diagram](./ARCHITECTURE.md#data-flow) showing service interactions
 - **Testing Strategy:**
   - Use MockScaleService with recorded sessions to test detection logic
-  - Use fast-forward mode to rapidly iterate on threshold tuning
+  - Use fast-forward mode to rapidly iterate on threshold tuning for manual testing
+  - Use `vi.useFakeTimers` for automatic tests
   - Test edge cases: quick vessel movements, ambiguous pours, interrupted sessions
 - **Acceptance Criteria:**
   - ✅ A full brewing session is automatically tracked from start to finish using the mock scale.
@@ -412,3 +407,5 @@
   - timer functionality
 - clean up ui
 - zen brew mode
+- add timers to brew process
+- add support for tea tray/boat containing overflow water

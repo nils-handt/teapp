@@ -1,0 +1,252 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { brewingSessionService } from './BrewingSessionService';
+import { BrewingPhase } from '../interfaces/brewing.types';
+import { bluetoothScaleService } from '../BluetoothScaleService';
+import { sessionRepository } from '../../repositories/SessionRepository'; // We need to mock this
+
+// Mock dependencies
+vi.mock('../../repositories/SessionRepository', () => ({
+    sessionRepository: {
+        saveSession: vi.fn(),
+    },
+}));
+
+import fs from 'fs';
+import path from 'path';
+
+describe('BrewingSessionService', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        // Reset service state if possible? 
+        // Singleton is hard to reset. We rely on public methods to reset state or assume clean slate.
+        // Ideally we should add a reset method for testing.
+        brewingSessionService.endSession();
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('should be in ENDED state after reset', () => {
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.ENDED);
+    });
+
+    it('should transition to SETUP when starting a session', () => {
+        brewingSessionService.startSession('Test Tea');
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.SETUP);
+        expect(brewingSessionService.session$.value?.teaName).toBe('Test Tea');
+    });
+
+    it('should detect vessel and confirm setup', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        // Simulate vessel placement (> 20g)
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000); // Debounce
+
+        // Simulate lid removal (drop > 5g)
+        bluetoothScaleService.weight$.next(80); // 20g drop
+        vi.advanceTimersByTime(1000);
+
+        // Confirm setup
+        brewingSessionService.confirmSetupDone();
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.READY);
+        expect(brewingSessionService.session$.value?.vesselWeight).toBe(100);
+        expect(brewingSessionService.session$.value?.lidWeight).toBe(20);
+    });
+
+    it('should start infusion when water is added', () => {
+        // Setup state
+        brewingSessionService.startSession('Test Tea');
+        // Fake setup values
+        bluetoothScaleService.weight$.next(100); // Vessel
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.READY);
+
+        // Add water (increase > 5g)
+        bluetoothScaleService.weight$.next(150); // +50g water
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION);
+        expect(brewingSessionService.currentInfusion$.value).toBeTruthy();
+        expect(brewingSessionService.currentInfusion$.value?.infusionNumber).toBe(1);
+    });
+
+    it('should handle vessel lift during infusion', () => {
+        // ... Previous steps to reach INFUSION
+        brewingSessionService.startSession('Test Tea');
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        bluetoothScaleService.weight$.next(150);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION);
+
+        // Lift vessel
+        bluetoothScaleService.weight$.next(0);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION_VESSEL_LIFTED);
+    });
+
+    it('should end infusion when poured out and vessel returned', () => {
+        // ... Reach INFUSION
+        brewingSessionService.startSession('Test Tea');
+        bluetoothScaleService.weight$.next(100); // Vessel
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        // Ready. weight is 100.
+
+        bluetoothScaleService.weight$.next(200); // +100g water
+        vi.advanceTimersByTime(1000);
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION);
+
+        // Lift
+        bluetoothScaleService.weight$.next(0);
+        vi.advanceTimersByTime(1000);
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION_VESSEL_LIFTED);
+
+        // Return empty (approx 100 + wet leaves)
+        // Let's say wet leaves add 10g. Return weight 110.
+        // This is significantly less than 200 (start of infusion).
+        bluetoothScaleService.weight$.next(110);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.REST);
+        expect(brewingSessionService.currentInfusion$.value?.duration).toBeDefined();
+        // Since we didn't advance time much, duration is 0, but it should be saved.
+        // check repository save call
+        expect(sessionRepository.saveSession).toHaveBeenCalled();
+    });
+
+    it('should validate scenarioA.json', async () => {
+        // Enable mock mode
+        await bluetoothScaleService.setMockMode(true);
+        const mockScale = bluetoothScaleService.mock;
+
+        // Load scenario data
+        const scenarioPath = path.resolve(__dirname, 'testfiles/scenarioA.json');
+        const scenarioContent = fs.readFileSync(scenarioPath, 'utf8');
+        const scenarioData = JSON.parse(scenarioContent);
+
+        // Load into mock scale
+        mockScale.loadRecording(scenarioData.data);
+        // Start replay
+        mockScale.startReplay();
+
+        // We simulate real-world behavior by emitting each weight change separately
+        // and triggering user actions at the correct timestamps.
+
+        const data = scenarioData.data;
+        const actions = scenarioData.actions || [];
+        let nextActionIndex = 0;
+
+        if (data.length > 0) {
+            // The simulation starts at the time of the first data point
+            let currentSimulationTime = data[0].timestamp;
+            let currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+
+            for (let i = 1; i < data.length; i++) {
+                const dataTimestamp = data[i].timestamp;
+
+                // Check if any actions need to be performed before reaching the next data timestamp
+                while (currentAction && currentAction.timestamp <= dataTimestamp) {
+                    const timeUntilAction = currentAction.timestamp - currentSimulationTime;
+
+                    if (timeUntilAction > 0) {
+                        vi.advanceTimersByTime(timeUntilAction);
+                        currentSimulationTime += timeUntilAction;
+                    }
+
+                    // Execute Action
+                    switch (currentAction.action) {
+                        case 'startSession':
+                            brewingSessionService.startSession('Scenario Tea');
+                            break;
+                        case 'confirmSetupDone':
+                            brewingSessionService.confirmSetupDone();
+                            break;
+                        case 'endSession':
+                            brewingSessionService.endSession();
+                            break;
+                        default:
+                            console.warn(`Unknown action: ${currentAction.action}`);
+                    }
+                    nextActionIndex++;
+                    currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+                }
+
+                // Advance to the data timestamp
+                const timeUntilData = dataTimestamp - currentSimulationTime;
+                if (timeUntilData > 0) {
+                    vi.advanceTimersByTime(timeUntilData);
+                    currentSimulationTime += timeUntilData;
+                }
+            }
+
+            // Convert any remaining actions after the last data point
+            while (currentAction) {
+                const timeUntilAction = currentAction.timestamp - currentSimulationTime;
+
+                if (timeUntilAction > 0) {
+                    vi.advanceTimersByTime(timeUntilAction);
+                    currentSimulationTime += timeUntilAction;
+                }
+
+                switch (currentAction.action) {
+                    case 'startSession':
+                        brewingSessionService.startSession('Scenario Tea');
+                        break;
+                    case 'confirmSetupDone':
+                        brewingSessionService.confirmSetupDone();
+                        break;
+                    case 'endSession':
+                        brewingSessionService.endSession();
+                        break;
+                    default:
+                        console.warn(`Unknown action: ${currentAction.action}`);
+                }
+                nextActionIndex++;
+                currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+            }
+
+            // Advance a bit more to ensure any final logic triggers
+            vi.advanceTimersByTime(2000);
+        }
+
+        // Simulate end of session if not auto-ended?
+        if (brewingSessionService.session$.value?.status === 'active') {
+            brewingSessionService.endSession();
+        }
+
+        const resultingSession = brewingSessionService.session$.value;
+        const resultPath = path.resolve(__dirname, 'testfiles/scenarioA.result.json');
+
+        if (fs.existsSync(resultPath)) {
+            const expectedResult = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+
+            // Helper to sanitize session for comparison
+            const sanitize = (s: any) => {
+                const { sessionId, startTime, endTime, infusions, ...rest } = s;
+                return {
+                    ...rest,
+                    infusions: infusions?.map((i: any) => {
+                        const { infusionId, sessionId, startTime, session, ...iRest } = i;
+                        return iRest;
+                    })
+                };
+            };
+
+            expect(sanitize(resultingSession)).toEqual(sanitize(expectedResult));
+        } else {
+            // Create expectation file
+            fs.writeFileSync(resultPath, JSON.stringify(resultingSession, null, 2));
+            throw new Error(`Created Result File at ${resultPath}. Please verify and re-run.`);
+        }
+    });
+});
