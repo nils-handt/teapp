@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,11 +11,13 @@
             font-family: sans-serif;
             margin: 20px;
         }
+
         #graph-container {
             width: 100%;
             height: 500px;
             margin-top: 20px;
         }
+
         .controls {
             margin-bottom: 20px;
             padding: 10px;
@@ -22,17 +25,52 @@
             border-radius: 4px;
         }
     </style>
+    <style>
+        #data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #data-table th,
+        #data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #data-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
+
 <body>
     <h1>Recording Visualizer</h1>
-    
+
     <div class="controls">
         <label for="fileInput">Select Recording JSON:</label>
         <input type="file" id="fileInput" accept=".json">
+        <button id="resetTableBtn" style="margin-left: 10px;">Reset Table</button>
         <div id="file-info" style="margin-top: 10px; color: #666;"></div>
     </div>
 
     <div id="graph-container"></div>
+
+    <table id="data-table">
+        <thead>
+            <tr>
+                <th>Weight</th>
+                <th>Date</th>
+                <th>Timestamp</th>
+                <th>Zero Timestamp</th>
+                <th>Weight Diff</th>
+                <th>Time Diff</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
 
     <script type="module">
         import Dygraph from 'dygraphs';
@@ -40,7 +78,11 @@
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('file-info');
         const graphContainer = document.getElementById('graph-container');
+        const tableBody = document.querySelector('#data-table tbody');
         let g = null;
+        let firstTimestamp = 0;
+        let lastRowWeight = null;
+        let lastRowTimestamp = null;
 
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -49,14 +91,22 @@
             }
 
             fileInfo.textContent = `Loading: ${file.name}`;
+            // Clear existing table data
+            tableBody.innerHTML = '';
+            lastRowWeight = null;
+            lastRowTimestamp = null;
 
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     const json = JSON.parse(e.target.result);
-                    
+
                     if (!json.data || !Array.isArray(json.data)) {
                         throw new Error("Invalid JSON format: 'data' array missing.");
+                    }
+
+                    if (json.data.length > 0) {
+                        firstTimestamp = json.data[0].timestamp;
                     }
 
                     const graphData = json.data.map(idx => {
@@ -79,6 +129,35 @@
                             showRangeSelector: true,
                             interactionModel: Dygraph.defaultInteractionModel,
                             animatedZooms: true,
+                            clickCallback: (e, x, points) => {
+                                if (!points || points.length === 0) return;
+                                const weight = points[0].yval;
+                                const date = new Date(x).toLocaleString();
+                                const timestamp = x;
+                                const zeroTimestamp = x - firstTimestamp;
+
+                                let weightDiff = 0;
+                                let timeDiff = 0;
+
+                                if (lastRowWeight !== null) {
+                                    weightDiff = weight - lastRowWeight;
+                                    timeDiff = (timestamp - lastRowTimestamp) / 1000;
+                                }
+
+                                lastRowWeight = weight;
+                                lastRowTimestamp = timestamp;
+
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${weight}</td>
+                                    <td>${date}</td>
+                                    <td>${timestamp}</td>
+                                    <td>${zeroTimestamp}</td>
+                                    <td>${weightDiff.toFixed(2)}</td>
+                                    <td>${timeDiff}</td>
+                                `;
+                                tableBody.appendChild(row);
+                            }
                         }
                     );
 
@@ -91,6 +170,13 @@
             };
             reader.readAsText(file);
         });
+
+        document.getElementById('resetTableBtn').addEventListener('click', () => {
+            tableBody.innerHTML = '';
+            lastRowWeight = null;
+            lastRowTimestamp = null;
+        });
     </script>
 </body>
+
 </html>

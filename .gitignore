@@ -39,3 +39,6 @@ yarn-error.log*
 .gemini
 
 public
+
+# specific test files
+src/services/brewing/testfiles/*.result.debug.json

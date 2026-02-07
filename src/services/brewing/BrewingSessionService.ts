@@ -1,5 +1,5 @@
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { bufferTime, filter, map } from 'rxjs/operators';
+import { bufferTime, filter } from 'rxjs/operators';
 import { bluetoothScaleService } from '../BluetoothScaleService';
 import { sessionRepository } from '../../repositories/SessionRepository';
 import { BrewingSession } from '../../entities/BrewingSession.entity';
@@ -23,6 +23,8 @@ class BrewingSessionService {
     private vesselWeight = 0;
     private lidWeight = 0;
     private dryTeaWeight = 0;
+    private maxWeightInPhase = 0;
+    private lastLiftTime = 0;
 
 
     // Timer handles
@@ -35,7 +37,7 @@ class BrewingSessionService {
     private readonly WEIGHT_UPDATE_BUFFER_MS = 500;
     private readonly TIMER_TICK_MS = 100;
 
-    private readonly WATER_ADDITION_THRESHOLD = 10; // grams increase to detect water
+    private readonly WATER_ADDITION_THRESHOLD = 5; // grams increase to detect water
 
     private readonly ZERO_THRESHOLD = 5; // grams, below this consider vessel lifted
 
@@ -62,14 +64,12 @@ class BrewingSessionService {
             this.weightSubscription.unsubscribe();
         }
         this.weightSubscription = bluetoothScaleService.weight$.pipe(
-            bufferTime(this.WEIGHT_UPDATE_BUFFER_MS),
-            filter(weights => weights.length > 0),
-            map(weights => {
-                const sum = weights.reduce((a, b) => a + b, 0);
-                return sum / weights.length;
-            })
-        ).subscribe(averageWeight => {
-            this.handleWeightUpdate(averageWeight);
+            bufferTime(this.WEIGHT_UPDATE_BUFFER_MS), // todo depending on scale update rate this might not give enough data points for trend analysis - ideally we want something like to wait for at least 4 data points OR if the scale updates faster than every 100ms then a time based buffer is fine
+            filter(weights => weights.length > 0)
+        ).subscribe(weights => {
+            const averageWeight = weights.reduce((a, b) => a + b, 0) / weights.length;
+            const trend = this.analyzeTrend(weights);
+            this.handleWeightUpdate(averageWeight, trend);
         });
     }
 
@@ -80,23 +80,58 @@ class BrewingSessionService {
         }
     }
 
-    private handleWeightUpdate(weight: number) {
+    private analyzeTrend(weights: number[]): 'STABLE' | 'INCREASING' | 'DECREASING' | 'CHAOTIC' { // todo create an enum for this
+        if (weights.length < 2) return 'STABLE'; // Not enough data, assume stable
+
+        const max = Math.max(...weights);
+        const min = Math.min(...weights);
+
+        if (max - min < 1.0) {
+            return 'STABLE';
+        }
+
+        let strictlyIncreasing = true;
+        let strictlyDecreasing = true;
+
+        for (let i = 1; i < weights.length; i++) {
+            if (weights[i] <= weights[i - 1]) strictlyIncreasing = false;
+            if (weights[i] >= weights[i - 1]) strictlyDecreasing = false;
+        }
+
+        if (strictlyIncreasing) return 'INCREASING';
+        if (strictlyDecreasing) return 'DECREASING';
+
+        return 'CHAOTIC';
+    }
+
+    private handleWeightUpdate(weight: number, trend: 'STABLE' | 'INCREASING' | 'DECREASING' | 'CHAOTIC') {
         this.currentWeight = weight;
+        if (trend === 'STABLE' && weight > this.maxWeightInPhase) {
+            this.maxWeightInPhase = weight;
+        }
         const phase = this.state$.value;
 
         switch (phase) {
             case BrewingPhase.SETUP:
-                this.handleSetupPhase(weight);
+                if (trend === 'STABLE') {
+                    this.handleSetupPhase(weight);
+                }
                 break;
             case BrewingPhase.READY:
             case BrewingPhase.REST:
-                this.handleRestOrReadyPhase(weight);
+                if (trend === 'STABLE' || trend === 'INCREASING') {
+                    this.handleRestOrReadyPhase(weight);
+                }
                 break;
             case BrewingPhase.INFUSION:
-                this.handleInfusionPhase(weight);
+                if (trend === 'STABLE') {
+                    this.handleInfusionPhase(weight);
+                }
                 break;
             case BrewingPhase.INFUSION_VESSEL_LIFTED:
-                this.handleVesselLiftedPhase(weight);
+                if (trend === 'STABLE') {
+                    this.handleVesselLiftedPhase(weight);
+                }
                 break;
         }
     }
@@ -117,6 +152,7 @@ class BrewingSessionService {
 
         this.session$.next(session);
         this.state$.next(BrewingPhase.SETUP);
+        this.maxWeightInPhase = 0;
 
         this.initializeWeightSubscription();
 
@@ -138,7 +174,15 @@ class BrewingSessionService {
             this.session$.next(session);
 
             this.state$.next(BrewingPhase.READY);
-            this.lastStableWeight = this.currentWeight; // Should be vessel + tea (+ lid potentially)
+
+            // Normalize lastStableWeight to include Lid if missing
+            let weight = this.currentWeight;
+            const expectedNoLid = this.vesselWeight + this.dryTeaWeight;
+
+            if (Math.abs(weight - expectedNoLid) < this.LID_REMOVAL_THRESHOLD) {
+                weight += this.lidWeight;
+            }
+            this.lastStableWeight = weight;
         }
     }
 
@@ -146,6 +190,15 @@ class BrewingSessionService {
         this.stopTimer();
         const session = this.session$.value;
         if (session) {
+            // Update last infusion's rest duration if applicable
+            if (session.infusions && session.infusions.length > 0) {
+                const lastInfusion = session.infusions[session.infusions.length - 1];
+                // Only if we are coming from a REST phase (timer was running)
+                if (this.state$.value === BrewingPhase.REST && this.timer$.value > 0) {
+                    lastInfusion.restDuration = Math.floor(this.timer$.value / 1000);
+                }
+            }
+
             session.endTime = new Date().toISOString();
             session.status = 'completed';
             await sessionRepository.saveSession(session);
@@ -174,6 +227,7 @@ class BrewingSessionService {
         // Then assume current is Vessel-Lid.
         // Then Increase by 3-10g: Set Dry Tea = (Current - (Vessel-Lid)).
 
+        // todo this logic is flawed, if the user initially puts vessel without lid on the scale this will fail
         if (this.vesselWeight === 0 && weight > this.VESSEL_DETECTION_THRESHOLD) {
             // Detected Vessel
             this.vesselWeight = weight;
@@ -181,19 +235,55 @@ class BrewingSessionService {
         } else if (this.vesselWeight > 0 && this.lidWeight === 0 && weight < this.vesselWeight - this.LID_REMOVAL_THRESHOLD && weight > this.ZERO_THRESHOLD) {
             // Weight dropped significantly, assume lid removal
             this.lidWeight = this.vesselWeight - weight;
-        } else if (this.lidWeight > 0 && this.dryTeaWeight === 0 && weight > (this.vesselWeight - this.lidWeight) + this.TEA_ADDITION_THRESHOLD) {
-            // Weight increased after lid removal, assume tea added
-            this.dryTeaWeight = weight - (this.vesselWeight - this.lidWeight);
+            this.vesselWeight = weight; // Update vessel weight to be just the vessel
+        } else if (this.lidWeight > 0) {
+            const V = this.vesselWeight;
+            const L = this.lidWeight;
+
+            // Check if Lid was simply put back (Weight ~ V + L)
+            if (Math.abs(weight - (V + L)) < this.LID_REMOVAL_THRESHOLD) {
+                // Lid put back, do not count as tea
+                return;
+            }
+
+            let newTea = 0;
+            // Check if Tea added with Lid ON (Weight > V + L + Threshold)
+            if (weight > (V + L) + this.TEA_ADDITION_THRESHOLD) {
+                newTea = weight - (V + L);
+            }
+            // Check if Tea added with Lid OFF (Weight > V + Threshold)
+            else if (weight > V + this.TEA_ADDITION_THRESHOLD) {
+                newTea = weight - V;
+            }
+
+            if (newTea > this.dryTeaWeight) {
+                this.dryTeaWeight = parseFloat(newTea.toFixed(1));
+            }
         }
     }
 
     private handleRestOrReadyPhase(weight: number) {
         // Look for water addition
         // Weight increase significantly above [WetLeaves + Vessel (+ Lid?)]
-        // We know `lastStableWeight` (state at end of last phase).
+        // We know `lastStableWeight` (state at end of last phase, normalized to WITH LID).
 
-        // If weight increases by WATER_ADDITION_THRESHOLD within short time
-        if (weight > this.lastStableWeight + this.WATER_ADDITION_THRESHOLD) {
+        const weightWithLid = this.lastStableWeight;
+        const weightNoLid = this.lastStableWeight - this.lidWeight;
+
+        let baseline = weightWithLid;
+
+        // If we have a lid, check if we are closer to the "No Lid" state
+        if (this.lidWeight > 0) {
+            const distToLidOn = Math.abs(weight - weightWithLid);
+            const distToLidOff = Math.abs(weight - weightNoLid);
+
+            if (distToLidOff < distToLidOn) {
+                baseline = weightNoLid;
+            }
+        }
+
+        // If weight increases by WATER_ADDITION_THRESHOLD above the determined baseline
+        if (weight > baseline + this.WATER_ADDITION_THRESHOLD) {
             this.startInfusion();
         }
     }
@@ -201,8 +291,9 @@ class BrewingSessionService {
     private handleInfusionPhase(weight: number) {
         // Detect Vessel Lift logic
         if (weight < this.ZERO_THRESHOLD) {
+            this.lastLiftTime = Date.now();
             this.state$.next(BrewingPhase.INFUSION_VESSEL_LIFTED);
-            // Timer continues running
+            this.stopTimer(); // Pause timer while lifted
             return;
         }
 
@@ -214,44 +305,22 @@ class BrewingSessionService {
         // Check for return
         if (weight > this.ZERO_THRESHOLD) {
             // Vessel returned.
-            // Check if weight is significantly LOWER than start of infusion (minus lid variations).
-            // Actually, compare to `lastStableWeight` (which was before water).
-            // No, compare to maximum weight detected during infusion? 
-            // Simply: if weight is LESS than (PreWater + Water/2)? 
-            // Or use the `minEndInfusionWeight` (POUR_THRESHOLD).
+            const predictedEmptyWeight = this.lastStableWeight; // This is Normalized (Vessel + Lid + Tea/WetLeaves)
 
-            // Logic: calculated poured amount.
-            // If we poured out, the new weight should be approx `wetLeavesWeight` + `vessel` (+- lid).
-            // Which is definitely less than `vessel` + `wetLeaves` + `water`.
+            // Logic: we want to know if user poured out.
 
-            // NOTE: We don't track total water weight accurately until the end.
-            // But we can check if weight DROP matches "empty vessel + wet leaves".
+            const matchesEmptyWithLid = Math.abs(weight - predictedEmptyWeight) < this.POUR_DETECTION_TOLERANCE;
+            // If predicted was normalized (Lid ON), then "predicted - Lid" is EmptyNoLid
+            const matchesEmptyNoLid = this.lidWeight > 0 && Math.abs(weight - (predictedEmptyWeight - this.lidWeight)) < this.POUR_DETECTION_TOLERANCE;
 
-            // Heuristic: If current weight is close to (Vessel + DryTea + Lid?), then we poured.
-            // Actually wet tea is heavier. 
-            // Let's assume if weight < (PreInfusionWeight + 10g) -> Poured out.
-            // Or better: If weight is significantly less than the PEAK weight during infusion.
-
-            // For MVP: If current weight is close to (Vessel + Lid + Tea * 2) (approx wet leaves)
-            // Let's use the POUR_THRESHOLD relative to the *Pre-Pour* weight (which implies we need to track peak weight?).
-            // Actually simply: If current weight < (lastStableWeight + WATER_ADDITION_THRESHOLD)?
-
-            // Let's use: If weight is stable and < (PeakInfusionWeight - POUR_THRESHOLD).
-            // We need to track PeakInfusionWeight.
-
-            // Simplified: If weight is back to near "Empty" state (Vessel + WetLeaves + Lid).
-            // Verify against `lastStableWeight` (which was Vessel + WetLeaves + Dry/WetTea).
-            // If `current` ~ `lastStableWeight` (+- drift), then we poured out (returned to baseline).
-            // If `current` >> `lastStableWeight` (by > 20g), we probably just lifted and put back with water.
-
-            const predictedEmptyWeight = this.lastStableWeight; // This is (Vessel + Lid + Tea/WetLeaves)
-
-            // If we are close to the empty weight (e.g. within 10g), we assume pour is done.
-            if (Math.abs(weight - predictedEmptyWeight) < this.POUR_DETECTION_TOLERANCE) {
-                this.endInfusion(weight);
+            if (matchesEmptyWithLid) {
+                this.endInfusion(weight, true, this.lastLiftTime);
+            } else if (matchesEmptyNoLid) {
+                this.endInfusion(weight, false, this.lastLiftTime);
             } else {
                 // Resumed (put back with water)
                 this.state$.next(BrewingPhase.INFUSION);
+                this.startTimer(true); // Resume timer
             }
         }
     }
@@ -263,6 +332,12 @@ class BrewingSessionService {
         const session = this.session$.value;
         if (session && session.infusions) {
             infusionNumber = session.infusions.length + 1;
+
+            // Update previous infusion's rest duration
+            if (session.infusions.length > 0) {
+                const lastInfusion = session.infusions[session.infusions.length - 1];
+                lastInfusion.restDuration = Math.floor(this.timer$.value / 1000);
+            }
         }
 
         const infusion = new Infusion();
@@ -279,10 +354,11 @@ class BrewingSessionService {
 
         this.currentInfusion$.next(infusion);
         this.state$.next(BrewingPhase.INFUSION);
+        this.maxWeightInPhase = this.currentWeight;
         this.startTimer();
     }
 
-    private endInfusion(currentWeight: number) {
+    private endInfusion(currentWeight: number, hasLid: boolean = true, liftTime?: number) {
         this.stopTimer();
         const infusion = this.currentInfusion$.value;
         const session = this.session$.value;
@@ -290,8 +366,23 @@ class BrewingSessionService {
         if (infusion && session) {
             infusion.duration = Math.floor(this.timer$.value / 1000); // sec
             infusion.restDuration = 0; // calculated next time
-            infusion.wetTeaLeavesWeight = currentWeight - this.vesselWeight - this.lidWeight; // Approx
-            // Note: calculation depends on if Lid is on. Assume Lid is ON when ending infusion usually.
+            let teaWeight = this.dryTeaWeight;
+            if (session.infusions && session.infusions.length > 0) {
+                const prevInfusion = session.infusions[session.infusions.length - 1];
+                if (prevInfusion.wetTeaLeavesWeight) {
+                    teaWeight = prevInfusion.wetTeaLeavesWeight;
+                }
+            }
+            infusion.waterWeight = parseFloat((this.maxWeightInPhase - this.vesselWeight - this.lidWeight - teaWeight).toFixed(1));
+
+            // Calculate wet leaves
+            let wetLeaves = 0;
+            if (hasLid) {
+                wetLeaves = currentWeight - this.vesselWeight - this.lidWeight;
+            } else {
+                wetLeaves = currentWeight - this.vesselWeight;
+            }
+            infusion.wetTeaLeavesWeight = parseFloat(wetLeaves.toFixed(1));
 
             // Save infusion
             infusion.session = session;
@@ -301,24 +392,31 @@ class BrewingSessionService {
 
             this.session$.next(session);
 
-            // Capture wet leaves weight more accurately?
-            // currentWeight is "Empty" weight (Vessel + Lid + WetLeaves).
-            // Capture wet leaves weight more accurately?
-            // currentWeight is "Empty" weight (Vessel + Lid + WetLeaves).
-            // this.wetLeavesWeight = currentWeight - this.vesselWeight - this.lidWeight;
-
-            this.lastStableWeight = currentWeight;
+            // Update lastStableWeight (normalized to V + L + WetLeaves)
+            this.lastStableWeight = hasLid ? currentWeight : currentWeight + this.lidWeight;
         }
 
         this.state$.next(BrewingPhase.REST);
-        this.startTimer(); // Start Rest Timer
+
+        let startOffset = 0;
+        if (liftTime) {
+            startOffset = Date.now() - liftTime;
+        }
+        this.startTimer(false, startOffset); // Start Rest Timer
     }
 
     // --- Timer Logic ---
-    private startTimer() {
-        this.stopTimer();
-        this.timerStartTime = Date.now();
-        this.timer$.next(0);
+    private startTimer(resume = false, startOffset = 0) {
+        this.stopTimer(); // Stop rest timer if any
+
+        if (resume) {
+            // Resume from current value
+            this.timerStartTime = Date.now() - this.timer$.value;
+        } else {
+            this.timerStartTime = Date.now() - startOffset;
+            this.timer$.next(startOffset);
+        }
+
         this.timerInterval = setInterval(() => {
             const now = Date.now();
             this.timer$.next(now - this.timerStartTime);
@@ -345,7 +443,7 @@ class BrewingSessionService {
 
     public manuallyStopInfusion() {
         if (this.state$.value === BrewingPhase.INFUSION || this.state$.value === BrewingPhase.INFUSION_VESSEL_LIFTED) {
-            this.endInfusion(this.currentWeight);
+            this.endInfusion(this.currentWeight, true); // todo what if the vessel doesn't have a lid on?
         }
     }
 }
