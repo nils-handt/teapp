@@ -5,7 +5,7 @@ import { sessionRepository } from '../../repositories/SessionRepository';
 import { BrewingSession } from '../../entities/BrewingSession.entity';
 import { Infusion } from '../../entities/Infusion.entity';
 
-import { BrewingPhase } from '../interfaces/brewing.types';
+import { BrewingPhase, WeightTrend } from '../interfaces/brewing.types';
 
 class BrewingSessionService {
     private static instance: BrewingSessionService;
@@ -80,14 +80,14 @@ class BrewingSessionService {
         }
     }
 
-    private analyzeTrend(weights: number[]): 'STABLE' | 'INCREASING' | 'DECREASING' | 'CHAOTIC' { // todo create an enum for this
-        if (weights.length < 2) return 'STABLE'; // Not enough data, assume stable
+    private analyzeTrend(weights: number[]): WeightTrend {
+        if (weights.length < 2) return WeightTrend.STABLE; // Not enough data, assume stable
 
         const max = Math.max(...weights);
         const min = Math.min(...weights);
 
         if (max - min < 1.0) {
-            return 'STABLE';
+            return WeightTrend.STABLE;
         }
 
         let strictlyIncreasing = true;
@@ -98,38 +98,38 @@ class BrewingSessionService {
             if (weights[i] >= weights[i - 1]) strictlyDecreasing = false;
         }
 
-        if (strictlyIncreasing) return 'INCREASING';
-        if (strictlyDecreasing) return 'DECREASING';
+        if (strictlyIncreasing) return WeightTrend.INCREASING;
+        if (strictlyDecreasing) return WeightTrend.DECREASING;
 
-        return 'CHAOTIC';
+        return WeightTrend.CHAOTIC;
     }
 
-    private handleWeightUpdate(weight: number, trend: 'STABLE' | 'INCREASING' | 'DECREASING' | 'CHAOTIC') {
+    private handleWeightUpdate(weight: number, trend: WeightTrend) {
         this.currentWeight = weight;
-        if (trend === 'STABLE' && weight > this.maxWeightInPhase) {
+        if (trend === WeightTrend.STABLE && weight > this.maxWeightInPhase) {
             this.maxWeightInPhase = weight;
         }
         const phase = this.state$.value;
 
         switch (phase) {
             case BrewingPhase.SETUP:
-                if (trend === 'STABLE') {
+                if (trend === WeightTrend.STABLE) {
                     this.handleSetupPhase(weight);
                 }
                 break;
             case BrewingPhase.READY:
             case BrewingPhase.REST:
-                if (trend === 'STABLE' || trend === 'INCREASING') {
+                if (trend === WeightTrend.STABLE || trend === WeightTrend.INCREASING) {
                     this.handleRestOrReadyPhase(weight);
                 }
                 break;
             case BrewingPhase.INFUSION:
-                if (trend === 'STABLE') {
+                if (trend === WeightTrend.STABLE) {
                     this.handleInfusionPhase(weight);
                 }
                 break;
             case BrewingPhase.INFUSION_VESSEL_LIFTED:
-                if (trend === 'STABLE') {
+                if (trend === WeightTrend.STABLE) {
                     this.handleVesselLiftedPhase(weight);
                 }
                 break;
@@ -212,36 +212,29 @@ class BrewingSessionService {
     // --- Phase Logic ---
 
     private handleSetupPhase(weight: number) {
-        // Logic to detect Vessel, Lid, Tea. 
-        // Simple logic for now: 
-        // 1. If weight > 20g -> Assume Vessel Placed.
-        // 2. If weight usage drops -> Check if Lid Removed.
-        // This is tricky to automate fully without UI feedback or strictly enforced flow.
-        // For MVP, lets capture current stable weights if consistent for some time?
-        // Or just let UI set these via "Capture Weight" buttons? 
-        // The REQUIREMENTS say "automatically initiate vessel Weight".
+        // Logic to detect Vessel, Lid, Tea.
+        // Happy Path: Vessel -> Lid (optional) -> Tea
+        // Refined logic allows tea detection even if lid is not detected or skipped.
 
-        // Let's implement a simplified auto-detect flow:
-        // 0 -> Jump to >20g: Set Vessel Weight.
-        // Vessel Weight -> Drop by > 5g: Set Lid Weight = (Vessel - Current). 
-        // Then assume current is Vessel-Lid.
-        // Then Increase by 3-10g: Set Dry Tea = (Current - (Vessel-Lid)).
-
-        // todo this logic is flawed, if the user initially puts vessel without lid on the scale this will fail
         if (this.vesselWeight === 0 && weight > this.VESSEL_DETECTION_THRESHOLD) {
             // Detected Vessel
             this.vesselWeight = weight;
-            // Assume Lid is on it initially?
+            // Assume Lid is on it initially? No, assume bare vessel or vessel+lid combo.
+            // We can't distinguish yet.
         } else if (this.vesselWeight > 0 && this.lidWeight === 0 && weight < this.vesselWeight - this.LID_REMOVAL_THRESHOLD && weight > this.ZERO_THRESHOLD) {
             // Weight dropped significantly, assume lid removal
             this.lidWeight = this.vesselWeight - weight;
             this.vesselWeight = weight; // Update vessel weight to be just the vessel
-        } else if (this.lidWeight > 0) {
+        } else if (this.vesselWeight > 0) {
+            // Check for tea addition
+            // Scenario 1: Lid was removed (lidWeight > 0). Tea added to Vessel.
+            // Scenario 2: Lid was NOT removed (lidWeight == 0). Tea added to Vessel (+Lid assumed part of vessel or not present).
+
             const V = this.vesselWeight;
             const L = this.lidWeight;
 
             // Check if Lid was simply put back (Weight ~ V + L)
-            if (Math.abs(weight - (V + L)) < this.LID_REMOVAL_THRESHOLD) {
+            if (L > 0 && Math.abs(weight - (V + L)) < this.LID_REMOVAL_THRESHOLD) {
                 // Lid put back, do not count as tea
                 return;
             }
@@ -251,12 +244,15 @@ class BrewingSessionService {
             if (weight > (V + L) + this.TEA_ADDITION_THRESHOLD) {
                 newTea = weight - (V + L);
             }
-            // Check if Tea added with Lid OFF (Weight > V + Threshold)
+            // Check if Tea added with Lid OFF (Weight > V + Threshold) - only strict if Lid is known
             else if (weight > V + this.TEA_ADDITION_THRESHOLD) {
                 newTea = weight - V;
             }
 
-            if (newTea > this.dryTeaWeight) {
+            // Cap detection to reasonable tea amounts (e.g. < 50g) to avoid mistaking water/lid for tea if logic is ambiguous
+            // But for now, just trust the threshold increase.
+
+            if (newTea > this.dryTeaWeight && newTea < 50) {
                 this.dryTeaWeight = parseFloat(newTea.toFixed(1));
             }
         }
@@ -443,8 +439,31 @@ class BrewingSessionService {
 
     public manuallyStopInfusion() {
         if (this.state$.value === BrewingPhase.INFUSION || this.state$.value === BrewingPhase.INFUSION_VESSEL_LIFTED) {
-            this.endInfusion(this.currentWeight, true); // todo what if the vessel doesn't have a lid on?
+            this.endInfusion(this.currentWeight, true);
         }
+    }
+
+    /**
+     * Resets the separate service state for testing purposes.
+     * clears all subjects and internal state.
+     */
+    public resetForTest() {
+        this.stopWeightSubscription();
+        this.stopTimer();
+
+        this.currentWeight = 0;
+        this.lastStableWeight = 0;
+        this.vesselWeight = 0;
+        this.lidWeight = 0;
+        this.dryTeaWeight = 0;
+        this.maxWeightInPhase = 0;
+        this.lastLiftTime = 0;
+        this.timerStartTime = 0;
+
+        this.state$.next(BrewingPhase.ENDED);
+        this.session$.next(null);
+        this.currentInfusion$.next(null);
+        this.timer$.next(0);
     }
 }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFailed } from 'vitest';
 import { brewingSessionService } from './BrewingSessionService';
 import { BrewingPhase } from '../interfaces/brewing.types';
 import { bluetoothScaleService } from '../BluetoothScaleService';
@@ -17,10 +17,7 @@ import path from 'path';
 describe('BrewingSessionService', () => {
     beforeEach(() => {
         vi.useFakeTimers();
-        // Reset service state if possible? 
-        // Singleton is hard to reset. We rely on public methods to reset state or assume clean slate.
-        // Ideally we should add a reset method for testing.
-        brewingSessionService.endSession();
+        brewingSessionService.resetForTest();
         vi.clearAllMocks();
     });
 
@@ -124,43 +121,79 @@ describe('BrewingSessionService', () => {
         expect(sessionRepository.saveSession).toHaveBeenCalled();
     });
 
-    // todo automatically run this test for \w+\.json files in testfiles folder
+    // Dynamic test loading for all .json scenarios in testfiles
+    const testFilesDir = path.resolve(__dirname, 'testfiles');
+    const testFiles = fs.readdirSync(testFilesDir).filter(file => file.endsWith('.json') && !file.includes('.result.'));
 
     // optional: performance: these tests are slow and could easily be run in a separate process.
     // That might require splitting the test file into multiple files / using an auto generated test file per scenario which would be annoying.
     //  Delay until performance becomes an issue.
-    it('should validate scenarioA.json', async () => {
-        // Enable mock mode
-        await bluetoothScaleService.setMockMode(true);
-        const mockScale = bluetoothScaleService.mock;
+    testFiles.forEach(file => {
+        it(`should validate scenario ${file}`, async () => {
+            // Enable mock mode
+            await bluetoothScaleService.setMockMode(true);
+            const mockScale = bluetoothScaleService.mock;
 
-        // Load scenario data
-        const scenarioPath = path.resolve(__dirname, 'testfiles/scenarioA.json');
-        const scenarioContent = fs.readFileSync(scenarioPath, 'utf8');
-        const scenarioData = JSON.parse(scenarioContent);
+            // Load scenario data
+            const scenarioPath = path.join(testFilesDir, file);
+            const scenarioContent = fs.readFileSync(scenarioPath, 'utf8');
+            const scenarioData = JSON.parse(scenarioContent);
 
-        // Load into mock scale
-        mockScale.loadRecording(scenarioData.data);
-        // Start replay
-        mockScale.startReplay();
+            // Load into mock scale
+            mockScale.loadRecording(scenarioData.data);
+            // Start replay
+            mockScale.startReplay();
 
-        // We simulate real-world behavior by emitting each weight change separately
-        // and triggering user actions at the correct timestamps.
+            const data = scenarioData.data;
+            const actions = scenarioData.actions || [];
+            let nextActionIndex = 0;
 
-        const data = scenarioData.data;
-        const actions = scenarioData.actions || [];
-        let nextActionIndex = 0;
+            if (data.length > 0) {
+                // The simulation starts at the time of the first data point
+                let currentSimulationTime = data[0].timestamp;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                let currentAction: any = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
 
-        if (data.length > 0) {
-            // The simulation starts at the time of the first data point
-            let currentSimulationTime = data[0].timestamp;
-            let currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+                for (let i = 1; i < data.length; i++) {
+                    const dataTimestamp = data[i].timestamp;
 
-            for (let i = 1; i < data.length; i++) {
-                const dataTimestamp = data[i].timestamp;
+                    // Check if any actions need to be performed before reaching the next data timestamp
+                    while (currentAction && currentAction.timestamp <= dataTimestamp) {
+                        const timeUntilAction = currentAction.timestamp - currentSimulationTime;
 
-                // Check if any actions need to be performed before reaching the next data timestamp
-                while (currentAction && currentAction.timestamp <= dataTimestamp) {
+                        if (timeUntilAction > 0) {
+                            vi.advanceTimersByTime(timeUntilAction);
+                            currentSimulationTime += timeUntilAction;
+                        }
+
+                        // Execute Action
+                        switch (currentAction.action) {
+                            case 'startSession':
+                                brewingSessionService.startSession('Scenario Tea');
+                                break;
+                            case 'confirmSetupDone':
+                                brewingSessionService.confirmSetupDone();
+                                break;
+                            case 'endSession':
+                                brewingSessionService.endSession();
+                                break;
+                            default:
+                                console.warn(`Unknown action: ${currentAction.action}`);
+                        }
+                        nextActionIndex++;
+                        currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+                    }
+
+                    // Advance to the data timestamp
+                    const timeUntilData = dataTimestamp - currentSimulationTime;
+                    if (timeUntilData > 0) {
+                        vi.advanceTimersByTime(timeUntilData);
+                        currentSimulationTime += timeUntilData;
+                    }
+                }
+
+                // Convert any remaining actions after the last data point
+                while (currentAction) {
                     const timeUntilAction = currentAction.timestamp - currentSimulationTime;
 
                     if (timeUntilAction > 0) {
@@ -168,7 +201,6 @@ describe('BrewingSessionService', () => {
                         currentSimulationTime += timeUntilAction;
                     }
 
-                    // Execute Action
                     switch (currentAction.action) {
                         case 'startSession':
                             brewingSessionService.startSession('Scenario Tea');
@@ -186,111 +218,82 @@ describe('BrewingSessionService', () => {
                     currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
                 }
 
-                // Advance to the data timestamp
-                const timeUntilData = dataTimestamp - currentSimulationTime;
-                if (timeUntilData > 0) {
-                    vi.advanceTimersByTime(timeUntilData);
-                    currentSimulationTime += timeUntilData;
-                }
+                // Advance a bit more to ensure any final logic triggers
+                vi.advanceTimersByTime(2000);
             }
 
-            // Convert any remaining actions after the last data point
-            while (currentAction) {
-                const timeUntilAction = currentAction.timestamp - currentSimulationTime;
-
-                if (timeUntilAction > 0) {
-                    vi.advanceTimersByTime(timeUntilAction);
-                    currentSimulationTime += timeUntilAction;
-                }
-
-                switch (currentAction.action) {
-                    case 'startSession':
-                        brewingSessionService.startSession('Scenario Tea');
-                        break;
-                    case 'confirmSetupDone':
-                        brewingSessionService.confirmSetupDone();
-                        break;
-                    case 'endSession':
-                        brewingSessionService.endSession();
-                        break;
-                    default:
-                        console.warn(`Unknown action: ${currentAction.action}`);
-                }
-                nextActionIndex++;
-                currentAction = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+            // Simulate end of session if not auto-ended?
+            if (brewingSessionService.session$.value?.status === 'active') {
+                brewingSessionService.endSession();
             }
 
-            // Advance a bit more to ensure any final logic triggers
-            vi.advanceTimersByTime(2000);
-        }
+            const resultingSession = brewingSessionService.session$.value;
+            const resultPath = path.resolve(testFilesDir, file.replace('.json', '.result.json'));
+            const resultPathDebug = path.resolve(testFilesDir, file.replace('.json', '.result.debug.json'));
 
-        // Simulate end of session if not auto-ended?
-        if (brewingSessionService.session$.value?.status === 'active') {
-            brewingSessionService.endSession();
-        }
+            // Hook to write debug file on failure
+            onTestFailed(() => {
+                // Helper to remove circular references for debug file
+                const simpleSession = {
+                    ...resultingSession,
+                    infusions: resultingSession?.infusions?.map((i: any) => {
+                        const { session, ...rest } = i;
+                        return rest;
+                    })
+                };
+                fs.writeFileSync(resultPathDebug, JSON.stringify(simpleSession, null, 2));
+                console.log(`Test failed. Debug result written to ${resultPathDebug}`);
+            });
 
-        const resultingSession = brewingSessionService.session$.value;
-        const resultPath = path.resolve(__dirname, 'testfiles/scenarioA.result.json');
-        const resultPathDebug = path.resolve(__dirname, 'testfiles/scenarioA.result.debug.json');
+            if (fs.existsSync(resultPath)) {
+                const expectedResult = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
 
-        if (fs.existsSync(resultPath)) {
-            const expectedResult = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+                // Fuzzy comparison configuration
+                const WEIGHT_TOLERANCE = 2; // grams
+                const TIME_TOLERANCE = 2; // seconds
 
-            // Helper to remove circular references for debug file
-            const simpleSession = {
-                ...resultingSession,
-                infusions: resultingSession?.infusions?.map((i: any) => {
-                    const { session, ...rest } = i;
-                    return rest;
-                })
-            };
-            fs.writeFileSync(resultPathDebug, JSON.stringify(simpleSession, null, 2)); // todo check if any test fails and only then write this file
-
-            // Fuzzy comparison configuration
-            const WEIGHT_TOLERANCE = 2; // grams
-            const TIME_TOLERANCE = 2; // seconds
-
-            const assertClose = (actual: number, expected: number | string, tolerance: number, label: string) => {
-                if (typeof expected !== 'string' || !expected.startsWith('skip')) { // allow results to be skipped by prefixing 'skip' to the expected value
-                    const diff = Math.abs(actual - Number(expected));
-                    expect.soft(diff, `Mismatch in ${label}: expected ${expected}, got ${actual} (diff ${diff})`).toBeLessThanOrEqual(tolerance);
-                }
-            };
-
-            // todo wrap this in test. functions
-            const compareSessions = (actual: any, expected: any) => {
-                expect(actual.teaName).toBe(expected.teaName);
-                expect(actual.status).toBe(expected.status);
-                // Notes might be undefined/empty string mismatch, strict check is fine usually
-
-                assertClose(actual.vesselWeight, expected.vesselWeight, WEIGHT_TOLERANCE, 'vesselWeight');
-                assertClose(actual.lidWeight, expected.lidWeight, WEIGHT_TOLERANCE, 'lidWeight');
-                assertClose(actual.dryTeaLeavesWeight, expected.dryTeaLeavesWeight, WEIGHT_TOLERANCE, 'dryTeaLeavesWeight');
-
-                expect(actual.infusions.length).toBe(expected.infusions.length);
-
-                // todo wrap this in test. functions related to each infusion
-                actual.infusions.forEach((actInf: any, index: number) => {
-                    const expectedInfusion = expected.infusions[index];
-                    assertClose(actInf.waterWeight, expectedInfusion.waterWeight, WEIGHT_TOLERANCE, `infusion[${index}].waterWeight`);
-                    assertClose(actInf.wetTeaLeavesWeight, expectedInfusion.wetTeaLeavesWeight, WEIGHT_TOLERANCE, `infusion[${index}].wetTeaLeavesWeight`);
-
-                    // Duration is numeric seconds (integer)
-                    assertClose(actInf.duration, expectedInfusion.duration, TIME_TOLERANCE, `infusion[${index}].duration`);
-
-                    // Rest duration 
-                    if (expectedInfusion.restDuration !== undefined && expectedInfusion.restDuration !== null) {
-                        assertClose(actInf.restDuration || 0, expectedInfusion.restDuration, TIME_TOLERANCE, `infusion[${index}].restDuration`);
+                const assertClose = (actual: number, expected: number | string, tolerance: number, label: string) => {
+                    if (typeof expected !== 'string' || !expected.startsWith('skip')) { // allow results to be skipped by prefixing 'skip' to the expected value
+                        const diff = Math.abs(actual - Number(expected));
+                        expect.soft(diff, `Mismatch in ${label}: expected ${expected}, got ${actual} (diff ${diff})`).toBeLessThanOrEqual(tolerance);
                     }
-                });
-            };
+                };
 
-            compareSessions(resultingSession, expectedResult);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const compareSessions = (actual: any, expected: any) => {
+                    expect(actual.teaName).toBe(expected.teaName);
+                    expect(actual.status).toBe(expected.status);
+                    // Notes might be undefined/empty string mismatch, strict check is fine usually
 
-        } else {
-            // Create expectation file
-            fs.writeFileSync(resultPathDebug, JSON.stringify(resultingSession, null, 2));
-            throw new Error(`Created Result File at ${resultPathDebug}. Please verify and re-run.`);
-        }
+                    assertClose(actual.vesselWeight, expected.vesselWeight, WEIGHT_TOLERANCE, 'vesselWeight');
+                    assertClose(actual.lidWeight, expected.lidWeight, WEIGHT_TOLERANCE, 'lidWeight');
+                    assertClose(actual.dryTeaLeavesWeight, expected.dryTeaLeavesWeight, WEIGHT_TOLERANCE, 'dryTeaLeavesWeight');
+
+                    expect(actual.infusions.length).toBe(expected.infusions.length);
+
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    actual.infusions.forEach((actInf: any, index: number) => {
+                        const expectedInfusion = expected.infusions[index];
+                        assertClose(actInf.waterWeight, expectedInfusion.waterWeight, WEIGHT_TOLERANCE, `infusion[${index}].waterWeight`);
+                        assertClose(actInf.wetTeaLeavesWeight, expectedInfusion.wetTeaLeavesWeight, WEIGHT_TOLERANCE, `infusion[${index}].wetTeaLeavesWeight`);
+
+                        // Duration is numeric seconds (integer)
+                        assertClose(actInf.duration, expectedInfusion.duration, TIME_TOLERANCE, `infusion[${index}].duration`);
+
+                        // Rest duration 
+                        if (expectedInfusion.restDuration !== undefined && expectedInfusion.restDuration !== null) {
+                            assertClose(actInf.restDuration || 0, expectedInfusion.restDuration, TIME_TOLERANCE, `infusion[${index}].restDuration`);
+                        }
+                    });
+                };
+
+                compareSessions(resultingSession, expectedResult);
+
+            } else {
+                // Fail test if result file is missing (to prompt creation via debug file logic if needed, or manual creation)
+                // Actually, if it's missing, let's just fail and let the debug file write happen so user can rename it.
+                expect.fail(`Result file not found at ${resultPath}.`);
+            }
+        });
     });
 });
