@@ -1,10 +1,12 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonAlert } from '@ionic/react';
-import { useState, useEffect } from 'react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton } from '@ionic/react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../stores/useStore';
+import DesignSwitcher from '../components/DesignSwitcher';
+import { useBrewingControl } from '../hooks/useBrewingControl';
 
 const BrewingScreen: React.FC = () => {
-  const { currentWeight, connectionStatus, weightLoggerEnabled, isRecording, startRecording, stopRecording } = useStore();
-  const [showSaveAlert, setShowSaveAlert] = useState(false);
+  const { currentWeight, connectionStatus, weightLoggerEnabled, isRecording } = useStore();
+  const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
@@ -21,9 +23,9 @@ const BrewingScreen: React.FC = () => {
 
   const handleToggleRecording = () => {
     if (isRecording) {
-      setShowSaveAlert(true);
+      handleEndSession();
     } else {
-      startRecording();
+      startBrewingSession();
     }
   };
 
@@ -32,6 +34,7 @@ const BrewingScreen: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Brewing</IonTitle>
+          <DesignSwitcher />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
@@ -76,41 +79,11 @@ const BrewingScreen: React.FC = () => {
               color={isRecording ? 'danger' : 'medium'}
               onClick={handleToggleRecording}
             >
-              {isRecording ? `Stop Recording (${elapsedTime}s)` : 'Start Recording'}
+              {isRecording ? `Stop Session & Recording (${elapsedTime}s)` : 'Start Session & Recording'}
             </IonButton>
           </div>
         )}
-        <IonAlert
-          isOpen={showSaveAlert}
-          onDidDismiss={() => setShowSaveAlert(false)}
-          header={'Save Recording'}
-          inputs={[
-            {
-              name: 'sessionName',
-              type: 'text',
-              placeholder: 'Session Name'
-            },
-            {
-              name: 'notes',
-              type: 'text',
-              placeholder: 'Notes (optional)'
-            }
-          ]}
-          buttons={[
-            {
-              text: 'Cancel',
-              role: 'cancel',
-              cssClass: 'secondary',
-              handler: () => { }
-            },
-            {
-              text: 'Save',
-              handler: (data) => {
-                stopRecording(data.sessionName || `Session ${new Date().toLocaleTimeString()}`, data.notes);
-              }
-            }
-          ]}
-        />
+        {recordingAlert}
       </IonContent>
     </IonPage>
   );

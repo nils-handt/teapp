@@ -6,18 +6,28 @@ import { cafe, list, settings } from 'ionicons/icons';
 import BrewingScreen from './BrewingScreen';
 import HistoryScreen from './HistoryScreen';
 import SettingsScreen from './SettingsScreen';
+import BrewingZen from './brewing/BrewingZen';
+import BrewingLab from './brewing/BrewingLab';
+import BrewingFlow from './brewing/BrewingFlow';
+import BrewingCard from './brewing/BrewingCard';
+import BrewingFocus from './brewing/BrewingFocus';
 
 const Tabs: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet>
-      <Route path="/tabs/brewing" component={BrewingScreen} exact={true} />
+      <Route path="/tabs/brewing/1" component={BrewingZen} exact={true} />
+      <Route path="/tabs/brewing/2" component={BrewingLab} exact={true} />
+      <Route path="/tabs/brewing/3" component={BrewingFlow} exact={true} />
+      <Route path="/tabs/brewing/4" component={BrewingCard} exact={true} />
+      <Route path="/tabs/brewing/5" component={BrewingFocus} exact={true} />
+      <Route path="/tabs/brewing/6" component={BrewingScreen} exact={true} />
       <Route path="/tabs/history" component={HistoryScreen} exact={true} />
       <Route path="/tabs/settings" component={SettingsScreen} exact={true} />
-      <Route path="/tabs" render={() => <Redirect to="/tabs/brewing" />} exact={true} />
+      <Route path="/tabs" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />
     </IonRouterOutlet>
 
     <IonTabBar slot="bottom">
-      <IonTabButton tab="brewing" href="/tabs/brewing">
+      <IonTabButton tab="brewing" href="/tabs/brewing/1">
         <IonIcon icon={cafe} />
         <IonLabel>Brewing</IonLabel>
       </IonTabButton>

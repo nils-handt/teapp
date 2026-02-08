@@ -3,14 +3,16 @@ import { IonReactRouter } from '@ionic/react-router';
 import { Route, Redirect } from 'react-router-dom';
 import Tabs from './screens/Tabs';
 import RecordingsScreen from './screens/RecordingsScreen';
-
 import { useEffect } from 'react';
 import { bluetoothScaleService } from './services/BluetoothScaleService';
+import { useBrewingSync } from './hooks/useBrewingSync';
 
 const App: React.FC = () => {
   useEffect(() => {
     bluetoothScaleService.initialize();
   }, []);
+
+  useBrewingSync(); // Activate global state sync
 
   return (
     <IonApp>
@@ -18,7 +20,9 @@ const App: React.FC = () => {
         <IonRouterOutlet>
           <Route path="/tabs" component={Tabs} />
           <Route path="/recordings" component={RecordingsScreen} />
-          <Route path="/" render={() => <Redirect to="/tabs/brewing" />} exact={true} />
+
+          {/* Phase 13 Design Routes */}
+          <Route path="/" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />
         </IonRouterOutlet>
       </IonReactRouter>
     </IonApp>

@@ -222,11 +222,6 @@
 - **Priority:** Medium (enables user configuration)
 - **Dependencies:** Phase 9 complete, Phase 3 complete
 - **Deliverables:**
-  - Dev Mode section (if enabled):
-    - Mock scale toggle
-    - Recording selector
-    - Playback speed control
-    - Weight logger toggle
   - Implement SettingsState store slice
   - Persist and load settings to/from SQLite via `Settings.Entity.ts`
 - **Architectural References:**
@@ -293,19 +288,20 @@
 - **Dependencies:** Phase 12 complete
 - **Deliverables:**
   - Implement comprehensive BrewingScreen UI:
-    - Large current weight display
-    - Current infusion number and timer display (infusion or rest)
     - Brewing phase indicator (setup, infusion, rest, ended)
+      - during setup phase:
+        - show visual feedback for automatic detections: vessel placed, lid removed, tea added, with an option for manual override by pressing them
+      - during infusion / rest phase:
+        - Infusion / Rest timer display (main focus)
+        - Current infusion number
+        - show last infusion duration, water weight and rest duration, with an option to swipe through all infusions
+      - during ended phase:
+        - show all infusions with duration, water weight and rest duration
     - Tea name input/selector
     - Session notes field
-    - Control buttons: start session, begin infusion tracking, end session
-    - Manual override buttons: manual start/stop timer (for edge cases)
-    - Visual feedback for automatic detections: vessel placed, lid removed, water added, tea poured
-    - Progress indicators for setup phase: vessel weight ✓, lid weight ✓, tea weight ✓
+    - Control buttons: start session, begin infusion tracking, end session depending on phase
   - Wire up `BrewingState` to UI using Zustand hooks
   - Add real-time updates as weight changes and timers progress
-  - Implement alert notifications (sound/vibration) when timers complete
-  - Add confirmation dialogs for session end
   - Display connection status and weight source (real scale vs mock)
 - **Architectural References:**
   - [BrewingScreen](./ARCHITECTURE.md#core-components) in UI Layer
@@ -406,6 +402,7 @@
   - Multi-device support
   - timer functionality
 - clean up ui
+- clean up code
 - zen brew mode
 - add timers to brew process
 - add support for tea tray/boat containing overflow water

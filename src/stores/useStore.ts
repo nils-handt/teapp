@@ -50,6 +50,7 @@ interface WeightLoggerState {
   savedRecordings: string[];
   startRecording: () => void;
   stopRecording: (sessionName: string, notes?: string) => Promise<void>;
+  discardRecording: () => void;
   refreshRecordings: () => Promise<void>;
 }
 
@@ -117,6 +118,10 @@ export const useStore = create<StoreState>((set, get) => ({
     await weightLoggerService.saveRecording(sessionName, notes);
     const recordings = await weightLoggerService.getRecordings();
     set({ isRecording: false, recordingStartTime: null, savedRecordings: recordings });
+  },
+  discardRecording: () => {
+    weightLoggerService.stopRecording();
+    set({ isRecording: false, recordingStartTime: null });
   },
   refreshRecordings: async () => {
     const recordings = await weightLoggerService.getRecordings();
