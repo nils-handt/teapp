@@ -11,6 +11,13 @@ export enum BrewingPhase {
     ENDED = 'ended'
 }
 
+export enum WeightTrend {
+    STABLE = 'STABLE',
+    INCREASING = 'INCREASING',
+    DECREASING = 'DECREASING',
+    CHAOTIC = 'CHAOTIC'
+}
+
 export interface BrewingStateData {
     phase: BrewingPhase;
     activeSession: BrewingSession | null;

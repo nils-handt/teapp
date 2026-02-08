@@ -42,9 +42,16 @@ describe('BrewingSessionService', () => {
         bluetoothScaleService.weight$.next(100);
         vi.advanceTimersByTime(1000); // Debounce
 
+        // NEW: Verify session is updated immediately without confirming
+        expect(brewingSessionService.session$.value?.vesselWeight).toBe(100);
+
         // Simulate lid removal (drop > 5g)
         bluetoothScaleService.weight$.next(80); // 20g drop
         vi.advanceTimersByTime(1000);
+
+        // NEW: Verify session updated immediately
+        expect(brewingSessionService.session$.value?.lidWeight).toBe(20);
+        expect(brewingSessionService.session$.value?.vesselWeight).toBe(80);
 
         // Confirm setup
         brewingSessionService.confirmSetupDone();
@@ -236,7 +243,9 @@ describe('BrewingSessionService', () => {
                 // Helper to remove circular references for debug file
                 const simpleSession = {
                     ...resultingSession,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     infusions: resultingSession?.infusions?.map((i: any) => {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         const { session, ...rest } = i;
                         return rest;
                     })
