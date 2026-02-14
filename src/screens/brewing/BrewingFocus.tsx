@@ -1,4 +1,4 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFooter, IonButton, IonIcon } from '@ionic/react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon } from '@ionic/react';
 import React, { useEffect, useRef } from 'react';
 import { useStore } from '../../stores/useStore';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';

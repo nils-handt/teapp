@@ -4,12 +4,14 @@ import { Route, Redirect } from 'react-router-dom';
 import Tabs from './screens/Tabs';
 import RecordingsScreen from './screens/RecordingsScreen';
 import { useEffect } from 'react';
+import { useStore } from './stores/useStore';
 import { bluetoothScaleService } from './services/BluetoothScaleService';
 import { useBrewingSync } from './hooks/useBrewingSync';
 
 const App: React.FC = () => {
   useEffect(() => {
     bluetoothScaleService.initialize();
+    useStore.getState().loadSettings();
   }, []);
 
   useBrewingSync(); // Activate global state sync

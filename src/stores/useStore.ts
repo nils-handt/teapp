@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DiscoveredDevice } from '../services/bluetooth/types/ble.types';
 import { weightLoggerService } from '../services/WeightLoggerService';
+import { settingsRepository } from '../repositories/SettingsRepository';
 import { BrewingPhase } from '../services/interfaces/brewing.types';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
@@ -42,6 +43,7 @@ interface SettingsState {
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
   updateSettings: (settings: Partial<SettingsState>) => void;
+  loadSettings: () => Promise<void>;
 }
 
 interface WeightLoggerState {
@@ -103,7 +105,33 @@ export const useStore = create<StoreState>((set, get) => ({
   devMode: false,
   weightLoggerEnabled: false,
   playbackSpeed: 1,
-  updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
+  updateSettings: (settings) => {
+    set((state) => ({ ...state, ...settings }));
+    settingsRepository.saveSettingsState(settings);
+  },
+  loadSettings: async () => {
+    const allSettings = await settingsRepository.getAllSettings();
+    const loadedSettings: Partial<SettingsState> = {};
+
+    if (allSettings['devMode']) {
+      loadedSettings.devMode = allSettings['devMode'] === 'true';
+    }
+    if (allSettings['weightLoggerEnabled']) {
+      loadedSettings.weightLoggerEnabled = allSettings['weightLoggerEnabled'] === 'true';
+    }
+    if (allSettings['playbackSpeed']) {
+      loadedSettings.playbackSpeed = Number(allSettings['playbackSpeed']);
+    }
+    if (allSettings['scaleConfig']) {
+      try {
+        loadedSettings.scaleConfig = JSON.parse(allSettings['scaleConfig']);
+      } catch (e) {
+        console.error('Failed to parse scaleConfig', e);
+      }
+    }
+
+    set((state) => ({ ...state, ...loadedSettings }));
+  },
 
   // WeightLoggerState
   isRecording: false,

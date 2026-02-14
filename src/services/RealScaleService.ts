@@ -8,7 +8,7 @@ import { DiscoveredDevice, LimitedPeripheralData, PeripheralData } from './bluet
 import { ScaleType, WeightChangeEvent } from './bluetooth/types/scale.types';
 import { Logger } from './bluetooth/utils/Logger';
 import { settingsRepository } from '../repositories/SettingsRepository';
-import { ScaleDevice } from '../models/ScaleDevice';
+import { ScaleDevice } from '../entities/ScaleDevice.entity';
 import { IScaleService } from './interfaces/IScaleService';
 
 const logger = new Logger('RealScaleService');

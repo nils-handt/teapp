@@ -41,7 +41,7 @@ class BrewingSessionService {
     private readonly VESSEL_DETECTION_THRESHOLD = 20;
     private readonly LID_REMOVAL_THRESHOLD = 5;
     private readonly TEA_ADDITION_THRESHOLD = 1;
-    private readonly POUR_DETECTION_TOLERANCE = 20;
+    private readonly POUR_DETECTION_TOLERANCE = 30;
 
 
     private constructor() {

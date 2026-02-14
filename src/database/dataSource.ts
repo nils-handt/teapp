@@ -4,8 +4,9 @@ import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
 import { ScaleDevice } from '../entities/ScaleDevice.entity';
 import { Settings } from '../entities/Settings.entity';
+import { WebPersistenceSubscriber } from './WebPersistenceSubscriber';
 
-const sqliteConnection = new SQLiteConnection(CapacitorSQLite);
+export const sqliteConnection = new SQLiteConnection(CapacitorSQLite);
 
 export const AppDataSource = new DataSource({
     type: 'capacitor',
@@ -21,5 +22,7 @@ export const AppDataSource = new DataSource({
         Settings
     ],
     migrations: [],
-    subscribers: [],
+    subscribers: [
+        WebPersistenceSubscriber
+    ],
 });

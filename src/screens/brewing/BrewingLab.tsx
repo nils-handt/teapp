@@ -55,7 +55,7 @@ const BrewingLab: React.FC = () => {
                     <h4>Session Logs</h4>
                     <pre style={{ fontSize: '0.8rem', overflowX: 'auto' }}>
                         {JSON.stringify(activeSession?.infusions?.map(i => {
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
                             const { session, ...rest } = i as any;
                             return rest;
                         }), null, 2) || 'No Data'}

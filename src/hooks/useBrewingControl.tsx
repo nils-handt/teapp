@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { IonAlert } from '@ionic/react';
 import { useStore } from '../stores/useStore';
 import { brewingSessionService } from '../services/brewing/BrewingSessionService';
