@@ -327,7 +327,6 @@
   - Implement `HistoryState` store slice to cache session list and selected session
   - Add session statistics calculations: total infusions, total brew time, average infusion duration
   - Add session search and filtering capabilities
-  - **Optional enhancement:** Implement session export functionality (e.g., generate JSON/CSV).
 - **Architectural References:**
   - [SessionRepository](./ARCHITECTURE.md#core-components) in Data Layer
   - [HistoryState](./ARCHITECTURE.md#state-management) in State Management
@@ -345,16 +344,14 @@
 - **Deliverables:**
   - Implement HistoryScreen with session list:
     - Display sessions in chronological order (most recent first)
-    - Show tea name, date, number of infusions for each session
+    - Show tea name, date and time, number of infusions for each session
     - Add search and filter controls
     - Add delete session action with confirmation
-    - **Optional enhancement:** Implement pull-to-refresh.
   - Implement SessionDetailScreen:
-    - Display session metadata: tea name, date, total time, notes
+    - Display session metadata: tea name, date and time, total time, notes
     - Show infusion list with details: infusion number, duration, rest duration, water weight, wet leaves weight
     - Display session statistics
-    - Add edit notes capability
-    - **Optional enhancement:** Add export session button.
+    - Add edit notes, tea name, and delete session capability
   - Wire up `HistoryState` to UI components
   - Implement navigation from HistoryScreen to SessionDetailScreen
 - **Architectural References:**
@@ -406,3 +403,5 @@
 - zen brew mode
 - add timers to brew process
 - add support for tea tray/boat containing overflow water
+- test / lint / editorconfig ci/cd config
+- deploy webapp to something

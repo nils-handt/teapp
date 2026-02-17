@@ -6,6 +6,15 @@ import { DiscoveredDevice, LimitedPeripheralData } from './bluetooth/types/ble.t
 
 vi.mock('./RealScaleService', { spy: true });
 vi.mock('./MockScaleService', { spy: true });
+vi.mock('../repositories/SettingsRepository', () => ({
+    settingsRepository: {
+        getSetting: vi.fn(),
+        saveSetting: vi.fn(),
+        getPreferredDeviceId: vi.fn().mockResolvedValue(null),
+        getScaleDevice: vi.fn().mockResolvedValue(null),
+        saveScaleDevice: vi.fn(),
+    }
+}));
 
 describe('BluetoothScaleService', () => {
     let realService: RealScaleService;

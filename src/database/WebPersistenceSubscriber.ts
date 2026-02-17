@@ -9,6 +9,10 @@ export class WebPersistenceSubscriber implements EntitySubscriberInterface {
         await this.saveToStore();
     }
 
+    async afterRemove() {
+        await this.saveToStore();
+    }
+
     private async saveToStore() {
         if (Capacitor.getPlatform() === 'web') {
             try {

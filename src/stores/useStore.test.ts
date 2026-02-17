@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStore } from './useStore';
 import { weightLoggerService } from '../services/WeightLoggerService';
+import { sessionRepository } from '../repositories/SessionRepository';
+import { BrewingSession } from '../entities/BrewingSession.entity';
 import { DiscoveredDevice, LimitedPeripheralData } from '../services/bluetooth/types/ble.types';
 
 // Mock WeightLoggerService
@@ -12,6 +14,25 @@ vi.mock('../services/WeightLoggerService', () => ({
         getRecordings: vi.fn().mockResolvedValue(['rec1.json']),
     }
 }));
+
+// Mock SessionRepository
+vi.mock('../repositories/SessionRepository', () => ({
+    sessionRepository: {
+        getAllSessions: vi.fn(),
+        getSessionById: vi.fn(),
+        deleteSession: vi.fn(),
+        getSessionsByTeaName: vi.fn(),
+    }
+}));
+
+// Mock SettingsRepository
+vi.mock('../repositories/SettingsRepository', () => ({
+    settingsRepository: {
+        saveSettingsState: vi.fn(),
+        getAllSettings: vi.fn().mockResolvedValue({}),
+    }
+}));
+
 
 describe('useStore', () => {
     beforeEach(() => {
@@ -28,7 +49,10 @@ describe('useStore', () => {
             // WeightLogger
             isRecording: false,
             recordingStartTime: null,
-            savedRecordings: []
+            savedRecordings: [],
+            // History
+            sessionList: [],
+            selectedSession: null,
         });
         vi.clearAllMocks();
     });
@@ -95,6 +119,49 @@ describe('useStore', () => {
             expect(useStore.getState().isRecording).toBe(false);
             expect(useStore.getState().recordingStartTime).toBeNull();
             expect(useStore.getState().savedRecordings).toEqual(['rec1.json']);
+        });
+    });
+
+    describe('History Slice', () => {
+        const mockSessions = [new BrewingSession(), new BrewingSession()];
+        const mockSession = new BrewingSession();
+
+        it('should load history', async () => {
+            (sessionRepository.getAllSessions as any).mockResolvedValue(mockSessions);
+
+            await useStore.getState().loadHistory();
+
+            expect(sessionRepository.getAllSessions).toHaveBeenCalled();
+            expect(useStore.getState().sessionList).toBe(mockSessions);
+        });
+
+        it('should select session', async () => {
+            (sessionRepository.getSessionById as any).mockResolvedValue(mockSession);
+
+            await useStore.getState().selectSession('123');
+
+            expect(sessionRepository.getSessionById).toHaveBeenCalledWith('123');
+            expect(useStore.getState().selectedSession).toBe(mockSession);
+        });
+
+        it('should delete session', async () => {
+            (sessionRepository.getAllSessions as any).mockResolvedValue(mockSessions);
+
+            await useStore.getState().deleteSession('123');
+
+            expect(sessionRepository.deleteSession).toHaveBeenCalledWith('123');
+            expect(sessionRepository.getAllSessions).toHaveBeenCalled();
+            expect(useStore.getState().sessionList).toBe(mockSessions);
+            expect(useStore.getState().selectedSession).toBeNull();
+        });
+
+        it('should filter history by tea', async () => {
+            (sessionRepository.getSessionsByTeaName as any).mockResolvedValue(mockSessions);
+
+            await useStore.getState().filterHistoryByTea('Oolong');
+
+            expect(sessionRepository.getSessionsByTeaName).toHaveBeenCalledWith('Oolong');
+            expect(useStore.getState().sessionList).toBe(mockSessions);
         });
     });
 });

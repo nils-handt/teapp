@@ -5,6 +5,7 @@ import { cafe, list, settings } from 'ionicons/icons';
 
 import BrewingScreen from './BrewingScreen';
 import HistoryScreen from './HistoryScreen';
+import SessionDetailScreen from './SessionDetailScreen';
 import SettingsScreen from './SettingsScreen';
 import BrewingZen from './brewing/BrewingZen';
 import BrewingLab from './brewing/BrewingLab';
@@ -21,6 +22,7 @@ const Tabs: React.FC = () => (
       <Route path="/tabs/brewing/4" component={BrewingCard} exact={true} />
       <Route path="/tabs/brewing/5" component={BrewingFocus} exact={true} />
       <Route path="/tabs/brewing/6" component={BrewingScreen} exact={true} />
+      <Route path="/tabs/history/:sessionId" component={SessionDetailScreen} />
       <Route path="/tabs/history" component={HistoryScreen} exact={true} />
       <Route path="/tabs/settings" component={SettingsScreen} exact={true} />
       <Route path="/tabs" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />

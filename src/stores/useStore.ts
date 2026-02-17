@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { DiscoveredDevice } from '../services/bluetooth/types/ble.types';
 import { weightLoggerService } from '../services/WeightLoggerService';
 import { settingsRepository } from '../repositories/SettingsRepository';
+import { sessionRepository } from '../repositories/SessionRepository';
 import { BrewingPhase } from '../services/interfaces/brewing.types';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
@@ -34,7 +35,11 @@ interface BrewingState {
 interface HistoryState {
   sessionList: BrewingSession[];
   selectedSession: BrewingSession | null;
-  loadHistory: () => void;
+  loadHistory: () => Promise<void>;
+  selectSession: (sessionId: string) => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  filterHistoryByTea: (teaName: string) => Promise<void>;
+  updateSession: (session: BrewingSession) => Promise<void>;
 }
 
 interface SettingsState {
@@ -98,7 +103,29 @@ export const useStore = create<StoreState>((set, get) => ({
   // HistoryState
   sessionList: [],
   selectedSession: null,
-  loadHistory: () => set({ sessionList: [] }),
+  loadHistory: async () => {
+    const sessions = await sessionRepository.getAllSessions();
+    set({ sessionList: sessions });
+  },
+  selectSession: async (sessionId) => {
+    const session = await sessionRepository.getSessionById(sessionId);
+    set({ selectedSession: session });
+  },
+  deleteSession: async (sessionId) => {
+    await sessionRepository.deleteSession(sessionId);
+    const sessions = await sessionRepository.getAllSessions();
+    set({ sessionList: sessions, selectedSession: null });
+  },
+  filterHistoryByTea: async (teaName) => {
+    const sessions = await sessionRepository.getSessionsByTeaName(teaName);
+    set({ sessionList: sessions });
+  },
+  updateSession: async (session) => {
+    await sessionRepository.saveSession(session);
+    // Refresh list and selected session
+    const sessions = await sessionRepository.getAllSessions();
+    set({ sessionList: sessions, selectedSession: session });
+  },
 
   // SettingsState
   scaleConfig: {},
