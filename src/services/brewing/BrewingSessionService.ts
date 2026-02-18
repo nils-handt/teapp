@@ -334,6 +334,17 @@ class BrewingSessionService {
             } else {
                 // Resumed (put back with water)
                 this.state$.next(BrewingPhase.INFUSION);
+                // Resume timer BUT ADD the duration of the lift to the timer
+                const liftDuration = Date.now() - this.lastLiftTime;
+                // We want the timer to Jump forward by liftDuration.
+                // startTimer(resume=true) resumes from current timer$.value.
+                // So we need to set timer$.value += liftDuration before resuming?
+                // Or modify startTimer to accept an offset to ADD to the current value.
+
+                // Let's manually adjust timer value then resume.
+                const currentTimer = this.timer$.value;
+                this.timer$.next(currentTimer + liftDuration);
+
                 this.startTimer(true); // Resume timer
             }
         }

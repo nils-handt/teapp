@@ -8,7 +8,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest run",
-    "testHuman": "vitest"
+    "testH": "vitest"
   },
   "engines": {
     "node": ">=20.19.0"

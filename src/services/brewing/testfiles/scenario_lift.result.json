@@ -1,0 +1,33 @@
+{
+  "sessionId": "6d11744e-a074-4fec-8314-5b9452defc2b",
+  "teaName": "Scenario Tea",
+  "startTime": "2026-02-03T04:50:53.056Z",
+  "endTime": "2026-02-03T04:54:21.801Z",
+  "vesselWeight": 162.3,
+  "lidWeight": 43.21999999999997,
+  "dryTeaLeavesWeight": 10,
+  "notes": "",
+  "status": "completed",
+  "infusions": [
+    {
+      "infusionId": "1",
+      "infusionNumber": 1,
+      "waterWeight": 125.1,
+      "startTime": "2026-02-01T20:34:36.884Z",
+      "duration": 30,
+      "restDuration": 61,
+      "wetTeaLeavesWeight": 22.7,
+      "sessionId": "6d11744e-a074-4fec-8344-5b9452defc2b"
+    },
+    {
+      "infusionId": "2",
+      "infusionNumber": 2,
+      "waterWeight": 119.9,
+      "startTime": "2026-02-01T20:35:59.199Z",
+      "duration": 39,
+      "restDuration": 29,
+      "wetTeaLeavesWeight": 30.4,
+      "sessionId": "6d11744e-a074-4fec-8344-5b9452defc2b"
+    }
+  ]
+}
