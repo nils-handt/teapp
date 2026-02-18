@@ -15,11 +15,14 @@ import {
   IonCard,
   IonCardContent,
   IonSelect,
-  IonSelectOption
+  IonSelectOption,
+  IonAlert
 } from '@ionic/react';
 import { useHistory } from 'react-router';
 import { useStore } from '../stores/useStore';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
+import { backupService } from '../services/BackupService';
+import { shareFile } from '../utils/fileUtils';
 
 const SettingsScreen: React.FC = () => {
   const history = useHistory();
@@ -35,6 +38,8 @@ const SettingsScreen: React.FC = () => {
   const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [showRestoreAlert, setShowRestoreAlert] = useState(false);
+  const [restoreData, setRestoreData] = useState<any>(null);
 
   const handleConnectNew = async () => {
     await bluetoothScaleService.connectNewDevice();
@@ -73,6 +78,61 @@ const SettingsScreen: React.FC = () => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleBackup = async () => {
+    try {
+      const data = await backupService.exportData();
+      const fileName = `teapp_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      await shareFile(fileName, data);
+      setToastMessage('Backup created successfully');
+      setShowToast(true);
+    } catch (error) {
+      console.error('Backup failed:', error);
+      setToastMessage('Backup failed');
+      setShowToast(true);
+    }
+  };
+
+  const handleRestoreFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        setRestoreData(json);
+        setShowRestoreAlert(true);
+      } catch {
+        setToastMessage('Failed to parse backup file');
+        setShowToast(true);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const executeRestore = async () => {
+    if (!restoreData) return;
+    try {
+      await backupService.importData(restoreData);
+      setToastMessage('Data restored successfully. App will reload.');
+      setShowToast(true);
+      // Force reload to reset store and re-initialize DB connection
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Restore failed:', error);
+      setToastMessage('Restore failed');
+      setShowToast(true);
+    } finally {
+      setRestoreData(null);
+      setShowRestoreAlert(false);
+      // Reset file input
+      const input = document.getElementById('restore-file-input') as HTMLInputElement;
+      if (input) input.value = '';
+    }
   };
 
   return (
@@ -198,7 +258,52 @@ const SettingsScreen: React.FC = () => {
               )}
             </>
           )}
+
+          <IonListHeader>
+            <IonLabel>Data Management</IonLabel>
+          </IonListHeader>
+          <IonItem button onClick={() => handleBackup()}>
+            <IonLabel>Backup Data</IonLabel>
+          </IonItem>
+          <IonItem button onClick={() => {
+            // Programmatically click the hidden file input
+            document.getElementById('restore-file-input')?.click();
+          }}>
+            <IonLabel>Restore Data</IonLabel>
+            <input
+              type="file"
+              accept=".json"
+              id="restore-file-input"
+              style={{ display: 'none' }}
+              onChange={handleRestoreFileUpload}
+            />
+          </IonItem>
         </IonList>
+
+        <IonAlert
+          isOpen={showRestoreAlert}
+          onDidDismiss={() => setShowRestoreAlert(false)}
+          header={'Confirm Restore'}
+          message={'Restoring data will overwrite all existing data. This action cannot be undone. Are you sure you want to proceed?'}
+          buttons={[
+            {
+              text: 'Cancel',
+              role: 'cancel',
+              handler: () => {
+                setShowRestoreAlert(false);
+                setRestoreData(null);
+                // Reset file input
+                const input = document.getElementById('restore-file-input') as HTMLInputElement;
+                if (input) input.value = '';
+              }
+            },
+            {
+              text: 'Restore',
+              role: 'destructive',
+              handler: executeRestore
+            }
+          ]}
+        />
 
         <IonToast
           isOpen={showToast}

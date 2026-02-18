@@ -14,11 +14,10 @@ import {
     IonIcon,
     IonAlert,
     IonRefresher,
-    IonRefresherContent,
-    isPlatform
+    IonRefresherContent
 } from '@ionic/react';
 import { trashOutline, shareOutline } from 'ionicons/icons';
-import { Share } from '@capacitor/share';
+import { shareFile } from '../utils/fileUtils';
 import { weightLoggerService } from '../services/WeightLoggerService';
 import { useStore } from '../stores/useStore';
 
@@ -37,32 +36,12 @@ const RecordingsScreen: React.FC = () => {
 
     const handleShare = async (fileName: string) => {
         try {
-            if (isPlatform('desktop') || isPlatform('pwa') || isPlatform('mobileweb')) {
-                // Web platform fallback: Download the file
-                const recording = await weightLoggerService.loadRecording(fileName);
-                if (!recording) {
-                    console.error('Failed to load recording for download');
-                    return;
-                }
-                const blob = new Blob([JSON.stringify(recording, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } else {
-                // Native platform: Use Share plugin
-                const uri = await weightLoggerService.getRecordingUri(fileName);
-                await Share.share({
-                    title: 'Weight Recording',
-                    text: `Sharing recording: ${fileName}`,
-                    url: uri,
-                    dialogTitle: 'Share Recording'
-                });
+            const recording = await weightLoggerService.loadRecording(fileName);
+            if (!recording) {
+                console.error('Failed to load recording for download');
+                return;
             }
+            await shareFile(fileName, recording);
         } catch (error) {
             console.error('Error sharing file:', error);
             // Fallback or alert user
