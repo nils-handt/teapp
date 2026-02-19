@@ -51,7 +51,7 @@ const BrewingFocus: React.FC = () => {
                                 marginBottom: '20px',
                                 opacity: isActive ? 1 : (isPast ? 0.5 : 0.3),
                                 transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                                transition: 'all 0.3s ease'
+                                transition: 'opacity 0.3s ease, transform 0.3s ease'
                             }}>
                                 <div style={{
                                     width: '40px',

@@ -36,9 +36,7 @@ const SettingsScreen: React.FC = () => {
   } = useStore();
 
   const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
-  const [toastMessage, setToastMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
-  const [showRestoreAlert, setShowRestoreAlert] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [restoreData, setRestoreData] = useState<any>(null);
 
   const handleConnectNew = async () => {
@@ -67,14 +65,11 @@ const SettingsScreen: React.FC = () => {
         if (json && Array.isArray(json.data) && json.data.length > 0 && typeof json.data[0].timestamp === 'number' && typeof json.data[0].weight === 'number') {
           bluetoothScaleService.mock.loadRecording(json.data);
           setToastMessage(`Loaded recording with ${json.data.length} samples.`);
-          setShowToast(true);
         } else {
           setToastMessage('Invalid recording file format: Missing data array or timestamps or weights.');
-          setShowToast(true);
         }
       } catch {
         setToastMessage('Failed to parse JSON file.');
-        setShowToast(true);
       }
     };
     reader.readAsText(file);
@@ -86,11 +81,9 @@ const SettingsScreen: React.FC = () => {
       const fileName = `teapp_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
       await shareFile(fileName, data);
       setToastMessage('Backup created successfully');
-      setShowToast(true);
     } catch (error) {
       console.error('Backup failed:', error);
       setToastMessage('Backup failed');
-      setShowToast(true);
     }
   };
 
@@ -103,10 +96,8 @@ const SettingsScreen: React.FC = () => {
       try {
         const json = JSON.parse(e.target?.result as string);
         setRestoreData(json);
-        setShowRestoreAlert(true);
       } catch {
         setToastMessage('Failed to parse backup file');
-        setShowToast(true);
       }
     };
     reader.readAsText(file);
@@ -117,7 +108,6 @@ const SettingsScreen: React.FC = () => {
     try {
       await backupService.importData(restoreData);
       setToastMessage('Data restored successfully. App will reload.');
-      setShowToast(true);
       // Force reload to reset store and re-initialize DB connection
       setTimeout(() => {
         window.location.reload();
@@ -125,10 +115,8 @@ const SettingsScreen: React.FC = () => {
     } catch (error) {
       console.error('Restore failed:', error);
       setToastMessage('Restore failed');
-      setShowToast(true);
     } finally {
       setRestoreData(null);
-      setShowRestoreAlert(false);
       // Reset file input
       const input = document.getElementById('restore-file-input') as HTMLInputElement;
       if (input) input.value = '';
@@ -281,8 +269,8 @@ const SettingsScreen: React.FC = () => {
         </IonList>
 
         <IonAlert
-          isOpen={showRestoreAlert}
-          onDidDismiss={() => setShowRestoreAlert(false)}
+          isOpen={restoreData !== null}
+          onDidDismiss={() => setRestoreData(null)}
           header={'Confirm Restore'}
           message={'Restoring data will overwrite all existing data. This action cannot be undone. Are you sure you want to proceed?'}
           buttons={[
@@ -290,7 +278,6 @@ const SettingsScreen: React.FC = () => {
               text: 'Cancel',
               role: 'cancel',
               handler: () => {
-                setShowRestoreAlert(false);
                 setRestoreData(null);
                 // Reset file input
                 const input = document.getElementById('restore-file-input') as HTMLInputElement;
@@ -306,9 +293,9 @@ const SettingsScreen: React.FC = () => {
         />
 
         <IonToast
-          isOpen={showToast}
-          onDidDismiss={() => setShowToast(false)}
-          message={toastMessage}
+          isOpen={toastMessage !== null}
+          onDidDismiss={() => setToastMessage(null)}
+          message={toastMessage ?? ''}
           duration={2000}
         />
       </IonContent>

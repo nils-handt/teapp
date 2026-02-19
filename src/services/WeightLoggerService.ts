@@ -3,12 +3,12 @@ import { bluetoothScaleService } from './BluetoothScaleService';
 import { Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 
-export interface WeightDataPoint {
+interface WeightDataPoint {
     timestamp: number;
     weight: number;
 }
 
-export interface RecordingSession {
+interface RecordingSession {
     name: string;
     date: string;
     notes?: string;

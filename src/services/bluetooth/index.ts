@@ -1,21 +1,3 @@
-export * from './types/ble.types';
-export * from './types/scale.types';
-export { BluetoothScale } from './base/BluetoothScale';
-export { DecentScale } from './devices/decent/DecentScale';
-export { FelicitaScale } from './devices/felicita/FelicitaScale';
-export { BlackCoffeeScale } from './devices/blackcoffee/BlackCoffeeScale';
-export { BokooScale } from './devices/bokoo/BokooScale';
-export { EspressiScale } from './devices/espressi/EspressiScale';
-export { EurekaPrecisaScale } from './devices/eureka/EurekaPrecisaScale';
-export { JimmyScale } from './devices/jimmy/JimmyScale';
-export { LunarScale } from './devices/lunar/LunarScale';
-export { Skale } from './devices/skale/Skale';
-export { SmartChefScale } from './devices/smartchef/SmartChefScale';
-export { TimemoreScale } from './devices/timemore/TimemoreScale';
-export { WeighMyBruScale } from './devices/weighmybru/WeighMyBruScale';
-export { bleAdapter } from './adapters/BleAdapter';
-export { Logger } from './utils/Logger';
-
 import { DecentScale } from './devices/decent/DecentScale';
 import { FelicitaScale } from './devices/felicita/FelicitaScale';
 import { BlackCoffeeScale } from './devices/blackcoffee/BlackCoffeeScale';

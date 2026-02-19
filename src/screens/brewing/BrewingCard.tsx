@@ -108,8 +108,8 @@ const BrewingCard: React.FC = () => {
                                         <span>Recent Infusions</span>
                                     </div>
                                     <IonGrid className="ion-no-padding">
-                                        {activeSession?.infusions?.slice().reverse().slice(0, 3).map((inf, i) => (
-                                            <IonRow key={i} style={{ borderBottom: '1px solid #eee', padding: '5px 0' }}>
+                                        {activeSession?.infusions?.slice().reverse().slice(0, 3).map((inf) => (
+                                            <IonRow key={inf.infusionNumber} style={{ borderBottom: '1px solid #eee', padding: '5px 0' }}>
                                                 <IonCol>#{inf.infusionNumber}</IonCol>
                                                 <IonCol>{inf.duration}s</IonCol>
                                                 <IonCol>{inf.waterWeight}g</IonCol>

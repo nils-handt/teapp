@@ -38,8 +38,8 @@ const BrewingLab: React.FC = () => {
 
                 <IonGrid>
                     <IonRow>
-                        {metrics.map((m, i) => (
-                            <IonCol size="6" key={i}>
+                        {metrics.map((m) => (
+                            <IonCol size="6" key={m.label}>
                                 <IonCard style={{ margin: '5px' }}>
                                     <IonCardHeader>
                                         <IonCardSubtitle>{m.label}</IonCardSubtitle>

@@ -1,6 +1,6 @@
 import { BrewingSession } from '../entities/BrewingSession.entity';
 
-export interface SessionStats {
+interface SessionStats {
     totalInfusions: number;
     totalBrewTime: number; // in seconds
     averageInfusionDuration: number; // in seconds
