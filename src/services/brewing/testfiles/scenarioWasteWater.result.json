@@ -1,0 +1,55 @@
+{
+  "sessionId": "5a5cf588-b3e2-4d71-a9dd-9ba720a8d2f7",
+  "teaName": "Scenario Tea",
+  "startTime": "2026-03-13T01:52:52.441Z",
+  "endTime": "2026-03-13T02:13:58.432Z",
+  "vesselWeight": 162.3,
+  "lidWeight": 43.3,
+  "trayWeight": 244.3,
+  "dryTeaLeavesWeight": 6.4,
+  "currentWasteWater": 191.3,
+  "notes": "",
+  "status": "completed",
+  "infusions": [
+    {
+      "infusionId": "38cc75b2-871f-42d1-9013-2b41e825f32a",
+      "infusionNumber": 1,
+      "waterWeight": 138.3,
+      "startTime": "2026-03-13T01:54:04.441Z",
+      "duration": 48,
+      "restDuration": 175,
+      "wetTeaLeavesWeight": 16.7,
+      "sessionId": "e31569d1-9ce2-4a3c-b228-007090713a6d"
+    },
+    {
+      "infusionId": "85763576-0d76-499d-b759-9a1327cc1f42",
+      "infusionNumber": 2,
+      "waterWeight": 150.6,
+      "startTime": "2026-03-13T01:57:47.941Z",
+      "duration": 70,
+      "restDuration": 282,
+      "wetTeaLeavesWeight": 23,
+      "sessionId": "e31569d1-9ce2-4a3c-b228-007090713a6d"
+    },
+    {
+      "infusionId": "589f24e9-767d-413e-84bb-74fa5853d1e2",
+      "infusionNumber": 3,
+      "waterWeight": 136,
+      "startTime": "2026-03-13T02:03:40.941Z",
+      "duration": 92,
+      "restDuration": 283,
+      "wetTeaLeavesWeight": 27.1,
+      "sessionId": "e31569d1-9ce2-4a3c-b228-007090713a6d"
+    },
+    {
+      "infusionId": "082318ef-3fa1-438b-9203-63693fa87d55",
+      "infusionNumber": 4,
+      "waterWeight": 117.1,
+      "startTime": "2026-03-13T02:09:55.941Z",
+      "duration": 195,
+      "restDuration": 47,
+      "wetTeaLeavesWeight": 28.4,
+      "sessionId": "e31569d1-9ce2-4a3c-b228-007090713a6d"
+    }
+  ]
+}

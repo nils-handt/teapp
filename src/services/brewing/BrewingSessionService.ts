@@ -20,9 +20,11 @@ class BrewingSessionService {
     // Internal state tracking
     private currentWeight = 0;
     private lastStableWeight = 0;
+    private lastStableWasteWater = 0;
     private maxWeightInPhase = 0;
     private lastLiftTime = 0;
-
+    private lowestLiftedWeight = Infinity;
+    private setupStepWeights: number[] = [];
 
     // Timer handles
     private timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -38,10 +40,10 @@ class BrewingSessionService {
     private readonly ZERO_THRESHOLD = 5; // grams, below this consider vessel lifted
 
     // Auto-detection thresholds
-    private readonly VESSEL_DETECTION_THRESHOLD = 20;
     private readonly LID_REMOVAL_THRESHOLD = 5;
     private readonly TEA_ADDITION_THRESHOLD = 1;
     private readonly POUR_DETECTION_TOLERANCE = 30;
+    private readonly SETUP_STEP_STABILITY_THRESHOLD = 1.0;
 
 
     private constructor() {
@@ -144,11 +146,16 @@ class BrewingSessionService {
         session.infusions = [];
         session.vesselWeight = 0;
         session.lidWeight = 0;
+        session.trayWeight = 0;
         session.dryTeaLeavesWeight = 0;
+        session.currentWasteWater = 0;
 
+        this.lowestLiftedWeight = Infinity;
+        this.lastStableWasteWater = 0;
+        this.maxWeightInPhase = 0;
+        this.setupStepWeights = [0];
         this.session$.next(session);
         this.state$.next(BrewingPhase.SETUP);
-        this.maxWeightInPhase = 0;
 
         this.initializeWeightSubscription();
 
@@ -169,12 +176,13 @@ class BrewingSessionService {
 
             // Normalize lastStableWeight to include Lid if missing
             let weight = this.currentWeight;
-            const expectedNoLid = (session.vesselWeight || 0) + (session.dryTeaLeavesWeight || 0);
+            const expectedNoLid = (session.trayWeight || 0) + (session.vesselWeight || 0) + (session.dryTeaLeavesWeight || 0);
 
             if (Math.abs(weight - expectedNoLid) < this.LID_REMOVAL_THRESHOLD) {
                 weight += (session.lidWeight || 0);
             }
             this.lastStableWeight = weight;
+            this.lastStableWasteWater = 0;
         }
     }
 
@@ -204,68 +212,114 @@ class BrewingSessionService {
     // --- Phase Logic ---
 
     private handleSetupPhase(weight: number) {
-        // Logic to detect Vessel, Lid, Tea.
-        // Happy Path: Vessel -> Lid (optional) -> Tea
-        // Refined logic allows tea detection even if lid is not detected or skipped.
         const session = this.session$.value;
         if (!session) return;
 
-        let updated = false;
+        const lastRecordedWeight = this.setupStepWeights.length > 0 ? this.setupStepWeights[this.setupStepWeights.length - 1] : 0;
+        // Use a threshold to consider it a distinct stable step
+        if (Math.abs(weight - lastRecordedWeight) > this.SETUP_STEP_STABILITY_THRESHOLD) {
+            this.setupStepWeights.push(weight);
+            this.recalculateSetupWeights();
+        }
+    }
 
-        // Use session values as source of truth
-        let currentVesselWeight = session.vesselWeight || 0;
-        let currentLidWeight = session.lidWeight || 0;
-        let currentTeaWeight = session.dryTeaLeavesWeight || 0;
+    private recalculateSetupWeights() {
+        const session = this.session$.value;
+        if (!session) return;
 
+        const weights = this.setupStepWeights.slice(1);
+        if (weights.length === 0) return;
 
-        if (currentVesselWeight === 0 && weight > this.VESSEL_DETECTION_THRESHOLD) {
-            // Detected Vessel
-            currentVesselWeight = weight;
-            updated = true;
-            // Assume Lid is on it initially? No, assume bare vessel or vessel+lid combo.
-            // We can't distinguish yet.
-        } else if (currentVesselWeight > 0 && currentLidWeight === 0 && weight < currentVesselWeight - this.LID_REMOVAL_THRESHOLD && weight > this.ZERO_THRESHOLD) {
-            // Weight dropped significantly, assume lid removal
-            currentLidWeight = currentVesselWeight - weight;
-            currentVesselWeight = weight; // Update vessel weight to be just the vessel
-            updated = true;
-        } else if (currentVesselWeight > 0) {
-            // Check for tea addition
-            // Scenario 1: Lid was removed (lidWeight > 0). Tea added to Vessel.
-            // Scenario 2: Lid was NOT removed (lidWeight == 0). Tea added to Vessel (+Lid assumed part of vessel or not present).
-
-            const V = currentVesselWeight;
-            const L = currentLidWeight;
-
-            // Check if Lid was simply put back (Weight ~ V + L)
-            if (L > 0 && Math.abs(weight - (V + L)) < this.LID_REMOVAL_THRESHOLD) {
-                // Lid put back, do not count as tea
-                return;
+        const uniqueWeights: number[] = [];
+        weights.forEach(w => {
+            if (!uniqueWeights.some(uw => Math.abs(uw - w) < 2.0)) {
+                uniqueWeights.push(w);
             }
+        });
 
-            let newTea = 0;
-            // Check if Tea added with Lid ON (Weight > V + L + Threshold)
-            if (weight > (V + L) + this.TEA_ADDITION_THRESHOLD) {
-                newTea = weight - (V + L);
-            }
-            // Check if Tea added with Lid OFF (Weight > V + Threshold) - only strict if Lid is known
-            else if (weight > V + this.TEA_ADDITION_THRESHOLD) {
-                newTea = weight - V;
-            }
+        const deltas: number[] = [];
+        for (let i = 1; i < this.setupStepWeights.length; i++) {
+            deltas.push(this.setupStepWeights[i] - this.setupStepWeights[i - 1]);
+        }
 
-            // Cap detection to reasonable tea amounts (e.g. < 50g) to avoid mistaking water/lid for tea if logic is ambiguous
-            // But for now, just trust the threshold increase.
+        let componentsAdded: number[] = [];
+        let maxLidRemoved = 0;
+        let teaAdded = 0;
 
-            if (newTea > currentTeaWeight && newTea < 50) {
-                currentTeaWeight = parseFloat(newTea.toFixed(1));
-                updated = true;
+        for (const delta of deltas) {
+            if (delta > 0) {
+                if (delta >= 40) { // Tray, Vessel, or Lid
+                    if (maxLidRemoved > 0 && Math.abs(delta - maxLidRemoved) < 5) {
+                        // lid returned
+                    } else {
+                        componentsAdded.push(delta);
+                    }
+                } else if (delta >= this.TEA_ADDITION_THRESHOLD) { // Tea
+                    teaAdded += delta;
+                }
+            } else if (delta <= -this.LID_REMOVAL_THRESHOLD) { // Lid removed
+                const removed = Math.abs(delta);
+                if (removed > maxLidRemoved) {
+                    maxLidRemoved = removed;
+                }
             }
         }
 
+        let tray = 0;
+        let vessel = 0;
+        let lid = 0;
+
+        // User rule: "If we detect 4 distinct weights we assume a tea tray is used. The first weight is then always the tray."
+        // A tray implies at least a Tray and a Vessel were added (componentsAdded.length >= 2)
+        let hasTray = uniqueWeights.length >= 4 && componentsAdded.length >= 2;
+
+        if (!hasTray && componentsAdded.length === 2 && maxLidRemoved > 0) {
+            // Deduce by physical component logic: if second component is NOT the lid we removed, it must be the vessel and first is Tray.
+            if (Math.abs(componentsAdded[1] - maxLidRemoved) > 5) {
+                hasTray = true;
+            }
+        }
+
+        if (hasTray) {
+            if (componentsAdded.length >= 3) {
+                tray = componentsAdded[0];
+                vessel = componentsAdded[1];
+                lid = componentsAdded[2];
+            } else if (componentsAdded.length === 2) {
+                tray = componentsAdded[0];
+                vessel = componentsAdded[1];
+                if (maxLidRemoved > 0) {
+                    lid = maxLidRemoved;
+                    vessel = vessel - lid;
+                }
+            } else if (componentsAdded.length === 1) {
+                tray = componentsAdded[0];
+            }
+        } else {
+            if (componentsAdded.length >= 2) {
+                vessel = componentsAdded[0];
+                lid = componentsAdded[1];
+            } else if (componentsAdded.length === 1) {
+                vessel = componentsAdded[0];
+                if (maxLidRemoved > 0) {
+                    lid = maxLidRemoved;
+                    vessel = vessel - lid;
+                }
+            }
+        }
+
+        tray = Math.max(0, parseFloat(tray.toFixed(1)));
+        vessel = Math.max(0, parseFloat(vessel.toFixed(1)));
+        lid = Math.max(0, parseFloat(lid.toFixed(1)));
+        teaAdded = Math.max(0, parseFloat(teaAdded.toFixed(1)));
+
+        let updated = false;
+        if (session.trayWeight !== tray) { session.trayWeight = tray; updated = true; }
+        if (session.vesselWeight !== vessel && vessel > 0) { session.vesselWeight = vessel; updated = true; }
+        if (session.lidWeight !== lid && lid > 0) { session.lidWeight = lid; updated = true; }
+        if (session.dryTeaLeavesWeight !== teaAdded) { session.dryTeaLeavesWeight = teaAdded; updated = true; }
+
         if (updated) {
-            session.vesselWeight = currentVesselWeight;
-            session.lidWeight = currentLidWeight;
-            session.dryTeaLeavesWeight = currentTeaWeight;
             this.session$.next(session);
         }
     }
@@ -300,9 +354,20 @@ class BrewingSessionService {
     }
 
     private handleInfusionPhase(weight: number) {
-        // Detect Vessel Lift logic
-        if (weight < this.ZERO_THRESHOLD) {
+        const session = this.session$.value;
+        const vesselWeight = session?.vesselWeight || 0;
+
+        // Detect Vessel Lift: weight dropped significantly from max (by at least vesselWeight)
+        if (this.maxWeightInPhase > 0 && weight < this.maxWeightInPhase - vesselWeight) {
             this.lastLiftTime = Date.now();
+            this.lowestLiftedWeight = weight;
+
+            const baseTray = session?.trayWeight || 0;
+            if (session) {
+                const wasteWater = parseFloat(Math.max(0, weight - baseTray).toFixed(1));
+                session.currentWasteWater = wasteWater;
+                this.session$.next(session);
+            }
             this.state$.next(BrewingPhase.INFUSION_VESSEL_LIFTED);
             this.stopTimer(); // Pause timer while lifted
             return;
@@ -313,12 +378,29 @@ class BrewingSessionService {
     }
 
     private handleVesselLiftedPhase(weight: number) {
-        // Check for return
-        if (weight > this.ZERO_THRESHOLD) {
-            // Vessel returned.
-            const predictedEmptyWeight = this.lastStableWeight; // This is Normalized (Vessel + Lid + Tea/WetLeaves)
+        const session = this.session$.value;
+        const baseTray = session?.trayWeight || 0;
 
-            const session = this.session$.value;
+        // Track lowest stable weight while vessel is lifted
+        if (weight < this.lowestLiftedWeight) {
+            this.lowestLiftedWeight = weight;
+            // Update waste water from lowest weight seen
+            if (session) {
+                const wasteWater = parseFloat(Math.max(0, weight - baseTray).toFixed(1));
+                session.currentWasteWater = wasteWater;
+                this.session$.next(session);
+            }
+        }
+
+        // Recompute after waste water update
+        const currentEmptyBase = baseTray + (session?.currentWasteWater || 0);
+
+        // Check for return
+        if (weight > currentEmptyBase + this.ZERO_THRESHOLD) {
+            // Vessel returned.
+            const wasteWaterDelta = (session?.currentWasteWater || 0) - this.lastStableWasteWater;
+            const predictedEmptyWeight = this.lastStableWeight + wasteWaterDelta;
+
             const lidWeight = session?.lidWeight || 0;
 
             // Logic: we want to know if user poured out.
@@ -334,14 +416,7 @@ class BrewingSessionService {
             } else {
                 // Resumed (put back with water)
                 this.state$.next(BrewingPhase.INFUSION);
-                // Resume timer BUT ADD the duration of the lift to the timer
                 const liftDuration = Date.now() - this.lastLiftTime;
-                // We want the timer to Jump forward by liftDuration.
-                // startTimer(resume=true) resumes from current timer$.value.
-                // So we need to set timer$.value += liftDuration before resuming?
-                // Or modify startTimer to accept an offset to ADD to the current value.
-
-                // Let's manually adjust timer value then resume.
                 const currentTimer = this.timer$.value;
                 this.timer$.next(currentTimer + liftDuration);
 
@@ -401,17 +476,19 @@ class BrewingSessionService {
 
             const vesselWeight = session.vesselWeight || 0;
             const lidWeight = session.lidWeight || 0;
+            const trayWeight = session.trayWeight || 0;
+            const wasteWater = session.currentWasteWater || 0;
 
-            infusion.waterWeight = parseFloat((this.maxWeightInPhase - vesselWeight - lidWeight - teaWeight).toFixed(1));
+            infusion.waterWeight = parseFloat(Math.max(0, this.maxWeightInPhase - trayWeight - wasteWater - vesselWeight - lidWeight - teaWeight).toFixed(1));
 
             // Calculate wet leaves
             let wetLeaves = 0;
             if (hasLid) {
-                wetLeaves = currentWeight - vesselWeight - lidWeight;
+                wetLeaves = currentWeight - trayWeight - wasteWater - vesselWeight - lidWeight;
             } else {
-                wetLeaves = currentWeight - vesselWeight;
+                wetLeaves = currentWeight - trayWeight - wasteWater - vesselWeight;
             }
-            infusion.wetTeaLeavesWeight = parseFloat(wetLeaves.toFixed(1));
+            infusion.wetTeaLeavesWeight = parseFloat(Math.max(0, wetLeaves).toFixed(1));
 
             // Save infusion
             infusion.session = session;
@@ -423,6 +500,8 @@ class BrewingSessionService {
 
             // Update lastStableWeight (normalized to V + L + WetLeaves)
             this.lastStableWeight = hasLid ? currentWeight : currentWeight + lidWeight;
+            this.lastStableWasteWater = session.currentWasteWater || 0;
+            this.lowestLiftedWeight = Infinity;
         }
 
         this.state$.next(BrewingPhase.REST);
@@ -486,9 +565,12 @@ class BrewingSessionService {
 
         this.currentWeight = 0;
         this.lastStableWeight = 0;
+        this.lastStableWasteWater = 0;
         this.maxWeightInPhase = 0;
         this.lastLiftTime = 0;
+        this.lowestLiftedWeight = Infinity;
         this.timerStartTime = 0;
+        this.setupStepWeights = [];
 
         this.state$.next(BrewingPhase.ENDED);
         this.session$.next(null);

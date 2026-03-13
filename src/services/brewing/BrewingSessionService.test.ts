@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach, onTestFailed } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFailed, onTestFinished } from 'vitest';
 import { brewingSessionService } from './BrewingSessionService';
 import { BrewingPhase } from '../interfaces/brewing.types';
 import { bluetoothScaleService } from '../BluetoothScaleService';
@@ -21,8 +21,14 @@ describe('BrewingSessionService', () => {
         vi.clearAllMocks();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         vi.useRealTimers();
+
+        // Ensure mock scale stops emitting between tests
+        if (bluetoothScaleService.mock) {
+            bluetoothScaleService.mock.stopReplay();
+        }
+        await bluetoothScaleService.disconnect();
     });
 
     it('should be in ENDED state after reset', () => {
@@ -134,7 +140,7 @@ describe('BrewingSessionService', () => {
 
     // optional: performance: these tests are slow and could easily be run in a separate process.
     // That might require splitting the test file into multiple files / using an auto generated test file per scenario which would be annoying.
-    //  Delay until performance becomes an issue.
+    // Delay until performance becomes an issue.
     testFiles.forEach(file => {
         it(`should validate scenario ${file}`, async () => {
             // Enable mock mode
@@ -154,6 +160,12 @@ describe('BrewingSessionService', () => {
             const data = scenarioData.data;
             const actions = scenarioData.actions || [];
             let nextActionIndex = 0;
+
+            // We need to keep track of the latest non-null session
+            let lastKnownSession = brewingSessionService.session$.value;
+            const sub = brewingSessionService.session$.subscribe(s => {
+                if (s) lastKnownSession = s;
+            });
 
             if (data.length > 0) {
                 // The simulation starts at the time of the first data point
@@ -229,12 +241,17 @@ describe('BrewingSessionService', () => {
                 vi.advanceTimersByTime(2000);
             }
 
-            // Simulate end of session if not auto-ended?
-            if (brewingSessionService.session$.value?.status === 'active') {
-                brewingSessionService.endSession();
-            }
+            // Cleanup subscription
+            sub.unsubscribe();
 
-            const resultingSession = brewingSessionService.session$.value;
+            // Use the last known session
+            let resultingSession = lastKnownSession;
+            // Simulate end of session if not auto-ended?
+            if (resultingSession?.status === 'active') {
+                await brewingSessionService.endSession();
+                // update resultingSession status, but keep data
+                resultingSession = { ...resultingSession, status: 'completed' } as any;
+            }
             const resultPath = path.resolve(testFilesDir, file.replace('.json', '.result.json'));
             const resultPathDebug = path.resolve(testFilesDir, file.replace('.json', '.result.debug.json'));
 
@@ -252,6 +269,14 @@ describe('BrewingSessionService', () => {
                 };
                 fs.writeFileSync(resultPathDebug, JSON.stringify(simpleSession, null, 2));
                 console.log(`Test failed. Debug result written to ${resultPathDebug}`);
+            });
+
+            onTestFinished(({ task }) => {
+                if (task.result?.state === 'pass') {
+                    if (fs.existsSync(resultPathDebug)) {
+                        fs.unlinkSync(resultPathDebug);
+                    }
+                }
             });
 
             if (fs.existsSync(resultPath)) {
@@ -278,6 +303,10 @@ describe('BrewingSessionService', () => {
                     assertClose(actual.lidWeight, expected.lidWeight, WEIGHT_TOLERANCE, 'lidWeight');
                     assertClose(actual.dryTeaLeavesWeight, expected.dryTeaLeavesWeight, WEIGHT_TOLERANCE, 'dryTeaLeavesWeight');
 
+                    if (expected.currentWasteWater !== undefined && expected.currentWasteWater !== null) {
+                        assertClose(actual.currentWasteWater || 0, expected.currentWasteWater, WEIGHT_TOLERANCE, 'currentWasteWater');
+                    }
+
                     expect(actual.infusions.length).toBe(expected.infusions.length);
 
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -300,7 +329,17 @@ describe('BrewingSessionService', () => {
 
             } else {
                 // Fail test if result file is missing (to prompt creation via debug file logic if needed, or manual creation)
-                // Actually, if it's missing, let's just fail and let the debug file write happen so user can rename it.
+                // Write debug file explicitly so we can see what was generated
+                const simpleSession = {
+                    ...resultingSession,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    infusions: resultingSession?.infusions?.map((i: any) => {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        const { session, ...rest } = i;
+                        return rest;
+                    })
+                };
+                fs.writeFileSync(resultPathDebug, JSON.stringify(simpleSession, null, 2));
                 expect.fail(`Result file not found at ${resultPath}.`);
             }
         });
