@@ -2,22 +2,16 @@ import { IonButton, IonButtons, IonIcon, IonPopover, IonList, IonItem, IonLabel,
 import { apps } from 'ionicons/icons';
 import React, { useState } from 'react';
 import { useHistory } from 'react-router';
+import { BREWING_SCREEN_OPTIONS, getBrewingScreenPath } from '../constants/brewingScreens';
+import { useStore } from '../stores/useStore';
 
 const DesignSwitcher: React.FC = () => {
     const history = useHistory();
+    const updateSettings = useStore((state) => state.updateSettings);
     const [showPopover, setShowPopover] = useState<{ open: boolean, event: Event | undefined }>({
         open: false,
         event: undefined,
     });
-
-    const designs = [
-        { id: 1, name: 'Zen', path: '/tabs/brewing/1' },
-        { id: 2, name: 'Lab', path: '/tabs/brewing/2' },
-        { id: 3, name: 'Flow', path: '/tabs/brewing/3' },
-        { id: 4, name: 'Card', path: '/tabs/brewing/4' },
-        { id: 5, name: 'Focus', path: '/tabs/brewing/5' },
-        { id: 6, name: 'Old', path: '/tabs/brewing/6' },
-    ];
 
     return (
         <>
@@ -33,9 +27,10 @@ const DesignSwitcher: React.FC = () => {
             >
                 <IonContent>
                     <IonList>
-                        {designs.map((d) => (
+                        {BREWING_SCREEN_OPTIONS.map((d) => (
                             <IonItem key={d.id} button onClick={() => {
-                                history.push(d.path);
+                                updateSettings({ lastUsedBrewingScreen: d.id });
+                                history.push(getBrewingScreenPath(d.id));
                                 setShowPopover({ open: false, event: undefined });
                             }}>
                                 <IonLabel>{d.id}. {d.name}</IonLabel>

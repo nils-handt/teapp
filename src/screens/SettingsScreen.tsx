@@ -23,6 +23,7 @@ import { useStore } from '../stores/useStore';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { backupService } from '../services/BackupService';
 import { shareFile } from '../utils/fileUtils';
+import { BREWING_SCREEN_OPTIONS, isBrewingScreenId } from '../constants/brewingScreens';
 
 const SettingsScreen: React.FC = () => {
   const history = useHistory();
@@ -32,6 +33,7 @@ const SettingsScreen: React.FC = () => {
     devMode,
     weightLoggerEnabled,
     playbackSpeed,
+    lastUsedBrewingScreen,
     updateSettings
   } = useStore();
 
@@ -51,6 +53,12 @@ const SettingsScreen: React.FC = () => {
   const handleSpeedChange = (speed: number) => {
     bluetoothScaleService.mock.setPlaybackSpeed(speed);
     updateSettings({ playbackSpeed: speed });
+  };
+
+  const handleBrewingScreenChange = (value: number) => {
+    if (isBrewingScreenId(value)) {
+      updateSettings({ lastUsedBrewingScreen: value });
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,6 +144,26 @@ const SettingsScreen: React.FC = () => {
             <IonTitle size="large">Settings</IonTitle>
           </IonToolbar>
         </IonHeader>
+
+        <IonList>
+          <IonListHeader>
+            <IonLabel>Brewing</IonLabel>
+          </IonListHeader>
+          <IonItem>
+            <IonLabel>Brewing Tab Screen</IonLabel>
+            <IonSelect
+              value={lastUsedBrewingScreen}
+              onIonChange={e => handleBrewingScreenChange(Number(e.detail.value))}
+              interface="popover"
+            >
+              {BREWING_SCREEN_OPTIONS.map((screen) => (
+                <IonSelectOption key={screen.id} value={screen.id}>
+                  {screen.name}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </IonItem>
+        </IonList>
 
         <IonList>
           <IonListHeader>

@@ -4,6 +4,8 @@ import { weightLoggerService } from '../services/WeightLoggerService';
 import { sessionRepository } from '../repositories/SessionRepository';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { DiscoveredDevice, LimitedPeripheralData } from '../services/bluetooth/types/ble.types';
+import { settingsRepository } from '../repositories/SettingsRepository';
+import { DEFAULT_BREWING_SCREEN_ID } from '../constants/brewingScreens';
 
 // Mock WeightLoggerService
 vi.mock('../services/WeightLoggerService', () => ({
@@ -46,6 +48,9 @@ describe('useStore', () => {
             // Settings
             scaleConfig: {},
             devMode: false,
+            weightLoggerEnabled: false,
+            playbackSpeed: 1,
+            lastUsedBrewingScreen: DEFAULT_BREWING_SCREEN_ID,
             // WeightLogger
             isRecording: false,
             recordingStartTime: null,
@@ -92,9 +97,23 @@ describe('useStore', () => {
 
     describe('Settings Slice', () => {
         it('should update settings', () => {
-            useStore.getState().updateSettings({ devMode: true, playbackSpeed: 2 });
+            useStore.getState().updateSettings({ devMode: true, playbackSpeed: 2, lastUsedBrewingScreen: 4 });
             expect(useStore.getState().devMode).toBe(true);
             expect(useStore.getState().playbackSpeed).toBe(2);
+            expect(useStore.getState().lastUsedBrewingScreen).toBe(4);
+            expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({ devMode: true, playbackSpeed: 2, lastUsedBrewingScreen: 4 });
+        });
+
+        it('should load persisted brewing screen setting', async () => {
+            (settingsRepository.getAllSettings as any).mockResolvedValue({
+                lastUsedBrewingScreen: '5',
+                devMode: 'true',
+            });
+
+            await useStore.getState().loadSettings();
+
+            expect(useStore.getState().lastUsedBrewingScreen).toBe(5);
+            expect(useStore.getState().devMode).toBe(true);
         });
     });
 

@@ -8,9 +8,11 @@ import { useEffect } from 'react';
 import { useStore } from './stores/useStore';
 import { bluetoothScaleService } from './services/BluetoothScaleService';
 import { useBrewingSync } from './hooks/useBrewingSync';
+import { getBrewingScreenPath } from './constants/brewingScreens';
 
 const App: React.FC = () => {
   const Router = Capacitor.getPlatform() === 'web' ? IonReactHashRouter : IonReactRouter;
+  const lastUsedBrewingScreen = useStore((state) => state.lastUsedBrewingScreen);
 
   useEffect(() => {
     bluetoothScaleService.initialize();
@@ -27,7 +29,7 @@ const App: React.FC = () => {
           <Route path="/recordings" component={RecordingsScreen} />
 
           {/* Phase 13 Design Routes */}
-          <Route path="/" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />
+          <Route path="/" render={() => <Redirect to={getBrewingScreenPath(lastUsedBrewingScreen)} />} exact={true} />
         </IonRouterOutlet>
       </Router>
     </IonApp>

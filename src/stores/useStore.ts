@@ -6,6 +6,11 @@ import { sessionRepository } from '../repositories/SessionRepository';
 import { BrewingPhase } from '../services/interfaces/brewing.types';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
+import {
+  DEFAULT_BREWING_SCREEN_ID,
+  isBrewingScreenId,
+  type BrewingScreenId,
+} from '../constants/brewingScreens';
 
 // As per ARCHITECTURE.md
 interface BluetoothState {
@@ -47,6 +52,7 @@ interface SettingsState {
   devMode: boolean;
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
+  lastUsedBrewingScreen: BrewingScreenId;
   updateSettings: (settings: Partial<SettingsState>) => void;
   loadSettings: () => Promise<void>;
 }
@@ -132,6 +138,7 @@ export const useStore = create<StoreState>((set, get) => ({
   devMode: false,
   weightLoggerEnabled: false,
   playbackSpeed: 1,
+  lastUsedBrewingScreen: DEFAULT_BREWING_SCREEN_ID,
   updateSettings: (settings) => {
     set((state) => ({ ...state, ...settings }));
     settingsRepository.saveSettingsState(settings);
@@ -148,6 +155,12 @@ export const useStore = create<StoreState>((set, get) => ({
     }
     if (allSettings['playbackSpeed']) {
       loadedSettings.playbackSpeed = Number(allSettings['playbackSpeed']);
+    }
+    if (allSettings['lastUsedBrewingScreen']) {
+      const screenId = Number(allSettings['lastUsedBrewingScreen']);
+      if (isBrewingScreenId(screenId)) {
+        loadedSettings.lastUsedBrewingScreen = screenId;
+      }
     }
     if (allSettings['scaleConfig']) {
       try {
