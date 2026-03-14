@@ -6,6 +6,7 @@ import { BrewingSession } from '../../entities/BrewingSession.entity';
 import { Infusion } from '../../entities/Infusion.entity';
 
 import { BrewingPhase, WeightTrend } from '../interfaces/brewing.types';
+import { keepAwakeService } from '../KeepAwakeService';
 
 class BrewingSessionService {
     private static instance: BrewingSessionService;
@@ -158,6 +159,7 @@ class BrewingSessionService {
         this.state$.next(BrewingPhase.SETUP);
 
         this.initializeWeightSubscription();
+        void keepAwakeService.keepAwake();
 
         // Reset Setup Values
         // No longer needed as we use session object directly
@@ -188,6 +190,7 @@ class BrewingSessionService {
 
     public async endSession() {
         this.stopTimer();
+        await keepAwakeService.allowSleep();
         const session = this.session$.value;
         if (session) {
             // Update last infusion's rest duration if applicable
@@ -562,6 +565,8 @@ class BrewingSessionService {
     public resetForTest() {
         this.stopWeightSubscription();
         this.stopTimer();
+        void keepAwakeService.allowSleep();
+        keepAwakeService.resetForTest();
 
         this.currentWeight = 0;
         this.lastStableWeight = 0;
