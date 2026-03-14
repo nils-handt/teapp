@@ -78,7 +78,7 @@ describe('BluetoothScaleService', () => {
 
         it('should delegate connect to active service', async () => {
             // Real mode
-            expect(bluetoothScaleService.connect(device)).rejects.toThrowError();
+            await expect(bluetoothScaleService.connect(device)).rejects.toThrowError();
             expect(realService.connect).toHaveBeenCalledWith(device);
 
             // Mock mode

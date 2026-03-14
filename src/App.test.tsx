@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import App from './App';
 
@@ -57,10 +57,14 @@ vi.mock('@ionic/react', async () => {
 
 
 describe('App', () => {
-    it('renders without crashing', () => {
-        const { baseElement } = render(
-            <App />
-        );
+    it('renders without crashing', async () => {
+        let baseElement: HTMLElement | null = null;
+        await act(async () => {
+            const result = render(
+                <App />
+            );
+            baseElement = result.baseElement;
+        });
         expect(baseElement).toBeDefined();
     });
 });
