@@ -7,6 +7,16 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
         return this.save(session);
     },
 
+    async getActiveSession(): Promise<BrewingSession | null> {
+        return this.findOne({
+            where: { status: 'active' },
+            order: {
+                startTime: 'DESC',
+            },
+            relations: ['infusions'],
+        });
+    },
+
     async getAllSessions(): Promise<BrewingSession[]> {
         return this.find({
             order: {

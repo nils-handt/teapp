@@ -16,7 +16,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     bluetoothScaleService.initialize();
-    useStore.getState().loadSettings();
+    void useStore.getState().loadSettings();
+    void useStore.getState().restoreActiveSession();
   }, []);
 
   useBrewingSync(); // Activate global state sync

@@ -165,6 +165,53 @@ class BrewingSessionService {
         // No longer needed as we use session object directly
     }
 
+    public restoreSession(session: BrewingSession) {
+        this.stopTimer();
+        this.stopWeightSubscription();
+
+        const restoredSession = { ...session };
+        restoredSession.infusions = [...(session.infusions || [])];
+
+        const resumedPhase = this.deriveRestoredPhase(restoredSession);
+
+        this.currentWeight = 0;
+        this.lowestLiftedWeight = Infinity;
+        this.maxWeightInPhase = 0;
+        this.lastLiftTime = 0;
+        this.timerStartTime = 0;
+        this.timer$.next(0);
+        this.currentInfusion$.next(null);
+        this.setupStepWeights = this.buildRestoredSetupWeights(restoredSession);
+        this.lastStableWasteWater = restoredSession.currentWasteWater || 0;
+        this.lastStableWeight = this.calculateRestoredStableWeight(restoredSession);
+
+        this.session$.next(restoredSession);
+        this.state$.next(resumedPhase);
+
+        this.initializeWeightSubscription();
+        void keepAwakeService.keepAwake();
+    }
+
+    public clearSession() {
+        this.stopTimer();
+        this.stopWeightSubscription();
+        void keepAwakeService.allowSleep();
+
+        this.currentWeight = 0;
+        this.lastStableWeight = 0;
+        this.lastStableWasteWater = 0;
+        this.maxWeightInPhase = 0;
+        this.lastLiftTime = 0;
+        this.lowestLiftedWeight = Infinity;
+        this.timerStartTime = 0;
+        this.setupStepWeights = [];
+
+        this.timer$.next(0);
+        this.currentInfusion$.next(null);
+        this.session$.next(null);
+        this.state$.next(BrewingPhase.IDLE);
+    }
+
     public confirmSetupDone() {
         const session = this.session$.value;
         if (session) {
@@ -325,6 +372,59 @@ class BrewingSessionService {
         if (updated) {
             this.session$.next(session);
         }
+    }
+
+    private deriveRestoredPhase(session: BrewingSession): BrewingPhase {
+        if ((session.infusions?.length || 0) > 0) {
+            return BrewingPhase.REST;
+        }
+
+        const hasSetupData = Boolean(
+            (session.vesselWeight || 0) > 0 ||
+            (session.lidWeight || 0) > 0 ||
+            (session.trayWeight || 0) > 0 ||
+            (session.dryTeaLeavesWeight || 0) > 0
+        );
+
+        return hasSetupData ? BrewingPhase.READY : BrewingPhase.SETUP;
+    }
+
+    private buildRestoredSetupWeights(session: BrewingSession): number[] {
+        const weights = [0];
+        const trayWeight = session.trayWeight || 0;
+        const vesselWeight = session.vesselWeight || 0;
+        const lidWeight = session.lidWeight || 0;
+        const dryTeaLeavesWeight = session.dryTeaLeavesWeight || 0;
+
+        if (trayWeight > 0) {
+            weights.push(trayWeight);
+        }
+        if (vesselWeight > 0) {
+            weights.push(trayWeight + vesselWeight);
+        }
+        if (lidWeight > 0) {
+            weights.push(trayWeight + vesselWeight + lidWeight);
+        }
+        if (dryTeaLeavesWeight > 0) {
+            weights.push(trayWeight + vesselWeight + dryTeaLeavesWeight);
+        }
+
+        return weights;
+    }
+
+    private calculateRestoredStableWeight(session: BrewingSession): number {
+        const trayWeight = session.trayWeight || 0;
+        const vesselWeight = session.vesselWeight || 0;
+        const lidWeight = session.lidWeight || 0;
+        const wasteWater = session.currentWasteWater || 0;
+        const baseWeight = trayWeight + vesselWeight + wasteWater;
+
+        if ((session.infusions?.length || 0) > 0) {
+            const lastInfusion = session.infusions[session.infusions.length - 1];
+            return parseFloat((baseWeight + lidWeight + (lastInfusion.wetTeaLeavesWeight || 0)).toFixed(1));
+        }
+
+        return parseFloat((baseWeight + lidWeight + (session.dryTeaLeavesWeight || 0)).toFixed(1));
     }
 
     private handleRestOrReadyPhase(weight: number) {

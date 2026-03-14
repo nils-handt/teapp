@@ -54,6 +54,21 @@ describe('SessionRepository', () => {
         expect(result).toBe(mockSessions);
     });
 
+    it('getActiveSession should return the newest active session with infusions', async () => {
+        const mockSession = new BrewingSession();
+        const findOneSpy = vi.fn().mockResolvedValue(mockSession);
+        sessionRepository.findOne = findOneSpy;
+
+        const result = await sessionRepository.getActiveSession();
+
+        expect(findOneSpy).toHaveBeenCalledWith({
+            where: { status: 'active' },
+            order: { startTime: 'DESC' },
+            relations: ['infusions'],
+        });
+        expect(result).toBe(mockSession);
+    });
+
     it('getSessionById should return a session with infusions', async () => {
         const mockSession = new BrewingSession();
         const findOneSpy = vi.fn().mockResolvedValue(mockSession);

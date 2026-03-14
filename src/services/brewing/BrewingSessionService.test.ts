@@ -3,6 +3,8 @@ import { brewingSessionService } from './BrewingSessionService';
 import { BrewingPhase } from '../interfaces/brewing.types';
 import { bluetoothScaleService } from '../BluetoothScaleService';
 import { sessionRepository } from '../../repositories/SessionRepository'; // We need to mock this
+import { BrewingSession } from '../../entities/BrewingSession.entity';
+import { Infusion } from '../../entities/Infusion.entity';
 
 // Mock dependencies
 vi.mock('../../repositories/SessionRepository', () => ({
@@ -39,6 +41,54 @@ describe('BrewingSessionService', () => {
         brewingSessionService.startSession('Test Tea');
         expect(brewingSessionService.state$.value).toBe(BrewingPhase.SETUP);
         expect(brewingSessionService.session$.value?.teaName).toBe('Test Tea');
+    });
+
+    it('should restore a saved session with setup data into READY', () => {
+        const session = new BrewingSession();
+        session.sessionId = 'restored-ready';
+        session.status = 'active';
+        session.startTime = new Date().toISOString();
+        session.teaName = 'Recovered Tea';
+        session.infusions = [];
+        session.vesselWeight = 95;
+        session.lidWeight = 12;
+        session.trayWeight = 0;
+        session.dryTeaLeavesWeight = 6;
+        session.currentWasteWater = 0;
+
+        brewingSessionService.restoreSession(session);
+
+        expect(brewingSessionService.session$.value?.sessionId).toBe('restored-ready');
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.READY);
+        expect(brewingSessionService.currentInfusion$.value).toBeNull();
+        expect(brewingSessionService.timer$.value).toBe(0);
+    });
+
+    it('should restore a saved session with prior infusions into REST', () => {
+        const session = new BrewingSession();
+        session.sessionId = 'restored-rest';
+        session.status = 'active';
+        session.startTime = new Date().toISOString();
+        session.teaName = 'Recovered Tea';
+        session.vesselWeight = 95;
+        session.lidWeight = 12;
+        session.trayWeight = 0;
+        session.dryTeaLeavesWeight = 6;
+        session.currentWasteWater = 4;
+
+        const infusion = new Infusion();
+        infusion.infusionId = 'inf-1';
+        infusion.infusionNumber = 1;
+        infusion.wetTeaLeavesWeight = 18;
+        infusion.duration = 15;
+        session.infusions = [infusion];
+
+        brewingSessionService.restoreSession(session);
+
+        expect(brewingSessionService.session$.value?.sessionId).toBe('restored-rest');
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.REST);
+        expect(brewingSessionService.currentInfusion$.value).toBeNull();
+        expect(brewingSessionService.timer$.value).toBe(0);
     });
 
     it('should detect vessel and confirm setup', () => {

@@ -6,6 +6,7 @@ import { sessionRepository } from '../repositories/SessionRepository';
 import { BrewingPhase } from '../services/interfaces/brewing.types';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
+import { brewingSessionService } from '../services/brewing/BrewingSessionService';
 import {
   DEFAULT_BREWING_SCREEN_ID,
   isBrewingScreenId,
@@ -35,6 +36,7 @@ interface BrewingState {
   brewingPhase: BrewingPhase;
   timerValue: number;
   setBrewingState: (state: Partial<BrewingState>) => void;
+  restoreActiveSession: () => Promise<void>;
 }
 
 interface HistoryState {
@@ -105,6 +107,30 @@ export const useStore = create<StoreState>((set, get) => ({
   timerValue: 0,
 
   setBrewingState: (newState) => set((state) => ({ ...state, ...newState })),
+  restoreActiveSession: async () => {
+    const activeSession = await sessionRepository.getActiveSession();
+
+    if (activeSession) {
+      brewingSessionService.restoreSession(activeSession);
+      set({
+        activeSession: brewingSessionService.session$.value,
+        currentInfusion: brewingSessionService.currentInfusion$.value,
+        brewingPhase: brewingSessionService.state$.value,
+        timerValue: brewingSessionService.timer$.value,
+        timerStatus: 'stopped',
+      });
+      return;
+    }
+
+    brewingSessionService.clearSession();
+    set({
+      activeSession: null,
+      currentInfusion: null,
+      brewingPhase: BrewingPhase.IDLE,
+      timerValue: 0,
+      timerStatus: 'stopped',
+    });
+  },
 
   // HistoryState
   sessionList: [],

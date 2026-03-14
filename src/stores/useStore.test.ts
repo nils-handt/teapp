@@ -6,6 +6,17 @@ import { BrewingSession } from '../entities/BrewingSession.entity';
 import { DiscoveredDevice, LimitedPeripheralData } from '../services/bluetooth/types/ble.types';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import { DEFAULT_BREWING_SCREEN_ID } from '../constants/brewingScreens';
+import { brewingSessionService } from '../services/brewing/BrewingSessionService';
+import { BrewingPhase } from '../services/interfaces/brewing.types';
+
+const mockBrewingSessionService = vi.hoisted(() => ({
+    state$: { value: 'idle' },
+    session$: { value: null as BrewingSession | null },
+    currentInfusion$: { value: null },
+    timer$: { value: 0 },
+    restoreSession: vi.fn(),
+    clearSession: vi.fn(),
+}));
 
 // Mock WeightLoggerService
 vi.mock('../services/WeightLoggerService', () => ({
@@ -21,10 +32,16 @@ vi.mock('../services/WeightLoggerService', () => ({
 vi.mock('../repositories/SessionRepository', () => ({
     sessionRepository: {
         getAllSessions: vi.fn(),
+        getActiveSession: vi.fn(),
         getSessionById: vi.fn(),
         deleteSession: vi.fn(),
         getSessionsByTeaName: vi.fn(),
+        saveSession: vi.fn(),
     }
+}));
+
+vi.mock('../services/brewing/BrewingSessionService', () => ({
+    brewingSessionService: mockBrewingSessionService,
 }));
 
 // Mock SettingsRepository
@@ -58,8 +75,28 @@ describe('useStore', () => {
             // History
             sessionList: [],
             selectedSession: null,
+            activeSession: null,
+            currentInfusion: null,
+            brewingPhase: 'idle' as any,
+            timerValue: 0,
         });
         vi.clearAllMocks();
+        (brewingSessionService.session$ as any).value = null;
+        (brewingSessionService.state$ as any).value = BrewingPhase.IDLE;
+        (brewingSessionService.currentInfusion$ as any).value = null;
+        (brewingSessionService.timer$ as any).value = 0;
+        (brewingSessionService.restoreSession as any).mockImplementation((session: BrewingSession) => {
+            (brewingSessionService.session$ as any).value = session;
+            (brewingSessionService.state$ as any).value = BrewingPhase.READY;
+            (brewingSessionService.currentInfusion$ as any).value = null;
+            (brewingSessionService.timer$ as any).value = 0;
+        });
+        (brewingSessionService.clearSession as any).mockImplementation(() => {
+            (brewingSessionService.session$ as any).value = null;
+            (brewingSessionService.state$ as any).value = BrewingPhase.IDLE;
+            (brewingSessionService.currentInfusion$ as any).value = null;
+            (brewingSessionService.timer$ as any).value = 0;
+        });
     });
 
     describe('Bluetooth Slice', () => {
@@ -181,6 +218,39 @@ describe('useStore', () => {
 
             expect(sessionRepository.getSessionsByTeaName).toHaveBeenCalledWith('Oolong');
             expect(useStore.getState().sessionList).toBe(mockSessions);
+        });
+    });
+
+    describe('Brewing Slice', () => {
+        it('should restore an active session through the brewing service', async () => {
+            const activeSession = new BrewingSession();
+            activeSession.sessionId = 'active-1';
+            (sessionRepository.getActiveSession as any).mockResolvedValue(activeSession);
+
+            await useStore.getState().restoreActiveSession();
+
+            expect(sessionRepository.getActiveSession).toHaveBeenCalled();
+            expect(brewingSessionService.restoreSession).toHaveBeenCalledWith(activeSession);
+            expect(brewingSessionService.clearSession).not.toHaveBeenCalled();
+            expect(useStore.getState().activeSession).toBe(activeSession);
+            expect(useStore.getState().brewingPhase).toBe(BrewingPhase.READY);
+        });
+
+        it('should clear stale in-memory brewing state when no active session exists', async () => {
+            useStore.setState({
+                activeSession: new BrewingSession(),
+                currentInfusion: {} as BrewingSession['infusions'][number],
+                brewingPhase: 'rest' as any,
+                timerValue: 1234,
+            });
+            (sessionRepository.getActiveSession as any).mockResolvedValue(null);
+
+            await useStore.getState().restoreActiveSession();
+
+            expect(brewingSessionService.clearSession).toHaveBeenCalled();
+            expect(useStore.getState().activeSession).toBeNull();
+            expect(useStore.getState().currentInfusion).toBeNull();
+            expect(useStore.getState().timerValue).toBe(0);
         });
     });
 });

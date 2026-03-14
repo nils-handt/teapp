@@ -1,6 +1,7 @@
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import App from './App';
+import { useStore } from './stores/useStore';
 
 // Mock dependencies
 vi.mock('./services/BluetoothScaleService', () => ({
@@ -18,6 +19,7 @@ vi.mock('./repositories/SettingsRepository', () => ({
 vi.mock('./repositories/SessionRepository', () => ({
     sessionRepository: {
         getAllSessions: vi.fn().mockResolvedValue([]),
+        getActiveSession: vi.fn().mockResolvedValue(null),
     }
 }));
 
@@ -66,5 +68,15 @@ describe('App', () => {
             baseElement = result.baseElement;
         });
         expect(baseElement).toBeDefined();
+    });
+
+    it('triggers active session recovery on mount', async () => {
+        const restoreSpy = vi.spyOn(useStore.getState(), 'restoreActiveSession');
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        expect(restoreSpy).toHaveBeenCalled();
     });
 });
