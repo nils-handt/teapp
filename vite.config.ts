@@ -3,28 +3,43 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path';
 import fs from 'fs';
+import type { Plugin, ResolvedConfig } from 'vite';
 
-// Custom plugin to copy wa-sqlite assets
-// todo not sure if this is smart, maybe there is a better way
-const copySqliteAssets = () => ({
-  name: 'copy-sqlite-assets',
-  configureServer(_server) {
-    const src = path.resolve(__dirname, 'node_modules/sql.js/dist/sql-wasm.wasm');
-    const destDir = path.resolve(__dirname, 'public/assets');
-    const dest = path.join(destDir, 'sql-wasm.wasm');
+const sqliteWasmName = 'sql-wasm.wasm';
+const sqliteWasmSource = path.resolve(__dirname, `node_modules/sql.js/dist/${sqliteWasmName}`);
 
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true });
+const copySqliteAssets = (): Plugin => {
+  let resolvedConfig: ResolvedConfig | undefined;
+
+  const copySqliteWasm = (destDir: string) => {
+    if (!fs.existsSync(sqliteWasmSource)) {
+      console.warn(`Could not find ${sqliteWasmName} at ${sqliteWasmSource}`);
+      return;
     }
 
-    if (fs.existsSync(src)) {
-      fs.copyFileSync(src, dest);
-      console.log('Copied sql-wasm.wasm to public/assets');
-    } else {
-      console.warn('Could not find sql-wasm.wasm at ' + src);
-    }
-  }
-});
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.copyFileSync(sqliteWasmSource, path.join(destDir, sqliteWasmName));
+  };
+
+  return {
+    name: 'copy-sqlite-assets',
+    configResolved(config) {
+      resolvedConfig = config;
+    },
+    configureServer() {
+      copySqliteWasm(path.resolve(__dirname, 'public/assets'));
+    },
+    buildStart() {
+      if (resolvedConfig?.command === 'build' && fs.existsSync(sqliteWasmSource)) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `assets/${sqliteWasmName}`,
+          source: fs.readFileSync(sqliteWasmSource),
+        });
+      }
+    },
+  };
+};
 
 // https://vitejs.dev/config/
 export default defineConfig({

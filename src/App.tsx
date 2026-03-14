@@ -1,5 +1,6 @@
 import { IonApp, IonRouterOutlet } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
+import { IonReactHashRouter, IonReactRouter } from '@ionic/react-router';
+import { Capacitor } from '@capacitor/core';
 import { Route, Redirect } from 'react-router-dom';
 import Tabs from './screens/Tabs';
 import RecordingsScreen from './screens/RecordingsScreen';
@@ -9,6 +10,8 @@ import { bluetoothScaleService } from './services/BluetoothScaleService';
 import { useBrewingSync } from './hooks/useBrewingSync';
 
 const App: React.FC = () => {
+  const Router = Capacitor.getPlatform() === 'web' ? IonReactHashRouter : IonReactRouter;
+
   useEffect(() => {
     bluetoothScaleService.initialize();
     useStore.getState().loadSettings();
@@ -18,7 +21,7 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
-      <IonReactRouter>
+      <Router>
         <IonRouterOutlet>
           <Route path="/tabs" component={Tabs} />
           <Route path="/recordings" component={RecordingsScreen} />
@@ -26,7 +29,7 @@ const App: React.FC = () => {
           {/* Phase 13 Design Routes */}
           <Route path="/" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />
         </IonRouterOutlet>
-      </IonReactRouter>
+      </Router>
     </IonApp>
   );
 };

@@ -36,8 +36,10 @@ const initApp = async () => {
     jeepSqlite(window);
 
     const existingJeepEl = document.querySelector('jeep-sqlite');
+    const jeepEl = existingJeepEl ?? document.createElement('jeep-sqlite');
+    jeepEl.setAttribute('wasmPath', './assets');
+
     if (!existingJeepEl) {
-      const jeepEl = document.createElement('jeep-sqlite');
       document.body.appendChild(jeepEl);
     }
 

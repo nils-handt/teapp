@@ -35,6 +35,18 @@ This document provides instructions for setting up the Teapp development environ
     npx cap open android
     ```
 
+## GitHub Pages Deployment
+
+1.  **Enable GitHub Pages to use Actions:**
+    In your repository settings, open `Settings > Pages` and set the source to `GitHub Actions`.
+
+2.  **Deploy from `main`:**
+    Push to `main`, or trigger the `Deploy Pages` workflow manually from the Actions tab.
+
+3.  **Open the published app:**
+    The web build is published at [https://nils-handt.github.io/teapp/](https://nils-handt.github.io/teapp/).
+    Browser routes use hash URLs such as `https://nils-handt.github.io/teapp/#/tabs/history`.
+
 ## Project Structure
 
 *   `src/`: Main application source code.
@@ -52,4 +64,4 @@ Refer to `docs/SHORT_TERM_PLAN.md` for the development roadmap. Phase 1 establis
 ## Troubleshooting
 
 *   **Port Conflicts:** If port 5173 is in use, the development server will automatically choose a different port.
-*   **SQLite Web Component:** The `jeep-sqlite` web component may require specific browser configurations to work correctly.
+*   **SQLite Web Component:** The web build copies `sql-wasm.wasm` into `assets/` automatically for both local development and GitHub Pages deployments.
