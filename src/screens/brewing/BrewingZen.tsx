@@ -85,6 +85,16 @@ const actionRowStyle: React.CSSProperties = {
     justifyContent: 'center',
 };
 
+const primaryButtonStyle = {
+    '--background': PALETTE.background,
+    '--color': '#000000',
+};
+
+const dangerButtonStyle = {
+    '--background': `linear-gradient(180deg, ${PALETTE.dangerSoft} 0%, #f4c4bc 100%)`,
+    '--color': '#000000',
+};
+
 const heroButtonStyle: React.CSSProperties = {
     ...secondaryPanelStyle,
     width: '100%',
@@ -265,7 +275,7 @@ const BrewingZen: React.FC = () => {
                 <p style={{ margin: 0, color: PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
                     {phaseCopy.label}
                 </p>
-                <div style={{ fontSize: '3.4rem', lineHeight: 1, fontWeight: 300 }}>
+                <div style={{ fontSize: '3.4rem', lineHeight: 1, fontWeight: 300, marginTop: '8px' }}>
                     {formatWeight(currentWeight)}
                 </div>
             </section>
@@ -285,7 +295,7 @@ const BrewingZen: React.FC = () => {
                     expand="block"
                     shape="round"
                     onClick={() => handleEndSession()}
-                    style={{ '--background': PALETTE.dangerSoft, '--color': '#000000' }}
+                    style={dangerButtonStyle}
                 >
                     End Session
                 </IonButton>
@@ -293,7 +303,7 @@ const BrewingZen: React.FC = () => {
                     expand="block"
                     shape="round"
                     onClick={() => brewingSessionService.confirmSetupDone()}
-                    style={{ '--background': PALETTE.buttonSoft, '--color': '#000000' }}
+                    style={primaryButtonStyle}
                 >
                     Confirm Setup
                 </IonButton>
@@ -354,7 +364,7 @@ const BrewingZen: React.FC = () => {
                     expand="block"
                     shape="round"
                     onClick={() => handleEndSession()}
-                    style={{ '--background': PALETTE.dangerSoft, '--color': '#000000' }}
+                    style={dangerButtonStyle}
                 >
                     End Session
                 </IonButton>
@@ -363,7 +373,7 @@ const BrewingZen: React.FC = () => {
                         expand="block"
                         shape="round"
                         onClick={() => brewingSessionService.manuallyStopInfusion()}
-                        style={{ '--background': PALETTE.buttonSoft, '--color': '#000000' }}
+                        style={primaryButtonStyle}
                     >
                         End Infusion
                     </IonButton>
@@ -373,7 +383,7 @@ const BrewingZen: React.FC = () => {
                         expand="block"
                         shape="round"
                         onClick={() => brewingSessionService.manuallyStartInfusion()}
-                        style={{ '--background': PALETTE.buttonSoft, '--color': '#000000' }}
+                        style={primaryButtonStyle}
                     >
                         Start Infusion
                     </IonButton>
@@ -474,7 +484,7 @@ const BrewingZen: React.FC = () => {
                     expand="block"
                     shape="round"
                     onClick={() => startBrewingSession()}
-                    style={{ '--background': PALETTE.buttonSoft, '--color': '#000000' }}
+                    style={primaryButtonStyle}
                 >
                     Start New Session
                 </IonButton>
@@ -579,7 +589,7 @@ const BrewingZen: React.FC = () => {
                                 <IonButton
                                     shape="round"
                                     onClick={handleAlertSave}
-                                    style={{ '--background': PALETTE.buttonSoft, '--color': '#000000' }}
+                                    style={primaryButtonStyle}
                                 >
                                     Save
                                 </IonButton>
