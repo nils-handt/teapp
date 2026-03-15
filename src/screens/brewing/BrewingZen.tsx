@@ -1,5 +1,4 @@
 import {
-    IonAlert,
     IonButton,
     IonContent,
     IonHeader,
@@ -23,7 +22,6 @@ type AlertState =
         field: EditableField;
         header: string;
         inputType: 'number' | 'text';
-        value: string;
     }
     | null;
 
@@ -138,6 +136,7 @@ const BrewingZen: React.FC = () => {
     } = useStore();
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
     const [alertState, setAlertState] = useState<AlertState>(null);
+    const [draftValue, setDraftValue] = useState('');
 
     const phaseCopy = PHASE_COPY[brewingPhase] ?? PHASE_COPY[BrewingPhase.IDLE];
     const hasTeaName = Boolean(activeSession?.teaName?.trim());
@@ -187,17 +186,28 @@ const BrewingZen: React.FC = () => {
             },
         };
 
-        setAlertState({ field, ...config[field] });
+        setAlertState({
+            field,
+            header: config[field].header,
+            inputType: config[field].inputType,
+        });
+        setDraftValue(config[field].value);
     };
 
-    const handleAlertSave = (data: { value?: string }) => {
+    const closeEditor = () => {
+        setAlertState(null);
+        setDraftValue('');
+    };
+
+    const handleAlertSave = () => {
         if (!alertState) {
             return;
         }
 
-        const nextValue = data.value ?? '';
+        const nextValue = draftValue;
         if (alertState.field === 'teaName') {
             brewingSessionService.updateTeaName(nextValue);
+            closeEditor();
             return;
         }
 
@@ -207,6 +217,7 @@ const BrewingZen: React.FC = () => {
         }
 
         brewingSessionService.updateSetupValue(alertState.field, parsedValue);
+        closeEditor();
     };
 
     const renderFieldButton = (label: string, value: string, field: EditableField) => (
@@ -265,7 +276,7 @@ const BrewingZen: React.FC = () => {
                     {renderFieldButton('Lid', formatWeight(activeSession?.lidWeight), 'lidWeight')}
                     {renderFieldButton('Tray', formatWeight(activeSession?.trayWeight), 'trayWeight')}
                     {renderFieldButton('Tea', formatWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
-                    {renderFieldButton('tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
+                    {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
                 </div>
             </section>
 
@@ -334,7 +345,7 @@ const BrewingZen: React.FC = () => {
 
             {!hasTeaName && (
                 <section style={panelStyle}>
-                    {renderFieldButton('tea name', 'no tea selected', 'teaName')}
+                    {renderFieldButton('Tea name', 'no tea selected', 'teaName')}
                 </section>
             )}
 
@@ -387,7 +398,7 @@ const BrewingZen: React.FC = () => {
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>Setup</h3>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
-                    {renderFieldButton('tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
+                    {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                     {setupItems.map((item) => (
@@ -518,26 +529,64 @@ const BrewingZen: React.FC = () => {
                     {renderPhaseContent()}
                 </div>
 
-                <IonAlert
-                    isOpen={alertState !== null}
-                    onDidDismiss={() => setAlertState(null)}
-                    header={alertState?.header}
-                    inputs={alertState ? [{
-                        name: 'value',
-                        type: alertState.inputType,
-                        value: alertState.value,
-                    }] : []}
-                    buttons={[
-                        {
-                            text: 'Cancel',
-                            role: 'cancel',
-                        },
-                        {
-                            text: 'Save',
-                            handler: handleAlertSave,
-                        },
-                    ]}
-                />
+                {alertState && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(20, 28, 22, 0.24)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px',
+                            zIndex: 1000,
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: 'min(420px, 100%)',
+                                borderRadius: '24px',
+                                background: '#fffdf8',
+                                border: `1px solid ${PALETTE.border}`,
+                                boxShadow: '0 18px 36px rgba(40, 52, 40, 0.18)',
+                                padding: '22px',
+                            }}
+                        >
+                            <h3 style={{ margin: '0 0 14px', fontSize: '1.1rem', fontWeight: 500 }}>{alertState.header}</h3>
+                            <input
+                                autoFocus
+                                type={alertState.inputType}
+                                value={draftValue}
+                                onChange={(event) => setDraftValue(event.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 16px',
+                                    borderRadius: '16px',
+                                    border: `1px solid ${PALETTE.border}`,
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    marginBottom: '16px',
+                                }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <IonButton
+                                    shape="round"
+                                    onClick={closeEditor}
+                                    style={{ '--background': '#ece8df', '--color': '#000000' }}
+                                >
+                                    Cancel
+                                </IonButton>
+                                <IonButton
+                                    shape="round"
+                                    onClick={handleAlertSave}
+                                    style={{ '--background': PALETTE.buttonSoft, '--color': '#000000' }}
+                                >
+                                    Save
+                                </IonButton>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {recordingAlert}
             </IonContent>
         </IonPage>
