@@ -24,7 +24,7 @@ export class DecentScale extends BluetoothScale {
   }
 
   async connect(): Promise<void> {
-    await bleAdapter.connect(this.device_id, this.disconnectTriggered.bind(this));
+    await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await this.setLed(true, true);
     await this.attachNotification();
     this.startHeartbeatMonitor();

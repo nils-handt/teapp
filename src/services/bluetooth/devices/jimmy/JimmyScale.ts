@@ -35,7 +35,7 @@ export class JimmyScale extends BluetoothScale {
   }
 
   async connect(): Promise<void> {
-    await bleAdapter.connect(this.device_id, this.disconnectTriggered.bind(this));
+    await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(this.device_id, JimmyScale.SERVICE_UUID, JimmyScale.READ_CHAR_UUID, this.handleNotifications.bind(this));
     setTimeout(async () => {
       await this.setUnit(JimmyUnit.GRAM);

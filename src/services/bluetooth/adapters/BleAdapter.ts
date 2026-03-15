@@ -133,6 +133,10 @@ class BleAdapter {
     try {
       await BleClient.stopNotifications(deviceId, service, characteristic);
     } catch (error) {
+      if (this.isExpectedDisconnectedError(error)) {
+        logger.debug(`Notifications already stopped for characteristic ${characteristic}.`, error);
+        return;
+      }
       logger.error(`Error stopping notifications for characteristic ${characteristic}:`, error);
     }
   }
@@ -140,6 +144,18 @@ class BleAdapter {
   // Helper to convert number array to ArrayBuffer for writing
   numbersToData(numbers: number[]): ArrayBufferLike {
     return new Uint8Array(numbers).buffer;
+  }
+
+  private isExpectedDisconnectedError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    const normalized = message.toLowerCase();
+    const mentionsDisconnect = normalized.includes('gatt server is disconnected')
+      || normalized.includes('server is disconnected')
+      || normalized.includes('device is disconnected')
+      || normalized.includes('cannot retrieve services')
+      || normalized.includes('(re)connect first');
+
+    return mentionsDisconnect;
   }
 }
 

@@ -18,7 +18,7 @@ export class Skale extends BluetoothScale {
   }
 
   async connect(): Promise<void> {
-    await bleAdapter.connect(this.device_id, this.disconnectTriggered.bind(this));
+    await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(this.device_id, Skale.SERVICE_UUID, Skale.READ_CHAR_UUID, this.handleNotifications.bind(this));
     await this.setLed(true);
     await this.displayCurrentWeight();

@@ -23,7 +23,7 @@ export class BokooScale extends BluetoothScale {
 
   async connect(): Promise<void> {
     this.logger.log('Connecting...');
-    await bleAdapter.connect(this.device_id, this.disconnectTriggered.bind(this));
+    await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(
       this.device_id,
       BokooScale.SERVICE_UUID,

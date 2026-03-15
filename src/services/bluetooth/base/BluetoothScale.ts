@@ -13,6 +13,7 @@ import {Logger} from '../utils/Logger';
 
 export abstract class BluetoothScale {
   protected logger: Logger;
+  private disconnectHandler: (() => void | Promise<void>) | null = null;
   public batteryLevel = 100;
   public supportsTaring = true;
   public supportsTwoWeights = false;
@@ -57,13 +58,29 @@ export abstract class BluetoothScale {
   abstract setLed(on: boolean, timerOn?: boolean): Promise<void>;
   abstract setTimer(command: SCALE_TIMER_COMMAND): Promise<void>;
   abstract getWeight(): Promise<void>;
-  abstract disconnectTriggered(): void;
+  abstract disconnectTriggered(): Promise<void> | void;
+
+  public setDisconnectHandler(handler: (() => void | Promise<void>) | null): void {
+    this.disconnectHandler = handler;
+  }
 
   public cleanup(): void {
     this.weightChangeSubject.complete();
     this.flowChangeSubject.complete();
     this.timerEventSubject.complete();
     this.tareEventSubject.complete();
+  }
+
+  protected async handleDeviceDisconnect(): Promise<void> {
+    try {
+      await this.disconnectTriggered();
+    } catch (error) {
+      this.logger.error('Error during disconnect cleanup', error);
+    }
+
+    if (this.disconnectHandler) {
+      await this.disconnectHandler();
+    }
   }
 
   protected setWeight(weight: number, stable: boolean): void {

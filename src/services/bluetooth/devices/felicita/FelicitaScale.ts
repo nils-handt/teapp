@@ -16,7 +16,7 @@ export class FelicitaScale extends BluetoothScale {
   }
 
   async connect(): Promise<void> {
-    await bleAdapter.connect(this.device_id, this.disconnectTriggered.bind(this));
+    await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(this.device_id, Felicita.DATA_SERVICE, Felicita.DATA_CHARACTERISTIC, this.handleNotifications.bind(this));
     this.logger.log('Felicita Scale connected');
   }

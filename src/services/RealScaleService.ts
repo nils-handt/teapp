@@ -36,6 +36,7 @@ export class RealScaleService implements IScaleService {
     private reconnectAttempts = 0;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private lastDevice: DiscoveredDevice | null = null;
+    private disconnectInProgress = false;
 
     constructor() { }
 
@@ -151,6 +152,7 @@ export class RealScaleService implements IScaleService {
         if (!this.currentScale) {
             throw new Error('Failed to instantiate scale class.');
         }
+        this.currentScale.setDisconnectHandler(this.handleScaleDisconnect.bind(this));
         logger.log(`Connecting to ${this.currentScale.device_name}...`);
 
         try {
@@ -183,16 +185,20 @@ export class RealScaleService implements IScaleService {
         if (!this.currentScale) return;
         const connectedDevice = this.getConnectedDevice();
         logger.log(`Disconnecting from ${this.currentScale.device_name}...`);
+        this.disconnectInProgress = true;
         try {
             await this.currentScale.disconnectTriggered();
         } catch (err) {
             logger.error('Error during scale specific disconnect cleanup:', err);
         }
-
-        if (connectedDevice) {
-            await bleAdapter.disconnect(connectedDevice.id);
+        try {
+            if (connectedDevice) {
+                await bleAdapter.disconnect(connectedDevice.id);
+            }
+        } finally {
+            await this.handleDisconnect(false);
+            this.disconnectInProgress = false;
         }
-        await this.handleDisconnect(false);
     }
 
     async tare(): Promise<void> {
@@ -250,6 +256,15 @@ export class RealScaleService implements IScaleService {
             if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
             this.reconnectAttempts = 0;
         }
+    }
+
+    private async handleScaleDisconnect(): Promise<void> {
+        if (this.disconnectInProgress) {
+            logger.log('Ignoring disconnect callback during manual disconnect.');
+            return;
+        }
+
+        await this.handleDisconnect(true);
     }
 
     private attemptReconnect(device: DiscoveredDevice) {
