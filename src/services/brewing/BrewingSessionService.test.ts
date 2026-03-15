@@ -117,6 +117,47 @@ describe('BrewingSessionService', () => {
         expect(brewingSessionService.session$.value?.lidWeight).toBe(20);
     });
 
+    it('should manually update tea name during an active session', () => {
+        brewingSessionService.startSession('Initial Tea');
+
+        brewingSessionService.updateTeaName('Updated Tea');
+
+        expect(brewingSessionService.session$.value?.teaName).toBe('Updated Tea');
+        expect(sessionRepository.saveSession).toHaveBeenCalledWith(
+            expect.objectContaining({ teaName: 'Updated Tea' })
+        );
+    });
+
+    it('should manually override setup values during setup', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        brewingSessionService.updateSetupValue('vesselWeight', 92.34);
+        brewingSessionService.updateSetupValue('lidWeight', 18.76);
+        brewingSessionService.updateSetupValue('trayWeight', 120.12);
+        brewingSessionService.updateSetupValue('dryTeaLeavesWeight', 7.49);
+
+        expect(brewingSessionService.session$.value).toEqual(
+            expect.objectContaining({
+                vesselWeight: 92.3,
+                lidWeight: 18.8,
+                trayWeight: 120.1,
+                dryTeaLeavesWeight: 7.5,
+            })
+        );
+    });
+
+    it('should ignore setup overrides outside setup phase', () => {
+        brewingSessionService.startSession('Test Tea');
+        brewingSessionService.updateSetupValue('vesselWeight', 88);
+        brewingSessionService.confirmSetupDone();
+        vi.clearAllMocks();
+
+        brewingSessionService.updateSetupValue('vesselWeight', 140);
+
+        expect(brewingSessionService.session$.value?.vesselWeight).toBe(88);
+        expect(sessionRepository.saveSession).not.toHaveBeenCalled();
+    });
+
     it('should start infusion when water is added', () => {
         // Setup state
         brewingSessionService.startSession('Test Tea');

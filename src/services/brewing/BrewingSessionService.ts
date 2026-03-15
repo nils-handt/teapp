@@ -8,6 +8,8 @@ import { Infusion } from '../../entities/Infusion.entity';
 import { BrewingPhase, WeightTrend } from '../interfaces/brewing.types';
 import { keepAwakeService } from '../KeepAwakeService';
 
+type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
+
 class BrewingSessionService {
     private static instance: BrewingSessionService;
     private weightSubscription: Subscription | null = null;
@@ -56,6 +58,13 @@ class BrewingSessionService {
             BrewingSessionService.instance = new BrewingSessionService();
         }
         return BrewingSessionService.instance;
+    }
+
+    private emitSession(session: BrewingSession) {
+        this.session$.next({
+            ...session,
+            infusions: [...(session.infusions || [])],
+        });
     }
 
     private initializeWeightSubscription() {
@@ -155,7 +164,7 @@ class BrewingSessionService {
         this.lastStableWasteWater = 0;
         this.maxWeightInPhase = 0;
         this.setupStepWeights = [0];
-        this.session$.next(session);
+        this.emitSession(session);
         this.state$.next(BrewingPhase.SETUP);
 
         this.initializeWeightSubscription();
@@ -219,7 +228,7 @@ class BrewingSessionService {
 
             // Persist initial session? Or wait? better save now in case of crash.
             sessionRepository.saveSession(session);
-            this.session$.next(session);
+            this.emitSession(session);
 
             this.state$.next(BrewingPhase.READY);
 
@@ -252,11 +261,44 @@ class BrewingSessionService {
             session.endTime = new Date().toISOString();
             session.status = 'completed';
             await sessionRepository.saveSession(session);
+            this.emitSession(session);
         }
         this.state$.next(BrewingPhase.ENDED);
-        this.session$.next(null);
         this.currentInfusion$.next(null);
         this.stopWeightSubscription();
+    }
+
+    public updateTeaName(name: string) {
+        const session = this.session$.value;
+        const allowedPhases = new Set<BrewingPhase>([
+            BrewingPhase.SETUP,
+            BrewingPhase.READY,
+            BrewingPhase.INFUSION,
+            BrewingPhase.INFUSION_VESSEL_LIFTED,
+            BrewingPhase.REST,
+        ]);
+
+        if (!session || !allowedPhases.has(this.state$.value)) {
+            return;
+        }
+
+        session.teaName = name.trim();
+        this.emitSession(session);
+        void sessionRepository.saveSession(session);
+    }
+
+    public updateSetupValue(field: SetupField, value: number) {
+        const session = this.session$.value;
+        if (!session || this.state$.value !== BrewingPhase.SETUP) {
+            return;
+        }
+
+        const normalizedValue = parseFloat(Math.max(0, value).toFixed(1));
+        session[field] = normalizedValue;
+
+        this.setupStepWeights = this.buildRestoredSetupWeights(session);
+        this.emitSession(session);
+        void sessionRepository.saveSession(session);
     }
 
     // --- Phase Logic ---
@@ -370,7 +412,7 @@ class BrewingSessionService {
         if (session.dryTeaLeavesWeight !== teaAdded) { session.dryTeaLeavesWeight = teaAdded; updated = true; }
 
         if (updated) {
-            this.session$.next(session);
+            this.emitSession(session);
         }
     }
 
@@ -469,7 +511,7 @@ class BrewingSessionService {
             if (session) {
                 const wasteWater = parseFloat(Math.max(0, weight - baseTray).toFixed(1));
                 session.currentWasteWater = wasteWater;
-                this.session$.next(session);
+                this.emitSession(session);
             }
             this.state$.next(BrewingPhase.INFUSION_VESSEL_LIFTED);
             this.stopTimer(); // Pause timer while lifted
@@ -491,7 +533,7 @@ class BrewingSessionService {
             if (session) {
                 const wasteWater = parseFloat(Math.max(0, weight - baseTray).toFixed(1));
                 session.currentWasteWater = wasteWater;
-                this.session$.next(session);
+                this.emitSession(session);
             }
         }
 
@@ -599,7 +641,7 @@ class BrewingSessionService {
 
             sessionRepository.saveSession(session);
 
-            this.session$.next(session);
+            this.emitSession(session);
 
             // Update lastStableWeight (normalized to V + L + WetLeaves)
             this.lastStableWeight = hasLid ? currentWeight : currentWeight + lidWeight;
