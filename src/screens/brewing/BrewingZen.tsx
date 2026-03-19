@@ -15,7 +15,7 @@ import { brewingSessionService } from '../../services/brewing/BrewingSessionServ
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
-type EditableField = SetupField | 'teaName';
+type EditableField = SetupField | 'teaName' | 'brewingVesselName';
 
 type AlertState =
     | {
@@ -150,6 +150,10 @@ const BrewingZen: React.FC = () => {
 
     const phaseCopy = PHASE_COPY[brewingPhase] ?? PHASE_COPY[BrewingPhase.IDLE];
     const hasTeaName = Boolean(activeSession?.teaName?.trim());
+    const hasBrewingVesselWeights = Boolean((activeSession?.vesselWeight ?? 0) > 0 && (activeSession?.lidWeight ?? 0) > 0);
+    const hasBrewingVesselName = Boolean(activeSession?.brewingVessel?.name?.trim());
+    const brewingVesselLabel = activeSession?.brewingVessel?.name?.trim()
+        || (hasBrewingVesselWeights ? 'no vessel selected' : 'detect vessel first');
 
     const setupItems = useMemo(() => ([
         { label: 'Vessel', value: formatWeight(activeSession?.vesselWeight) },
@@ -164,7 +168,7 @@ const BrewingZen: React.FC = () => {
     ]), [activeSession]);
 
     const openAlert = (field: EditableField) => {
-        if (!activeSession && field !== 'teaName') {
+        if (!activeSession) {
             return;
         }
 
@@ -194,6 +198,11 @@ const BrewingZen: React.FC = () => {
                 inputType: 'number',
                 value: String(activeSession?.dryTeaLeavesWeight ?? 0),
             },
+            brewingVesselName: {
+                header: 'Brewing Vessel Name',
+                inputType: 'text',
+                value: activeSession?.brewingVessel?.name ?? '',
+            },
         };
 
         setAlertState({
@@ -221,6 +230,12 @@ const BrewingZen: React.FC = () => {
             return;
         }
 
+        if (alertState.field === 'brewingVesselName') {
+            brewingSessionService.updateBrewingVesselName(nextValue);
+            closeEditor();
+            return;
+        }
+
         const parsedValue = Number.parseFloat(nextValue);
         if (Number.isNaN(parsedValue)) {
             return;
@@ -230,22 +245,31 @@ const BrewingZen: React.FC = () => {
         closeEditor();
     };
 
-    const renderFieldButton = (label: string, value: string, field: EditableField) => (
+    const renderFieldButton = (label: string, value: string, field: EditableField, options?: { disabled?: boolean }) => (
         <button
             type="button"
-            onClick={() => openAlert(field)}
+            onClick={() => {
+                if (!options?.disabled) {
+                    openAlert(field);
+                }
+            }}
+            disabled={options?.disabled}
             style={{
                 width: '100%',
                 padding: '16px 18px',
                 borderRadius: '18px',
                 border: `1px solid ${PALETTE.border}`,
-                background: field === 'teaName' && !hasTeaName ? PALETTE.accentSoft : 'rgba(255, 255, 255, 0.52)',
+                background:
+                    (field === 'teaName' && !hasTeaName) || (field === 'brewingVesselName' && !hasBrewingVesselName && hasBrewingVesselWeights)
+                        ? PALETTE.accentSoft
+                        : 'rgba(255, 255, 255, 0.52)',
                 color: PALETTE.text,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 fontSize: '1rem',
-                cursor: 'pointer',
+                cursor: options?.disabled ? 'not-allowed' : 'pointer',
+                opacity: options?.disabled ? 0.6 : 1,
             }}
         >
             <span style={{ color: PALETTE.muted, letterSpacing: '0.03em' }}>{label}</span>
@@ -287,6 +311,7 @@ const BrewingZen: React.FC = () => {
                     {renderFieldButton('Tray', formatWeight(activeSession?.trayWeight), 'trayWeight')}
                     {renderFieldButton('Tea', formatWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
                     {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
+                    {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                 </div>
             </section>
 
@@ -353,9 +378,12 @@ const BrewingZen: React.FC = () => {
                 )}
             </section>
 
-            {!hasTeaName && (
+            {(!hasTeaName || !hasBrewingVesselName) && (
                 <section style={panelStyle}>
-                    {renderFieldButton('Tea name', 'no tea selected', 'teaName')}
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                        {!hasTeaName && renderFieldButton('Tea name', 'no tea selected', 'teaName')}
+                        {!hasBrewingVesselName && renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
+                    </div>
                 </section>
             )}
 
@@ -409,6 +437,9 @@ const BrewingZen: React.FC = () => {
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                     {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                    {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                     {setupItems.map((item) => (

@@ -13,7 +13,7 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
             order: {
                 startTime: 'DESC',
             },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
     },
 
@@ -22,14 +22,14 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
             order: {
                 startTime: 'DESC',
             },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
     },
 
     async getSessionById(sessionId: string): Promise<BrewingSession | null> {
         return this.findOne({
             where: { sessionId },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
     },
 
@@ -39,7 +39,7 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
             order: {
                 startTime: 'DESC',
             },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
     },
 

@@ -42,3 +42,4 @@ public
 
 # specific test files
 src/services/brewing/testfiles/*.result.debug.json
+.npm-cache

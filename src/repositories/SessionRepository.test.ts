@@ -49,7 +49,7 @@ describe('SessionRepository', () => {
 
         expect(findSpy).toHaveBeenCalledWith({
             order: { startTime: 'DESC' },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
         expect(result).toBe(mockSessions);
     });
@@ -64,7 +64,7 @@ describe('SessionRepository', () => {
         expect(findOneSpy).toHaveBeenCalledWith({
             where: { status: 'active' },
             order: { startTime: 'DESC' },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
         expect(result).toBe(mockSession);
     });
@@ -78,7 +78,7 @@ describe('SessionRepository', () => {
 
         expect(findOneSpy).toHaveBeenCalledWith({
             where: { sessionId: '123' },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
         expect(result).toBe(mockSession);
     });
@@ -93,7 +93,7 @@ describe('SessionRepository', () => {
         expect(findSpy).toHaveBeenCalledWith({
             where: { teaName: Like('%Oolong%') },
             order: { startTime: 'DESC' },
-            relations: ['infusions'],
+            relations: ['infusions', 'brewingVessel'],
         });
         expect(result).toBe(mockSessions);
     });

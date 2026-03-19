@@ -3,7 +3,9 @@ import { brewingSessionService } from './BrewingSessionService';
 import { BrewingPhase } from '../interfaces/brewing.types';
 import { bluetoothScaleService } from '../BluetoothScaleService';
 import { sessionRepository } from '../../repositories/SessionRepository'; // We need to mock this
+import { brewingVesselRepository } from '../../repositories/BrewingVesselRepository';
 import { BrewingSession } from '../../entities/BrewingSession.entity';
+import { BrewingVessel } from '../../entities/BrewingVessel.entity';
 import { Infusion } from '../../entities/Infusion.entity';
 
 // Mock dependencies
@@ -13,14 +15,27 @@ vi.mock('../../repositories/SessionRepository', () => ({
     },
 }));
 
+vi.mock('../../repositories/BrewingVesselRepository', () => ({
+    brewingVesselRepository: {
+        findSimilarVessel: vi.fn(),
+        saveBrewingVessel: vi.fn(),
+    },
+}));
+
 import fs from 'fs';
 import path from 'path';
 
 describe('BrewingSessionService', () => {
+    const flushAsyncWork = async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
     beforeEach(() => {
         vi.useFakeTimers();
         brewingSessionService.resetForTest();
         vi.clearAllMocks();
+        vi.mocked(brewingVesselRepository.findSimilarVessel).mockResolvedValue(null);
     });
 
     afterEach(async () => {
@@ -126,6 +141,48 @@ describe('BrewingSessionService', () => {
         expect(sessionRepository.saveSession).toHaveBeenCalledWith(
             expect.objectContaining({ teaName: 'Updated Tea' })
         );
+    });
+
+    it('should attach a matching brewing vessel when setup weights change', async () => {
+        const brewingVessel = new BrewingVessel();
+        brewingVessel.vesselId = 'vessel-1';
+        brewingVessel.name = 'Silver Gaiwan';
+        brewingVessel.vesselWeight = 92.3;
+        brewingVessel.lidWeight = 18.8;
+        vi.mocked(brewingVesselRepository.findSimilarVessel).mockResolvedValue(brewingVessel);
+
+        brewingSessionService.startSession('Test Tea');
+        brewingSessionService.updateSetupValue('vesselWeight', 92.34);
+        brewingSessionService.updateSetupValue('lidWeight', 18.76);
+        await flushAsyncWork();
+
+        expect(brewingSessionService.session$.value?.brewingVessel?.name).toBe('Silver Gaiwan');
+        expect(brewingSessionService.session$.value?.brewingVesselId).toBe('vessel-1');
+    });
+
+    it('should save a brewing vessel from the current session weights', async () => {
+        const savedBrewingVessel = new BrewingVessel();
+        savedBrewingVessel.vesselId = 'vessel-2';
+        savedBrewingVessel.name = 'Clay Pot';
+        savedBrewingVessel.vesselWeight = 110;
+        savedBrewingVessel.lidWeight = 22;
+        vi.mocked(brewingVesselRepository.saveBrewingVessel).mockResolvedValue(savedBrewingVessel);
+
+        brewingSessionService.startSession('Test Tea');
+        brewingSessionService.updateSetupValue('vesselWeight', 110);
+        brewingSessionService.updateSetupValue('lidWeight', 22);
+        brewingSessionService.updateBrewingVesselName('Clay Pot');
+        await flushAsyncWork();
+
+        expect(brewingVesselRepository.saveBrewingVessel).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Clay Pot',
+                vesselWeight: 110,
+                lidWeight: 22,
+            })
+        );
+        expect(brewingSessionService.session$.value?.brewingVessel?.name).toBe('Clay Pot');
+        expect(brewingSessionService.session$.value?.brewingVesselId).toBe('vessel-2');
     });
 
     it('should manually override setup values during setup', () => {

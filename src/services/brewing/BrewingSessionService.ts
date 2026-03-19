@@ -2,7 +2,9 @@ import { BehaviorSubject, Subscription } from 'rxjs';
 import { bufferTime, filter } from 'rxjs/operators';
 import { bluetoothScaleService } from '../BluetoothScaleService';
 import { sessionRepository } from '../../repositories/SessionRepository';
+import { brewingVesselRepository } from '../../repositories/BrewingVesselRepository';
 import { BrewingSession } from '../../entities/BrewingSession.entity';
+import { BrewingVessel } from '../../entities/BrewingVessel.entity';
 import { Infusion } from '../../entities/Infusion.entity';
 
 import { BrewingPhase, WeightTrend } from '../interfaces/brewing.types';
@@ -159,6 +161,8 @@ class BrewingSessionService {
         session.trayWeight = 0;
         session.dryTeaLeavesWeight = 0;
         session.currentWasteWater = 0;
+        session.brewingVesselId = null;
+        session.brewingVessel = null;
 
         this.lowestLiftedWeight = Infinity;
         this.lastStableWasteWater = 0;
@@ -287,6 +291,28 @@ class BrewingSessionService {
         void sessionRepository.saveSession(session);
     }
 
+    public updateBrewingVesselName(name: string) {
+        const session = this.session$.value;
+        const allowedPhases = new Set<BrewingPhase>([
+            BrewingPhase.SETUP,
+            BrewingPhase.READY,
+            BrewingPhase.INFUSION,
+            BrewingPhase.INFUSION_VESSEL_LIFTED,
+            BrewingPhase.REST,
+        ]);
+
+        if (!session || !allowedPhases.has(this.state$.value)) {
+            return;
+        }
+
+        const trimmedName = name.trim();
+        if (!trimmedName || !this.hasBrewingVesselWeights(session)) {
+            return;
+        }
+
+        void this.saveBrewingVesselForSession(session.sessionId, trimmedName);
+    }
+
     public updateSetupValue(field: SetupField, value: number) {
         const session = this.session$.value;
         if (!session || this.state$.value !== BrewingPhase.SETUP) {
@@ -299,6 +325,10 @@ class BrewingSessionService {
         this.setupStepWeights = this.buildRestoredSetupWeights(session);
         this.emitSession(session);
         void sessionRepository.saveSession(session);
+
+        if (field === 'vesselWeight' || field === 'lidWeight') {
+            void this.syncBrewingVesselForSession(session.sessionId);
+        }
     }
 
     // --- Phase Logic ---
@@ -405,6 +435,7 @@ class BrewingSessionService {
         lid = Math.max(0, parseFloat(lid.toFixed(1)));
         teaAdded = Math.max(0, parseFloat(teaAdded.toFixed(1)));
 
+        const setupWeightsChanged = session.vesselWeight !== vessel || session.lidWeight !== lid;
         let updated = false;
         if (session.trayWeight !== tray) { session.trayWeight = tray; updated = true; }
         if (session.vesselWeight !== vessel && vessel > 0) { session.vesselWeight = vessel; updated = true; }
@@ -414,6 +445,86 @@ class BrewingSessionService {
         if (updated) {
             this.emitSession(session);
         }
+
+        if (setupWeightsChanged) {
+            void this.syncBrewingVesselForSession(session.sessionId);
+        }
+    }
+
+    private hasBrewingVesselWeights(session: BrewingSession): boolean {
+        return (session.vesselWeight || 0) > 0 && (session.lidWeight || 0) > 0;
+    }
+
+    private assignBrewingVessel(session: BrewingSession, brewingVessel: BrewingVessel | null): boolean {
+        const currentVessel = session.brewingVessel;
+        const currentVesselId = currentVessel?.vesselId ?? session.brewingVesselId ?? null;
+        const nextVesselId = brewingVessel?.vesselId ?? null;
+
+        const hasChanged =
+            currentVesselId !== nextVesselId ||
+            currentVessel?.name !== brewingVessel?.name ||
+            currentVessel?.vesselWeight !== brewingVessel?.vesselWeight ||
+            currentVessel?.lidWeight !== brewingVessel?.lidWeight;
+
+        if (!hasChanged) {
+            return false;
+        }
+
+        session.brewingVesselId = nextVesselId;
+        session.brewingVessel = brewingVessel;
+        return true;
+    }
+
+    private async syncBrewingVesselForSession(sessionId: string) {
+        const session = this.session$.value;
+        if (!session || session.sessionId !== sessionId) {
+            return;
+        }
+
+        if (!this.hasBrewingVesselWeights(session)) {
+            if (this.assignBrewingVessel(session, null)) {
+                this.emitSession(session);
+                await sessionRepository.saveSession(session);
+            }
+            return;
+        }
+
+        const brewingVessel = await brewingVesselRepository.findSimilarVessel(session.vesselWeight, session.lidWeight);
+        const currentSession = this.session$.value;
+        if (!currentSession || currentSession.sessionId !== sessionId) {
+            return;
+        }
+
+        if (this.assignBrewingVessel(currentSession, brewingVessel)) {
+            this.emitSession(currentSession);
+            await sessionRepository.saveSession(currentSession);
+        }
+    }
+
+    private async saveBrewingVesselForSession(sessionId: string, name: string) {
+        const session = this.session$.value;
+        if (!session || session.sessionId !== sessionId || !this.hasBrewingVesselWeights(session)) {
+            return;
+        }
+
+        const brewingVessel = session.brewingVessel ?? await brewingVesselRepository.findSimilarVessel(session.vesselWeight, session.lidWeight) ?? new BrewingVessel();
+        if (!brewingVessel.vesselId) {
+            brewingVessel.vesselId = crypto.randomUUID();
+        }
+
+        brewingVessel.name = name;
+        brewingVessel.vesselWeight = session.vesselWeight;
+        brewingVessel.lidWeight = session.lidWeight;
+
+        const savedBrewingVessel = await brewingVesselRepository.saveBrewingVessel(brewingVessel);
+        const currentSession = this.session$.value;
+        if (!currentSession || currentSession.sessionId !== sessionId) {
+            return;
+        }
+
+        this.assignBrewingVessel(currentSession, savedBrewingVessel);
+        this.emitSession(currentSession);
+        await sessionRepository.saveSession(currentSession);
     }
 
     private deriveRestoredPhase(session: BrewingSession): BrewingPhase {

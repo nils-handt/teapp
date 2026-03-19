@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import { BrewingSession } from '../entities/BrewingSession.entity';
+import { BrewingVessel } from '../entities/BrewingVessel.entity';
 import { Infusion } from '../entities/Infusion.entity';
 import { ScaleDevice } from '../entities/ScaleDevice.entity';
 import { Settings } from '../entities/Settings.entity';
@@ -17,6 +18,7 @@ export const AppDataSource = new DataSource({
     logging: false,
     entities: [
         BrewingSession,
+        BrewingVessel,
         Infusion,
         ScaleDevice,
         Settings

@@ -11,6 +11,7 @@ const {
     manuallyStartInfusion,
     manuallyStopInfusion,
     updateTeaName,
+    updateBrewingVesselName,
     updateSetupValue,
 } = vi.hoisted(() => ({
     connectNewDevice: vi.fn(),
@@ -20,6 +21,7 @@ const {
     manuallyStartInfusion: vi.fn(),
     manuallyStopInfusion: vi.fn(),
     updateTeaName: vi.fn(),
+    updateBrewingVesselName: vi.fn(),
     updateSetupValue: vi.fn(),
 }));
 
@@ -53,6 +55,7 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
         manuallyStartInfusion,
         manuallyStopInfusion,
         updateTeaName,
+        updateBrewingVesselName,
         updateSetupValue,
     },
 }));
@@ -73,6 +76,7 @@ describe('BrewingZen', () => {
         mockState = {
             activeSession: {
                 teaName: '',
+                brewingVessel: null,
                 vesselWeight: 95.2,
                 lidWeight: 14.1,
                 trayWeight: 0,
@@ -110,11 +114,12 @@ describe('BrewingZen', () => {
         render(<BrewingZen />);
 
         expect(screen.getByText('63.5 g')).toBeDefined();
-        expect(screen.getByRole('button', { name: /Vessel/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /^Vessel95\.2 g$/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Lid/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Tray/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Tea6.4 g/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /tea name/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /vessel name/i })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Confirm Setup' })).toBeDefined();
     });
 
@@ -124,6 +129,7 @@ describe('BrewingZen', () => {
         render(<BrewingZen />);
 
         expect(screen.getByRole('button', { name: /tea nameno tea selected/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /vessel nameno vessel selected/i })).toBeDefined();
         expect(screen.queryByText('63.5 g')).toBeNull();
     });
 

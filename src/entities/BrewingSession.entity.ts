@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Infusion } from './Infusion.entity.ts';
+import { BrewingVessel } from './BrewingVessel.entity';
 
 @Entity('brewing_sessions')
 export class BrewingSession {
@@ -38,6 +39,13 @@ export class BrewingSession {
 
     @Column('float', { nullable: true })
     waterTemperature!: number;
+
+    @Column('text', { nullable: true })
+    brewingVesselId!: string | null;
+
+    @ManyToOne(() => BrewingVessel, (brewingVessel) => brewingVessel.sessions, { nullable: true })
+    @JoinColumn({ name: 'brewingVesselId', referencedColumnName: 'vesselId' })
+    brewingVessel!: BrewingVessel | null;
 
     @OneToMany(() => Infusion, (infusion) => infusion.session, { cascade: true })
     infusions!: Infusion[];
