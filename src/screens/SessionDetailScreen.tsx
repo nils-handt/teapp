@@ -7,18 +7,14 @@ import {
     IonToolbar,
     IonButtons,
     IonBackButton,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonNote,
     IonButton,
     IonIcon,
-    IonListHeader,
     IonAlert,
     useIonToast
 } from '@ionic/react';
 import { trash, pencil } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
+import SessionSummaryView from '../components/SessionSummaryView';
 import { useStore } from '../stores/useStore';
 
 const TOAST_DURATION = 2000;
@@ -79,18 +75,9 @@ const SessionDetailScreen: React.FC = () => {
         );
     }
 
-    const formatDate = (value: string | number | Date) => {
-        if (!value) return 'N/A';
-        const date = new Date(value);
-        if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleString();
-    };
-
-    const formatDuration = (totalSeconds: number) => {
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    };
+    const hasBrewingVesselWeights = Boolean((selectedSession.vesselWeight ?? 0) > 0 && (selectedSession.lidWeight ?? 0) > 0);
+    const brewingVesselLabel = selectedSession.brewingVessel?.name?.trim()
+        || (hasBrewingVesselWeights ? 'no vessel selected' : 'detect vessel first');
 
     return (
         <IonPage>
@@ -111,44 +98,13 @@ const SessionDetailScreen: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>
-                <IonList>
-                    <IonListHeader>
-                        <IonLabel>Session Info</IonLabel>
-                    </IonListHeader>
-                    <IonItem>
-                        <IonLabel>
-                            <h3>Date</h3>
-                            <p>{formatDate(selectedSession.startTime)}</p>
-                        </IonLabel>
-                    </IonItem>
-                    <IonItem>
-                        <IonLabel text-wrap>
-                            <h3>Notes</h3>
-                            <p>{selectedSession.notes || 'No notes'}</p>
-                        </IonLabel>
-                    </IonItem>
-
-                    <IonListHeader>
-                        <IonLabel>Infusions</IonLabel>
-                    </IonListHeader>
-                    {selectedSession.infusions && selectedSession.infusions.map((infusion) => (
-                        <IonItem key={infusion.infusionId}>
-                            <IonLabel>
-                                <h2>Infusion {infusion.infusionNumber}</h2>
-                                <p>Ratio: 1:{(infusion.waterWeight / (selectedSession.dryTeaLeavesWeight || 1)).toFixed(1)}</p>
-                            </IonLabel>
-                            <div slot="end" className="ion-text-right">
-                                <IonNote color="primary">
-                                    {formatDuration(infusion.duration)}
-                                </IonNote>
-                                <br />
-                                <IonNote style={{ fontSize: '0.8em' }}>
-                                    {infusion.waterWeight.toFixed(1)}g / {selectedSession.dryTeaLeavesWeight?.toFixed(1)}g
-                                </IonNote>
-                            </div>
-                        </IonItem>
-                    ))}
-                </IonList>
+                <div style={{ minHeight: '100%', padding: '24px 20px 40px', background: '#ffffff' }}>
+                    <SessionSummaryView
+                        session={selectedSession}
+                        brewingVesselLabel={brewingVesselLabel}
+                        showNotes
+                    />
+                </div>
 
                 <IonAlert
                     isOpen={showDeleteAlert}

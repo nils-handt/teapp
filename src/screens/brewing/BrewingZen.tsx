@@ -6,13 +6,26 @@ import {
     IonTitle,
     IonToolbar,
 } from '@ionic/react';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import DesignSwitcher from '../../components/DesignSwitcher';
+import SessionSummaryView from '../../components/SessionSummaryView';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { useStore } from '../../stores/useStore';
 import { bluetoothScaleService } from '../../services/BluetoothScaleService';
 import { brewingSessionService } from '../../services/brewing/BrewingSessionService';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
+import {
+    formatZenWeight,
+    zenActionRowStyle,
+    zenContainerStyle,
+    zenDangerButtonStyle,
+    zenHeroButtonStyle,
+    zenPanelStyle,
+    zenPrimaryButtonStyle,
+    zenSecondaryPanelStyle,
+    zenStackStyle,
+    ZEN_PALETTE,
+} from './zenBrewingShared';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
 type EditableField = SetupField | 'teaName' | 'brewingVesselName';
@@ -35,102 +48,8 @@ const PHASE_COPY: Record<BrewingPhase, { label: string; message: string }> = {
     [BrewingPhase.ENDED]: { label: 'Ended', message: '' },
 };
 
-const PALETTE = {
-    background: 'linear-gradient(180deg, #f7f3eb 0%, #eef3ea 100%)',
-    panel: 'rgba(255, 252, 246, 0.86)',
-    panelStrong: 'rgba(246, 250, 242, 0.95)',
-    border: 'rgba(93, 113, 90, 0.16)',
-    text: '#243126',
-    muted: '#68756a',
-    accentSoft: 'rgba(95, 124, 97, 0.12)',
-    restTimer: '#9aa399',
-    buttonSoft: '#d9e8ef',
-    dangerSoft: '#fad3ce',
-};
-
-const containerStyle: React.CSSProperties = {
-    minHeight: '100%',
-    padding: '24px 20px 40px',
-    background: '#ffffff',
-    color: PALETTE.text,
-};
-
-const stackStyle: React.CSSProperties = {
-    maxWidth: '720px',
-    margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '18px',
-};
-
-const panelStyle: React.CSSProperties = {
-    background: PALETTE.panel,
-    border: `1px solid ${PALETTE.border}`,
-    borderRadius: '28px',
-    padding: '22px',
-    boxShadow: '0 16px 36px rgba(69, 83, 66, 0.08)',
-    backdropFilter: 'blur(10px)',
-};
-
-const secondaryPanelStyle: React.CSSProperties = {
-    ...panelStyle,
-    background: PALETTE.panelStrong,
-    backgroundImage: PALETTE.background,
-};
-
-const actionRowStyle: React.CSSProperties = {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '12px',
-    justifyContent: 'center',
-};
-
-const primaryButtonStyle = {
-    '--background': PALETTE.background,
-    '--color': '#000000',
-};
-
-const dangerButtonStyle = {
-    '--background': `linear-gradient(180deg, ${PALETTE.dangerSoft} 0%, #f4c4bc 100%)`,
-    '--color': '#000000',
-};
-
-const heroButtonStyle: React.CSSProperties = {
-    ...secondaryPanelStyle,
-    width: '100%',
-    padding: '40px 24px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    color: '#000000',
-    fontSize: '1.05rem',
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-};
-
 const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-};
-
-const formatWeight = (value?: number | null) => `${(value ?? 0).toFixed(1)} g`;
-
-const formatDateTime = (value?: string | null) => {
-    if (!value) {
-        return 'Not available';
-    }
-
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return 'Not available';
-    }
-
-    return parsed.toLocaleString();
-};
-
-const formatSeconds = (value?: number | null) => {
-    const totalSeconds = value ?? 0;
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -154,18 +73,6 @@ const BrewingZen: React.FC = () => {
     const hasBrewingVesselName = Boolean(activeSession?.brewingVessel?.name?.trim());
     const brewingVesselLabel = activeSession?.brewingVessel?.name?.trim()
         || (hasBrewingVesselWeights ? 'no vessel selected' : 'detect vessel first');
-
-    const setupItems = useMemo(() => ([
-        { label: 'Vessel', value: formatWeight(activeSession?.vesselWeight) },
-        { label: 'Lid', value: formatWeight(activeSession?.lidWeight) },
-        { label: 'Tray', value: formatWeight(activeSession?.trayWeight) },
-        { label: 'Tea', value: formatWeight(activeSession?.dryTeaLeavesWeight) },
-    ]), [activeSession]);
-
-    const timingItems = useMemo(() => ([
-        { label: 'Started', value: formatDateTime(activeSession?.startTime) },
-        { label: 'Ended', value: formatDateTime(activeSession?.endTime) },
-    ]), [activeSession]);
 
     const openAlert = (field: EditableField) => {
         if (!activeSession) {
@@ -258,12 +165,12 @@ const BrewingZen: React.FC = () => {
                 width: '100%',
                 padding: '16px 18px',
                 borderRadius: '18px',
-                border: `1px solid ${PALETTE.border}`,
+                border: `1px solid ${ZEN_PALETTE.border}`,
                 background:
                     (field === 'teaName' && !hasTeaName) || (field === 'brewingVesselName' && !hasBrewingVesselName && hasBrewingVesselWeights)
-                        ? PALETTE.accentSoft
+                        ? ZEN_PALETTE.accentSoft
                         : 'rgba(255, 255, 255, 0.52)',
-                color: PALETTE.text,
+                color: ZEN_PALETTE.text,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -272,19 +179,19 @@ const BrewingZen: React.FC = () => {
                 opacity: options?.disabled ? 0.6 : 1,
             }}
         >
-            <span style={{ color: PALETTE.muted, letterSpacing: '0.03em' }}>{label}</span>
+            <span style={{ color: ZEN_PALETTE.muted, letterSpacing: '0.03em' }}>{label}</span>
             <span>{value}</span>
         </button>
     );
 
     const renderDisconnectedState = () => (
-        <div style={{ ...stackStyle, justifyContent: 'center', minHeight: 'calc(100vh - 120px)' }}>
+        <div style={{ ...zenStackStyle, justifyContent: 'center', minHeight: 'calc(100vh - 120px)' }}>
             <button
                 type="button"
                 onClick={() => bluetoothScaleService.connectNewDevice()}
                 disabled={connectionStatus === 'connecting'}
                 style={{
-                    ...heroButtonStyle,
+                    ...zenHeroButtonStyle,
                     cursor: connectionStatus === 'connecting' ? 'default' : 'pointer',
                 }}
             >
@@ -294,33 +201,33 @@ const BrewingZen: React.FC = () => {
     );
 
     const renderSetupView = () => (
-        <div style={stackStyle}>
-            <section style={secondaryPanelStyle}>
-                <p style={{ margin: 0, color: PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
+        <div style={zenStackStyle}>
+            <section style={zenSecondaryPanelStyle}>
+                <p style={{ margin: 0, color: ZEN_PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
                     {phaseCopy.label}
                 </p>
                 <div style={{ fontSize: '3.4rem', lineHeight: 1, fontWeight: 300, marginTop: '8px' }}>
-                    {formatWeight(currentWeight)}
+                    {formatZenWeight(currentWeight)}
                 </div>
             </section>
 
-            <section style={panelStyle}>
+            <section style={zenPanelStyle}>
                 <div style={{ display: 'grid', gap: '12px' }}>
-                    {renderFieldButton('Vessel', formatWeight(activeSession?.vesselWeight), 'vesselWeight')}
-                    {renderFieldButton('Lid', formatWeight(activeSession?.lidWeight), 'lidWeight')}
-                    {renderFieldButton('Tray', formatWeight(activeSession?.trayWeight), 'trayWeight')}
-                    {renderFieldButton('Tea', formatWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
+                    {renderFieldButton('Vessel', formatZenWeight(activeSession?.vesselWeight), 'vesselWeight')}
+                    {renderFieldButton('Lid', formatZenWeight(activeSession?.lidWeight), 'lidWeight')}
+                    {renderFieldButton('Tray', formatZenWeight(activeSession?.trayWeight), 'trayWeight')}
+                    {renderFieldButton('Tea', formatZenWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
                     {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
                     {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                 </div>
             </section>
 
-            <section style={actionRowStyle}>
+            <section style={zenActionRowStyle}>
                 <IonButton
                     expand="block"
                     shape="round"
                     onClick={() => handleEndSession()}
-                    style={dangerButtonStyle}
+                    style={zenDangerButtonStyle}
                 >
                     End Session
                 </IonButton>
@@ -328,7 +235,7 @@ const BrewingZen: React.FC = () => {
                     expand="block"
                     shape="round"
                     onClick={() => brewingSessionService.confirmSetupDone()}
-                    style={primaryButtonStyle}
+                    style={zenPrimaryButtonStyle}
                 >
                     Confirm Setup
                 </IonButton>
@@ -337,9 +244,9 @@ const BrewingZen: React.FC = () => {
     );
 
     const renderActiveView = (options?: { greyTimer?: boolean }) => (
-        <div style={stackStyle}>
-            <section style={{ ...secondaryPanelStyle, textAlign: 'center' }}>
-                <p style={{ margin: 0, color: PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
+        <div style={zenStackStyle}>
+            <section style={{ ...zenSecondaryPanelStyle, textAlign: 'center' }}>
+                <p style={{ margin: 0, color: ZEN_PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
                     {phaseCopy.label}
                 </p>
                 <div
@@ -348,7 +255,7 @@ const BrewingZen: React.FC = () => {
                         width: 'min(320px, 78vw)',
                         aspectRatio: '1 / 1',
                         borderRadius: '50%',
-                        border: `1px solid ${PALETTE.border}`,
+                        border: `1px solid ${ZEN_PALETTE.border}`,
                         background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(230,238,226,0.9))',
                         display: 'flex',
                         flexDirection: 'column',
@@ -361,25 +268,25 @@ const BrewingZen: React.FC = () => {
                         style={{
                             fontSize: '3.4rem',
                             fontWeight: 300,
-                            color: options?.greyTimer ? PALETTE.restTimer : PALETTE.text,
+                            color: options?.greyTimer ? ZEN_PALETTE.restTimer : ZEN_PALETTE.text,
                             transition: 'color 200ms ease',
                         }}
                     >
                         {formatTime(timerValue)}
                     </span>
-                    <span style={{ marginTop: '8px', color: PALETTE.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}>
+                    <span style={{ marginTop: '8px', color: ZEN_PALETTE.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}>
                         {phaseCopy.label}
                     </span>
                 </div>
                 {phaseCopy.message && (
-                    <p style={{ margin: 0, color: PALETTE.muted, lineHeight: 1.6 }}>
+                    <p style={{ margin: 0, color: ZEN_PALETTE.muted, lineHeight: 1.6 }}>
                         {phaseCopy.message}
                     </p>
                 )}
             </section>
 
             {(!hasTeaName || !hasBrewingVesselName) && (
-                <section style={panelStyle}>
+                <section style={zenPanelStyle}>
                     <div style={{ display: 'grid', gap: '12px' }}>
                         {!hasTeaName && renderFieldButton('Tea name', 'no tea selected', 'teaName')}
                         {!hasBrewingVesselName && renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
@@ -387,12 +294,12 @@ const BrewingZen: React.FC = () => {
                 </section>
             )}
 
-            <section style={actionRowStyle}>
+            <section style={zenActionRowStyle}>
                 <IonButton
                     expand="block"
                     shape="round"
                     onClick={() => handleEndSession()}
-                    style={dangerButtonStyle}
+                    style={zenDangerButtonStyle}
                 >
                     End Session
                 </IonButton>
@@ -401,7 +308,7 @@ const BrewingZen: React.FC = () => {
                         expand="block"
                         shape="round"
                         onClick={() => brewingSessionService.manuallyStopInfusion()}
-                        style={primaryButtonStyle}
+                        style={zenPrimaryButtonStyle}
                     >
                         End Infusion
                     </IonButton>
@@ -411,7 +318,7 @@ const BrewingZen: React.FC = () => {
                         expand="block"
                         shape="round"
                         onClick={() => brewingSessionService.manuallyStartInfusion()}
-                        style={primaryButtonStyle}
+                        style={zenPrimaryButtonStyle}
                     >
                         Start Infusion
                     </IonButton>
@@ -420,115 +327,32 @@ const BrewingZen: React.FC = () => {
         </div>
     );
 
-    const renderEndedView = () => (
-        <div style={stackStyle}>
-            <section style={secondaryPanelStyle}>
-                <p style={{ margin: 0, color: PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
-                    Session Summary
-                </p>
-                <h2 style={{ margin: '10px 0 8px', fontSize: '1.9rem', fontWeight: 400 }}>
-                    {activeSession?.teaName?.trim() || 'no tea selected'}
-                </h2>
-            </section>
-
-            <section style={panelStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>Setup</h3>
-                </div>
-                <div style={{ marginBottom: '12px' }}>
-                    {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
-                </div>
-                <div style={{ marginBottom: '12px' }}>
-                    {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                    {setupItems.map((item) => (
-                        <div
-                            key={item.label}
-                            style={{
-                                padding: '14px 16px',
-                                borderRadius: '18px',
-                                background: 'rgba(255,255,255,0.55)',
-                                border: `1px solid ${PALETTE.border}`,
-                            }}
-                        >
-                            <div style={{ color: PALETTE.muted, fontSize: '0.82rem', marginBottom: '6px' }}>{item.label}</div>
-                            <div>{item.value}</div>
-                        </div>
-                    ))}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
-                    {timingItems.map((item) => (
-                        <div
-                            key={item.label}
-                            style={{
-                                padding: '14px 16px',
-                                borderRadius: '18px',
-                                background: 'rgba(255,255,255,0.55)',
-                                border: `1px solid ${PALETTE.border}`,
-                            }}
-                        >
-                            <div style={{ color: PALETTE.muted, fontSize: '0.82rem', marginBottom: '6px' }}>{item.label}</div>
-                            <div>{item.value}</div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            <section style={panelStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>Infusions</h3>
-                    <span style={{ color: PALETTE.muted, fontSize: '0.9rem' }}>{activeSession?.infusions?.length ?? 0} total</span>
-                </div>
-
-                {(activeSession?.infusions?.length ?? 0) > 0 ? (
-                    <div style={{ display: 'grid', gap: '10px' }}>
-                        {activeSession?.infusions?.map((infusion) => (
-                            <div
-                                key={infusion.infusionId}
-                                style={{
-                                    padding: '14px 16px',
-                                    borderRadius: '18px',
-                                    border: `1px solid ${PALETTE.border}`,
-                                    background: 'rgba(255,255,255,0.58)',
-                                }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                    <strong>Infusion {infusion.infusionNumber}</strong>
-                                    <span style={{ color: PALETTE.muted }}>{formatSeconds(infusion.duration)}</span>
-                                </div>
-                                <div style={{ color: PALETTE.muted, display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.92rem' }}>
-                                    <span>Water {formatWeight(infusion.waterWeight)}</span>
-                                    <span>Wet leaves {formatWeight(infusion.wetTeaLeavesWeight)}</span>
-                                    <span>Rest {formatSeconds(infusion.restDuration)}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p style={{ margin: 0, color: PALETTE.muted }}>No infusions were recorded for this session.</p>
-                )}
-            </section>
-
-            <section style={actionRowStyle}>
+    const renderEndedView = () => activeSession && (
+        <SessionSummaryView
+            session={activeSession}
+            brewingVesselLabel={brewingVesselLabel}
+            teaNameAction={() => openAlert('teaName')}
+            brewingVesselAction={() => openAlert('brewingVesselName')}
+            brewingVesselActionDisabled={!hasBrewingVesselWeights}
+            footer={(
                 <IonButton
                     expand="block"
                     shape="round"
                     onClick={() => startBrewingSession()}
-                    style={primaryButtonStyle}
+                    style={zenPrimaryButtonStyle}
                 >
                     Start New Session
                 </IonButton>
-            </section>
-        </div>
+            )}
+        />
     );
 
     const renderIdleView = () => (
-        <div style={stackStyle}>
+        <div style={zenStackStyle}>
             <button
                 type="button"
                 onClick={() => startBrewingSession()}
-                style={heroButtonStyle}
+                style={zenHeroButtonStyle}
             >
                 START SESSION
             </button>
@@ -566,7 +390,7 @@ const BrewingZen: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>
-                <div style={containerStyle}>
+                <div style={zenContainerStyle}>
                     {renderPhaseContent()}
                 </div>
 
@@ -588,7 +412,7 @@ const BrewingZen: React.FC = () => {
                                 width: 'min(420px, 100%)',
                                 borderRadius: '24px',
                                 background: '#fffdf8',
-                                border: `1px solid ${PALETTE.border}`,
+                                border: `1px solid ${ZEN_PALETTE.border}`,
                                 boxShadow: '0 18px 36px rgba(40, 52, 40, 0.18)',
                                 padding: '22px',
                             }}
@@ -603,7 +427,7 @@ const BrewingZen: React.FC = () => {
                                     width: '100%',
                                     padding: '14px 16px',
                                     borderRadius: '16px',
-                                    border: `1px solid ${PALETTE.border}`,
+                                    border: `1px solid ${ZEN_PALETTE.border}`,
                                     fontSize: '1rem',
                                     outline: 'none',
                                     marginBottom: '16px',
@@ -620,7 +444,7 @@ const BrewingZen: React.FC = () => {
                                 <IonButton
                                     shape="round"
                                     onClick={handleAlertSave}
-                                    style={primaryButtonStyle}
+                                    style={zenPrimaryButtonStyle}
                                 >
                                     Save
                                 </IonButton>
