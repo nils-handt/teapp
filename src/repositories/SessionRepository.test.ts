@@ -98,6 +98,30 @@ describe('SessionRepository', () => {
         expect(result).toBe(mockSessions);
     });
 
+    it('getKnownTeaNames should return unique recent tea names', async () => {
+        const firstSession = new BrewingSession();
+        firstSession.teaName = 'ORT 2015 Gao Jia Shan';
+
+        const duplicateSession = new BrewingSession();
+        duplicateSession.teaName = 'ort 2015 gao jia shan';
+
+        const blankSession = new BrewingSession();
+        blankSession.teaName = '   ';
+
+        const secondSession = new BrewingSession();
+        secondSession.teaName = 'Morning Sencha';
+
+        const findSpy = vi.fn().mockResolvedValue([firstSession, duplicateSession, blankSession, secondSession]);
+        sessionRepository.find = findSpy;
+
+        const result = await sessionRepository.getKnownTeaNames();
+
+        expect(findSpy).toHaveBeenCalledWith({
+            order: { startTime: 'DESC' },
+        });
+        expect(result).toEqual(['ORT 2015 Gao Jia Shan', 'Morning Sencha']);
+    });
+
     it('deleteSession should delete the session', async () => {
         const deleteSpy = vi.fn().mockResolvedValue({ affected: 1 });
         sessionRepository.delete = deleteSpy;

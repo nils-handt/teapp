@@ -15,6 +15,7 @@ import {
 import { trash, pencil } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
 import SessionSummaryView from '../components/SessionSummaryView';
+import TeaNameEditorModal from '../components/TeaNameEditorModal';
 import { useStore } from '../stores/useStore';
 
 const TOAST_DURATION = 2000;
@@ -22,9 +23,11 @@ const TOAST_DURATION = 2000;
 const SessionDetailScreen: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
     const history = useHistory();
-    const { selectedSession, selectSession, deleteSession, updateSession } = useStore();
+    const { selectedSession, selectSession, deleteSession, updateSession, knownTeaNames, loadKnownTeaNames, upsertKnownTeaName } = useStore();
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-    const [showEditAlert, setShowEditAlert] = useState(false);
+    const [showNotesAlert, setShowNotesAlert] = useState(false);
+    const [showTeaNameEditor, setShowTeaNameEditor] = useState(false);
+    const [teaNameDraft, setTeaNameDraft] = useState('');
     const [present] = useIonToast();
 
     useEffect(() => {
@@ -45,9 +48,24 @@ const SessionDetailScreen: React.FC = () => {
         }
     };
 
-    const handleEdit = async (data: any) => {
+    const handleTeaNameSave = async () => {
+        if (selectedSession) {
+            const trimmedTeaName = teaNameDraft.trim();
+            const updatedSession = { ...selectedSession, teaName: trimmedTeaName };
+            await updateSession(updatedSession);
+            upsertKnownTeaName(trimmedTeaName);
+            setShowTeaNameEditor(false);
+            present({
+                message: 'Session updated',
+                duration: TOAST_DURATION,
+                color: 'success'
+            });
+        }
+    };
+
+    const handleNotesSave = async (data: { notes?: string }) => {
         if (selectedSession && data) {
-            const updatedSession = { ...selectedSession, ...data };
+            const updatedSession = { ...selectedSession, notes: data.notes ?? '' };
             await updateSession(updatedSession);
             present({
                 message: 'Session updated',
@@ -55,6 +73,16 @@ const SessionDetailScreen: React.FC = () => {
                 color: 'success'
             });
         }
+    };
+
+    const openTeaNameEditor = () => {
+        if (!selectedSession) {
+            return;
+        }
+
+        setTeaNameDraft(selectedSession.teaName ?? '');
+        setShowTeaNameEditor(true);
+        void loadKnownTeaNames();
     };
 
     if (!selectedSession) {
@@ -88,7 +116,7 @@ const SessionDetailScreen: React.FC = () => {
                     </IonButtons>
                     <IonTitle>{selectedSession.teaName}</IonTitle>
                     <IonButtons slot="end">
-                        <IonButton onClick={() => setShowEditAlert(true)}>
+                        <IonButton onClick={() => setShowNotesAlert(true)}>
                             <IonIcon slot="icon-only" icon={pencil} />
                         </IonButton>
                         <IonButton onClick={() => setShowDeleteAlert(true)}>
@@ -102,6 +130,7 @@ const SessionDetailScreen: React.FC = () => {
                     <SessionSummaryView
                         session={selectedSession}
                         brewingVesselLabel={brewingVesselLabel}
+                        teaNameAction={openTeaNameEditor}
                         showNotes
                     />
                 </div>
@@ -125,16 +154,10 @@ const SessionDetailScreen: React.FC = () => {
                 />
 
                 <IonAlert
-                    isOpen={showEditAlert}
-                    onDidDismiss={() => setShowEditAlert(false)}
-                    header="Edit Session"
+                    isOpen={showNotesAlert}
+                    onDidDismiss={() => setShowNotesAlert(false)}
+                    header="Edit Notes"
                     inputs={[
-                        {
-                            name: 'teaName',
-                            type: 'text',
-                            placeholder: 'Tea Name',
-                            value: selectedSession.teaName
-                        },
                         {
                             name: 'notes',
                             type: 'textarea',
@@ -149,9 +172,18 @@ const SessionDetailScreen: React.FC = () => {
                         },
                         {
                             text: 'Save',
-                            handler: handleEdit
+                            handler: handleNotesSave
                         }
                     ]}
+                />
+                <TeaNameEditorModal
+                    isOpen={showTeaNameEditor}
+                    title="Tea Name"
+                    value={teaNameDraft}
+                    knownTeaNames={knownTeaNames}
+                    onChange={setTeaNameDraft}
+                    onCancel={() => setShowTeaNameEditor(false)}
+                    onSave={handleTeaNameSave}
                 />
             </IonContent>
         </IonPage>

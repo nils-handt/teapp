@@ -9,6 +9,7 @@ import {
 import React, { useState } from 'react';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import SessionSummaryView from '../../components/SessionSummaryView';
+import TeaNameEditorModal from '../../components/TeaNameEditorModal';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { useStore } from '../../stores/useStore';
 import { bluetoothScaleService } from '../../services/BluetoothScaleService';
@@ -62,6 +63,9 @@ const BrewingZen: React.FC = () => {
         connectionStatus,
         currentWeight,
         timerValue,
+        knownTeaNames,
+        loadKnownTeaNames,
+        upsertKnownTeaName,
     } = useStore();
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
     const [alertState, setAlertState] = useState<AlertState>(null);
@@ -118,6 +122,10 @@ const BrewingZen: React.FC = () => {
             inputType: config[field].inputType,
         });
         setDraftValue(config[field].value);
+
+        if (field === 'teaName') {
+            void loadKnownTeaNames();
+        }
     };
 
     const closeEditor = () => {
@@ -133,6 +141,7 @@ const BrewingZen: React.FC = () => {
         const nextValue = draftValue;
         if (alertState.field === 'teaName') {
             brewingSessionService.updateTeaName(nextValue);
+            upsertKnownTeaName(nextValue);
             closeEditor();
             return;
         }
@@ -394,7 +403,17 @@ const BrewingZen: React.FC = () => {
                     {renderPhaseContent()}
                 </div>
 
-                {alertState && (
+                <TeaNameEditorModal
+                    isOpen={alertState?.field === 'teaName'}
+                    title={alertState?.header ?? 'Tea Name'}
+                    value={draftValue}
+                    knownTeaNames={knownTeaNames}
+                    onChange={setDraftValue}
+                    onCancel={closeEditor}
+                    onSave={handleAlertSave}
+                />
+
+                {alertState && alertState.field !== 'teaName' && (
                     <div
                         style={{
                             position: 'fixed',

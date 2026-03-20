@@ -43,6 +43,34 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
         });
     },
 
+    async getKnownTeaNames(): Promise<string[]> {
+        const sessions = await this.find({
+            order: {
+                startTime: 'DESC',
+            },
+        });
+
+        const knownTeaNames: string[] = [];
+        const seenTeaNames = new Set<string>();
+
+        sessions.forEach((session) => {
+            const trimmedTeaName = session.teaName?.trim();
+            if (!trimmedTeaName) {
+                return;
+            }
+
+            const normalizedTeaName = trimmedTeaName.toLowerCase();
+            if (seenTeaNames.has(normalizedTeaName)) {
+                return;
+            }
+
+            seenTeaNames.add(normalizedTeaName);
+            knownTeaNames.push(trimmedTeaName);
+        });
+
+        return knownTeaNames;
+    },
+
     async deleteSession(sessionId: string): Promise<void> {
         await this.delete(sessionId);
     },

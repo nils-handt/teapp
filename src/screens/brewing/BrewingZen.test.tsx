@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
@@ -13,6 +13,8 @@ const {
     updateTeaName,
     updateBrewingVesselName,
     updateSetupValue,
+    loadKnownTeaNames,
+    upsertKnownTeaName,
 } = vi.hoisted(() => ({
     connectNewDevice: vi.fn(),
     startBrewingSession: vi.fn(),
@@ -23,6 +25,8 @@ const {
     updateTeaName: vi.fn(),
     updateBrewingVesselName: vi.fn(),
     updateSetupValue: vi.fn(),
+    loadKnownTeaNames: vi.fn(),
+    upsertKnownTeaName: vi.fn(),
 }));
 
 let mockState: any;
@@ -98,6 +102,9 @@ describe('BrewingZen', () => {
             connectionStatus: 'connected',
             currentWeight: 63.5,
             timerValue: 92000,
+            knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
+            loadKnownTeaNames,
+            upsertKnownTeaName,
         };
     });
 
@@ -172,5 +179,19 @@ describe('BrewingZen', () => {
         render(<BrewingZen />);
 
         expect(screen.getByRole('button', { name: 'End Infusion' })).toBeDefined();
+    });
+
+    it('uses the shared tea editor suggestions when saving a tea name', () => {
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: /tea nameno tea selected/i }));
+
+        expect(loadKnownTeaNames).toHaveBeenCalled();
+
+        fireEvent.click(screen.getByRole('button', { name: 'ORT 2015 Gao Jia Shan' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        expect(updateTeaName).toHaveBeenCalledWith('ORT 2015 Gao Jia Shan');
+        expect(upsertKnownTeaName).toHaveBeenCalledWith('ORT 2015 Gao Jia Shan');
     });
 });

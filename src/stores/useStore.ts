@@ -42,7 +42,10 @@ interface BrewingState {
 interface HistoryState {
   sessionList: BrewingSession[];
   selectedSession: BrewingSession | null;
+  knownTeaNames: string[];
   loadHistory: () => Promise<void>;
+  loadKnownTeaNames: (force?: boolean) => Promise<void>;
+  upsertKnownTeaName: (teaName: string) => void;
   selectSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   filterHistoryByTea: (teaName: string) => Promise<void>;
@@ -135,9 +138,31 @@ export const useStore = create<StoreState>((set, get) => ({
   // HistoryState
   sessionList: [],
   selectedSession: null,
+  knownTeaNames: [],
   loadHistory: async () => {
     const sessions = await sessionRepository.getAllSessions();
     set({ sessionList: sessions });
+  },
+  loadKnownTeaNames: async (force = false) => {
+    if (!force && get().knownTeaNames.length > 0) {
+      return;
+    }
+
+    const knownTeaNames = await sessionRepository.getKnownTeaNames();
+    set({ knownTeaNames });
+  },
+  upsertKnownTeaName: (teaName) => {
+    const trimmedTeaName = teaName.trim();
+    if (!trimmedTeaName) {
+      return;
+    }
+
+    set((state) => {
+      const remainingTeaNames = state.knownTeaNames.filter((knownTeaName) => knownTeaName.toLowerCase() !== trimmedTeaName.toLowerCase());
+      return {
+        knownTeaNames: [trimmedTeaName, ...remainingTeaNames],
+      };
+    });
   },
   selectSession: async (sessionId) => {
     const session = await sessionRepository.getSessionById(sessionId);

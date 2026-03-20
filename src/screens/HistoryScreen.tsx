@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -22,19 +22,21 @@ import { trash } from 'ionicons/icons';
 import { useStore } from '../stores/useStore';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { calculateSessionStats } from '../utils/SessionStatistics';
+import { filterSessionsByTeaName, getTeaNameSuggestions } from '../utils/teaNameSearch';
 
 const HistoryScreen: React.FC = () => {
-  const { sessionList, loadHistory, deleteSession, filterHistoryByTea } = useStore();
+  const { sessionList, loadHistory, deleteSession, knownTeaNames, loadKnownTeaNames } = useStore();
   const [searchText, setSearchText] = useState('');
 
   // Load history when entering the view
   useIonViewWillEnter(() => {
-    loadHistory();
+    void loadHistory();
+    void loadKnownTeaNames();
   });
 
   // Handle refresh
   const handleRefresh = async (event: CustomEvent) => {
-    await loadHistory();
+    await Promise.all([loadHistory(), loadKnownTeaNames(true)]);
     setSearchText(''); // Reset search on refresh
     event.detail.complete();
   };
@@ -43,12 +45,17 @@ const HistoryScreen: React.FC = () => {
   const handleSearch = (e: CustomEvent) => {
     const query = e.detail.value;
     setSearchText(query || '');
-    if (query && query.trim() !== '') {
-      filterHistoryByTea(query);
-    } else {
-      loadHistory();
-    }
   };
+
+  const suggestions = useMemo(
+    () => (searchText.trim() ? getTeaNameSuggestions(knownTeaNames, searchText) : []),
+    [knownTeaNames, searchText],
+  );
+
+  const filteredSessions = useMemo(
+    () => filterSessionsByTeaName(sessionList, knownTeaNames, searchText),
+    [knownTeaNames, searchText, sessionList],
+  );
 
   // Handle delete
   const handleDelete = async (sessionId: string) => {
@@ -101,12 +108,35 @@ const HistoryScreen: React.FC = () => {
         </IonRefresher>
 
         <IonList>
-          {sessionList.length === 0 ? (
+          {suggestions.length > 0 && (
+            <div className="ion-padding-horizontal ion-padding-top">
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {suggestions.map((teaName) => (
+                  <button
+                    key={teaName}
+                    type="button"
+                    onClick={() => setSearchText(teaName)}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(93, 113, 90, 0.16)',
+                      background: 'rgba(255, 255, 255, 0.72)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {teaName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {filteredSessions.length === 0 ? (
             <div className="ion-padding ion-text-center">
               <IonLabel color="medium">No brewing sessions found.</IonLabel>
             </div>
           ) : (
-            sessionList.map((session) => (
+            filteredSessions.map((session) => (
               <IonItemSliding key={session.sessionId}>
                 <IonItem routerLink={`/tabs/history/${session.sessionId}`} detail>
                   <IonLabel>

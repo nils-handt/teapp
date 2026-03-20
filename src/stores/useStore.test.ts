@@ -34,6 +34,7 @@ vi.mock('../repositories/SessionRepository', () => ({
         getAllSessions: vi.fn(),
         getActiveSession: vi.fn(),
         getSessionById: vi.fn(),
+        getKnownTeaNames: vi.fn(),
         deleteSession: vi.fn(),
         getSessionsByTeaName: vi.fn(),
         saveSession: vi.fn(),
@@ -75,6 +76,7 @@ describe('useStore', () => {
             // History
             sessionList: [],
             selectedSession: null,
+            knownTeaNames: [],
             activeSession: null,
             currentInfusion: null,
             brewingPhase: 'idle' as any,
@@ -189,6 +191,37 @@ describe('useStore', () => {
 
             expect(sessionRepository.getAllSessions).toHaveBeenCalled();
             expect(useStore.getState().sessionList).toBe(mockSessions);
+        });
+
+        it('should load known tea names once by default', async () => {
+            (sessionRepository.getKnownTeaNames as any).mockResolvedValue(['ORT 2015 Gao Jia Shan']);
+
+            await useStore.getState().loadKnownTeaNames();
+            await useStore.getState().loadKnownTeaNames();
+
+            expect(sessionRepository.getKnownTeaNames).toHaveBeenCalledTimes(1);
+            expect(useStore.getState().knownTeaNames).toEqual(['ORT 2015 Gao Jia Shan']);
+        });
+
+        it('should allow known tea names to be refreshed explicitly', async () => {
+            (sessionRepository.getKnownTeaNames as any)
+                .mockResolvedValueOnce(['ORT 2015 Gao Jia Shan'])
+                .mockResolvedValueOnce(['Morning Sencha']);
+
+            await useStore.getState().loadKnownTeaNames();
+            await useStore.getState().loadKnownTeaNames(true);
+
+            expect(sessionRepository.getKnownTeaNames).toHaveBeenCalledTimes(2);
+            expect(useStore.getState().knownTeaNames).toEqual(['Morning Sencha']);
+        });
+
+        it('should upsert tea names into the known tea name cache', () => {
+            useStore.setState({ knownTeaNames: ['Morning Sencha'] });
+
+            useStore.getState().upsertKnownTeaName('ORT 2015 Gao Jia Shan');
+            useStore.getState().upsertKnownTeaName('morning sencha');
+
+            expect(useStore.getState().knownTeaNames).toEqual(['morning sencha', 'ORT 2015 Gao Jia Shan']);
         });
 
         it('should select session', async () => {
