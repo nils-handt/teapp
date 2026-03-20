@@ -1,6 +1,8 @@
+import type { MouseEventHandler, PropsWithChildren } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionDetailScreen from './SessionDetailScreen';
+import type { BrewingSession } from '../entities/BrewingSession.entity';
 
 const goBack = vi.fn();
 const selectSession = vi.fn();
@@ -10,7 +12,34 @@ const loadKnownTeaNames = vi.fn();
 const upsertKnownTeaName = vi.fn();
 const presentToast = vi.fn();
 
-let mockState: any;
+type SessionDetailStore = {
+    deleteSession: (sessionId: string) => Promise<void> | void;
+    knownTeaNames: string[];
+    loadKnownTeaNames: () => Promise<void> | void;
+    selectSession: (sessionId: string) => Promise<void> | void;
+    selectedSession: Pick<
+        BrewingSession,
+        | 'brewingVessel'
+        | 'dryTeaLeavesWeight'
+        | 'endTime'
+        | 'infusions'
+        | 'lidWeight'
+        | 'notes'
+        | 'sessionId'
+        | 'startTime'
+        | 'teaName'
+        | 'trayWeight'
+        | 'vesselWeight'
+    > | null;
+    updateSession: (session: BrewingSession) => Promise<void> | void;
+    upsertKnownTeaName: (teaName: string) => void;
+};
+
+type ButtonProps = PropsWithChildren<{
+    onClick?: MouseEventHandler<HTMLButtonElement>;
+}>;
+
+let mockState: SessionDetailStore;
 
 vi.mock('../stores/useStore', () => ({
     useStore: () => mockState,
@@ -22,14 +51,14 @@ vi.mock('react-router-dom', () => ({
 }));
 
 vi.mock('@ionic/react', () => ({
-    IonContent: ({ children }: any) => <div>{children}</div>,
-    IonHeader: ({ children }: any) => <div>{children}</div>,
-    IonPage: ({ children }: any) => <div>{children}</div>,
-    IonTitle: ({ children }: any) => <div>{children}</div>,
-    IonToolbar: ({ children }: any) => <div>{children}</div>,
-    IonButtons: ({ children }: any) => <div>{children}</div>,
+    IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonBackButton: () => null,
-    IonButton: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>,
+    IonButton: ({ children, onClick }: ButtonProps) => <button onClick={onClick}>{children}</button>,
     IonIcon: () => null,
     IonAlert: () => null,
     useIonToast: () => [presentToast],

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useStore } from './useStore';
+import { useStore, type StoreState } from './useStore';
 import { weightLoggerService } from '../services/WeightLoggerService';
 import { sessionRepository } from '../repositories/SessionRepository';
 import { BrewingSession } from '../entities/BrewingSession.entity';
+import { Infusion } from '../entities/Infusion.entity';
 import { DiscoveredDevice, LimitedPeripheralData } from '../services/bluetooth/types/ble.types';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import { DEFAULT_BREWING_SCREEN_ID } from '../constants/brewingScreens';
@@ -53,6 +54,14 @@ vi.mock('../repositories/SettingsRepository', () => ({
     }
 }));
 
+type MutableSubject<T> = {
+    value: T;
+};
+
+const sessionSubject = brewingSessionService.session$ as unknown as MutableSubject<BrewingSession | null>;
+const stateSubject = brewingSessionService.state$ as unknown as MutableSubject<BrewingPhase>;
+const currentInfusionSubject = brewingSessionService.currentInfusion$ as unknown as MutableSubject<StoreState['currentInfusion']>;
+const timerSubject = brewingSessionService.timer$ as unknown as MutableSubject<number>;
 
 describe('useStore', () => {
     beforeEach(() => {
@@ -79,25 +88,25 @@ describe('useStore', () => {
             knownTeaNames: [],
             activeSession: null,
             currentInfusion: null,
-            brewingPhase: 'idle' as any,
+            brewingPhase: BrewingPhase.IDLE,
             timerValue: 0,
         });
         vi.clearAllMocks();
-        (brewingSessionService.session$ as any).value = null;
-        (brewingSessionService.state$ as any).value = BrewingPhase.IDLE;
-        (brewingSessionService.currentInfusion$ as any).value = null;
-        (brewingSessionService.timer$ as any).value = 0;
-        (brewingSessionService.restoreSession as any).mockImplementation((session: BrewingSession) => {
-            (brewingSessionService.session$ as any).value = session;
-            (brewingSessionService.state$ as any).value = BrewingPhase.READY;
-            (brewingSessionService.currentInfusion$ as any).value = null;
-            (brewingSessionService.timer$ as any).value = 0;
+        sessionSubject.value = null;
+        stateSubject.value = BrewingPhase.IDLE;
+        currentInfusionSubject.value = null;
+        timerSubject.value = 0;
+        vi.mocked(brewingSessionService.restoreSession).mockImplementation((session: BrewingSession) => {
+            sessionSubject.value = session;
+            stateSubject.value = BrewingPhase.READY;
+            currentInfusionSubject.value = null;
+            timerSubject.value = 0;
         });
-        (brewingSessionService.clearSession as any).mockImplementation(() => {
-            (brewingSessionService.session$ as any).value = null;
-            (brewingSessionService.state$ as any).value = BrewingPhase.IDLE;
-            (brewingSessionService.currentInfusion$ as any).value = null;
-            (brewingSessionService.timer$ as any).value = 0;
+        vi.mocked(brewingSessionService.clearSession).mockImplementation(() => {
+            sessionSubject.value = null;
+            stateSubject.value = BrewingPhase.IDLE;
+            currentInfusionSubject.value = null;
+            timerSubject.value = 0;
         });
     });
 
@@ -144,7 +153,7 @@ describe('useStore', () => {
         });
 
         it('should load persisted brewing screen setting', async () => {
-            (settingsRepository.getAllSettings as any).mockResolvedValue({
+            vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
                 lastUsedBrewingScreen: '5',
                 devMode: 'true',
             });
@@ -185,7 +194,7 @@ describe('useStore', () => {
         const mockSession = new BrewingSession();
 
         it('should load history', async () => {
-            (sessionRepository.getAllSessions as any).mockResolvedValue(mockSessions);
+            vi.mocked(sessionRepository.getAllSessions).mockResolvedValue(mockSessions);
 
             await useStore.getState().loadHistory();
 
@@ -194,7 +203,7 @@ describe('useStore', () => {
         });
 
         it('should load known tea names once by default', async () => {
-            (sessionRepository.getKnownTeaNames as any).mockResolvedValue(['ORT 2015 Gao Jia Shan']);
+            vi.mocked(sessionRepository.getKnownTeaNames).mockResolvedValue(['ORT 2015 Gao Jia Shan']);
 
             await useStore.getState().loadKnownTeaNames();
             await useStore.getState().loadKnownTeaNames();
@@ -204,7 +213,7 @@ describe('useStore', () => {
         });
 
         it('should allow known tea names to be refreshed explicitly', async () => {
-            (sessionRepository.getKnownTeaNames as any)
+            vi.mocked(sessionRepository.getKnownTeaNames)
                 .mockResolvedValueOnce(['ORT 2015 Gao Jia Shan'])
                 .mockResolvedValueOnce(['Morning Sencha']);
 
@@ -225,7 +234,7 @@ describe('useStore', () => {
         });
 
         it('should select session', async () => {
-            (sessionRepository.getSessionById as any).mockResolvedValue(mockSession);
+            vi.mocked(sessionRepository.getSessionById).mockResolvedValue(mockSession);
 
             await useStore.getState().selectSession('123');
 
@@ -234,7 +243,7 @@ describe('useStore', () => {
         });
 
         it('should delete session', async () => {
-            (sessionRepository.getAllSessions as any).mockResolvedValue(mockSessions);
+            vi.mocked(sessionRepository.getAllSessions).mockResolvedValue(mockSessions);
 
             await useStore.getState().deleteSession('123');
 
@@ -245,7 +254,7 @@ describe('useStore', () => {
         });
 
         it('should filter history by tea', async () => {
-            (sessionRepository.getSessionsByTeaName as any).mockResolvedValue(mockSessions);
+            vi.mocked(sessionRepository.getSessionsByTeaName).mockResolvedValue(mockSessions);
 
             await useStore.getState().filterHistoryByTea('Oolong');
 
@@ -258,7 +267,7 @@ describe('useStore', () => {
         it('should restore an active session through the brewing service', async () => {
             const activeSession = new BrewingSession();
             activeSession.sessionId = 'active-1';
-            (sessionRepository.getActiveSession as any).mockResolvedValue(activeSession);
+            vi.mocked(sessionRepository.getActiveSession).mockResolvedValue(activeSession);
 
             await useStore.getState().restoreActiveSession();
 
@@ -270,13 +279,23 @@ describe('useStore', () => {
         });
 
         it('should clear stale in-memory brewing state when no active session exists', async () => {
+            const staleInfusion = new Infusion();
+            staleInfusion.infusionId = 'stale-inf';
+            staleInfusion.infusionNumber = 1;
+            staleInfusion.waterWeight = 85;
+            staleInfusion.startTime = new Date().toISOString();
+            staleInfusion.duration = 12;
+            staleInfusion.restDuration = 0;
+            staleInfusion.wetTeaLeavesWeight = 16;
+            staleInfusion.sessionId = 'stale-session';
+
             useStore.setState({
                 activeSession: new BrewingSession(),
-                currentInfusion: {} as BrewingSession['infusions'][number],
-                brewingPhase: 'rest' as any,
+                currentInfusion: staleInfusion,
+                brewingPhase: BrewingPhase.REST,
                 timerValue: 1234,
             });
-            (sessionRepository.getActiveSession as any).mockResolvedValue(null);
+            vi.mocked(sessionRepository.getActiveSession).mockResolvedValue(null);
 
             await useStore.getState().restoreActiveSession();
 

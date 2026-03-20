@@ -72,7 +72,7 @@ interface WeightLoggerState {
   refreshRecordings: () => Promise<void>;
 }
 
-type StoreState = BluetoothState & BrewingState & HistoryState & SettingsState & WeightLoggerState;
+export type StoreState = BluetoothState & BrewingState & HistoryState & SettingsState & WeightLoggerState;
 
 export const useStore = create<StoreState>((set, get) => ({
   // BluetoothState

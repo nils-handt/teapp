@@ -1,7 +1,9 @@
+import type { MouseEventHandler, PropsWithChildren } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
+import type { BrewingVessel } from '../../entities/BrewingVessel.entity';
 
 const {
     connectNewDevice,
@@ -29,7 +31,44 @@ const {
     upsertKnownTeaName: vi.fn(),
 }));
 
-let mockState: any;
+type BrewingZenInfusion = {
+    duration: number;
+    infusionId: string;
+    infusionNumber: number;
+    restDuration: number;
+    waterWeight: number;
+    wetTeaLeavesWeight: number;
+};
+
+type BrewingZenSession = {
+    brewingVessel: Pick<BrewingVessel, 'name'> | null;
+    dryTeaLeavesWeight: number;
+    endTime: string;
+    infusions: BrewingZenInfusion[];
+    lidWeight: number;
+    startTime: string;
+    teaName: string;
+    trayWeight: number;
+    vesselWeight: number;
+};
+
+type BrewingZenStore = {
+    activeSession: BrewingZenSession | null;
+    brewingPhase: BrewingPhase;
+    connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'scanning';
+    currentWeight: number;
+    knownTeaNames: string[];
+    loadKnownTeaNames: () => Promise<void> | void;
+    timerValue: number;
+    upsertKnownTeaName: (teaName: string) => void;
+};
+
+type ButtonProps = PropsWithChildren<{
+    disabled?: boolean;
+    onClick?: MouseEventHandler<HTMLButtonElement>;
+}>;
+
+let mockState: BrewingZenStore;
 
 vi.mock('../../components/DesignSwitcher', () => ({
     default: () => <div>Design Switcher</div>,
@@ -66,12 +105,12 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
 
 vi.mock('@ionic/react', () => ({
     IonAlert: () => null,
-    IonButton: ({ children, onClick, disabled }: any) => <button onClick={onClick} disabled={disabled}>{children}</button>,
-    IonContent: ({ children }: any) => <div>{children}</div>,
-    IonHeader: ({ children }: any) => <div>{children}</div>,
-    IonPage: ({ children }: any) => <div>{children}</div>,
-    IonTitle: ({ children }: any) => <div>{children}</div>,
-    IonToolbar: ({ children }: any) => <div>{children}</div>,
+    IonButton: ({ children, onClick, disabled }: ButtonProps) => <button onClick={onClick} disabled={disabled}>{children}</button>,
+    IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
 }));
 
 describe('BrewingZen', () => {
@@ -142,7 +181,7 @@ describe('BrewingZen', () => {
 
     it('hides the tea field in ready when a tea name has been selected', () => {
         mockState.brewingPhase = BrewingPhase.READY;
-        mockState.activeSession.teaName = 'Morning Sencha';
+        mockState.activeSession!.teaName = 'Morning Sencha';
 
         render(<BrewingZen />);
 
@@ -161,7 +200,7 @@ describe('BrewingZen', () => {
 
     it('renders a detailed session summary when ended', () => {
         mockState.brewingPhase = BrewingPhase.ENDED;
-        mockState.activeSession.teaName = 'Cloud Mist';
+        mockState.activeSession!.teaName = 'Cloud Mist';
 
         render(<BrewingZen />);
 

@@ -41,12 +41,12 @@ describe('SessionStatistics', () => {
 
     it('should handle undefined values gracefully', () => {
         const session = new BrewingSession();
-        const infusion = new Infusion();
+        const infusion = new Infusion() as Partial<Infusion>;
         // simulate missing data
-        (infusion as any).duration = undefined;
-        (infusion as any).waterWeight = undefined;
+        infusion.duration = undefined;
+        infusion.waterWeight = undefined;
 
-        session.infusions = [infusion];
+        session.infusions = [infusion as Infusion];
 
         const stats = calculateSessionStats(session);
 

@@ -21,7 +21,7 @@ import {
 import { useHistory } from 'react-router';
 import { useStore } from '../stores/useStore';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
-import { backupService } from '../services/BackupService';
+import { backupService, isBackupData, type BackupData } from '../services/BackupService';
 import { shareFile } from '../utils/fileUtils';
 import { BREWING_SCREEN_OPTIONS, isBrewingScreenId } from '../constants/brewingScreens';
 
@@ -39,7 +39,7 @@ const SettingsScreen: React.FC = () => {
 
   const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [restoreData, setRestoreData] = useState<any>(null);
+  const [restoreData, setRestoreData] = useState<BackupData | null>(null);
 
   const handleConnectNew = async () => {
     await bluetoothScaleService.connectNewDevice();
@@ -102,7 +102,12 @@ const SettingsScreen: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const json = JSON.parse(e.target?.result as string);
+        const json: unknown = JSON.parse(e.target?.result as string);
+        if (!isBackupData(json)) {
+          setToastMessage('Invalid backup file format');
+          return;
+        }
+
         setRestoreData(json);
       } catch {
         setToastMessage('Failed to parse backup file');

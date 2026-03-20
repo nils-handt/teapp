@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Subject } from 'rxjs';
 import { RealScaleService } from './RealScaleService';
-import { useStore } from '../stores/useStore';
+import { useStore, type StoreState } from '../stores/useStore';
 import { bleAdapter } from './bluetooth/adapters/BleAdapter';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import { DiscoveredDevice, PeripheralData } from './bluetooth/types/ble.types';
@@ -131,14 +131,21 @@ vi.mock('./bluetooth/index', () => ({
 
 describe('RealScaleService', () => {
     let service: RealScaleService;
-    let storeState: {
-        connectionStatus: string;
-        connectedDevice: DiscoveredDevice | null;
-        currentWeight: number;
-        setConnectionStatus: (status: string) => void;
-        setConnectedDevice: (device: DiscoveredDevice | null) => void;
-        setCurrentWeight: (weight: number) => void;
-    };
+    let storeState: Pick<
+        StoreState,
+        | 'availableDevices'
+        | 'clearAvailableDevices'
+        | 'connectedDevice'
+        | 'connectionStatus'
+        | 'currentWeight'
+        | 'isScanning'
+        | 'setAvailableDevices'
+        | 'addDiscoveredDevice'
+        | 'setConnectedDevice'
+        | 'setConnectionStatus'
+        | 'setCurrentWeight'
+        | 'setIsScanning'
+    >;
 
     const device: DiscoveredDevice = {
         id: 'scale-1',
@@ -163,8 +170,19 @@ describe('RealScaleService', () => {
             connectionStatus: 'disconnected',
             connectedDevice: null,
             currentWeight: 0,
+            availableDevices: [],
+            isScanning: false,
             setConnectionStatus: (status) => {
                 storeState.connectionStatus = status;
+            },
+            setAvailableDevices: (devices) => {
+                storeState.availableDevices = devices;
+            },
+            addDiscoveredDevice: (discoveredDevice) => {
+                storeState.availableDevices = [...storeState.availableDevices, discoveredDevice];
+            },
+            clearAvailableDevices: () => {
+                storeState.availableDevices = [];
             },
             setConnectedDevice: (connectedDevice) => {
                 storeState.connectedDevice = connectedDevice;
@@ -172,9 +190,12 @@ describe('RealScaleService', () => {
             setCurrentWeight: (weight) => {
                 storeState.currentWeight = weight;
             },
+            setIsScanning: (scanning) => {
+                storeState.isScanning = scanning;
+            },
         };
 
-        vi.mocked(useStore.getState).mockImplementation(() => storeState);
+        vi.mocked(useStore.getState).mockImplementation(() => storeState as StoreState);
         service = new RealScaleService();
     });
 

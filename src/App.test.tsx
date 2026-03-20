@@ -1,3 +1,4 @@
+import type { PropsWithChildren } from 'react';
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import App from './App';
@@ -25,35 +26,37 @@ vi.mock('./repositories/SessionRepository', () => ({
 
 // Mock Ionic components to avoid issues with web components in JSDOM not being fully supported or needing setup
 vi.mock('@ionic/react', async () => {
-    const actual = await vi.importActual('@ionic/react');
+    const actual = await vi.importActual<typeof import('@ionic/react')>('@ionic/react');
+    const Wrap = ({ children }: PropsWithChildren) => <div>{children}</div>;
+
     return {
         ...actual,
-        IonApp: ({ children }: any) => <div>{children}</div>,
-        IonRouterOutlet: ({ children }: any) => <div>{children}</div>,
-        IonPage: ({ children }: any) => <div>{children}</div>,
-        IonContent: ({ children }: any) => <div>{children}</div>,
-        IonHeader: ({ children }: any) => <div>{children}</div>,
-        IonToolbar: ({ children }: any) => <div>{children}</div>,
-        IonTitle: ({ children }: any) => <div>{children}</div>,
-        IonList: ({ children }: any) => <div>{children}</div>,
-        IonItem: ({ children }: any) => <div>{children}</div>,
-        IonLabel: ({ children }: any) => <div>{children}</div>,
-        IonSearchbar: ({ children }: any) => <div>{children}</div>,
-        IonRefresher: ({ children }: any) => <div>{children}</div>,
-        IonRefresherContent: ({ children }: any) => <div>{children}</div>,
-        IonItemSliding: ({ children }: any) => <div>{children}</div>,
-        IonItemOptions: ({ children }: any) => <div>{children}</div>,
-        IonItemOption: ({ children }: any) => <div>{children}</div>,
-        IonIcon: ({ children }: any) => <div>{children}</div>,
-        IonButtons: ({ children }: any) => <div>{children}</div>,
-        IonButton: ({ children }: any) => <div>{children}</div>,
-        IonTabs: ({ children }: any) => <div>{children}</div>,
-        IonTabBar: ({ children }: any) => <div>{children}</div>,
-        IonTabButton: ({ children }: any) => <div>{children}</div>,
-        IonBackButton: ({ children }: any) => <div>{children}</div>,
-        IonAlert: ({ children }: any) => <div>{children}</div>,
-        IonNote: ({ children }: any) => <div>{children}</div>,
-        IonListHeader: ({ children }: any) => <div>{children}</div>,
+        IonApp: Wrap,
+        IonRouterOutlet: Wrap,
+        IonPage: Wrap,
+        IonContent: Wrap,
+        IonHeader: Wrap,
+        IonToolbar: Wrap,
+        IonTitle: Wrap,
+        IonList: Wrap,
+        IonItem: Wrap,
+        IonLabel: Wrap,
+        IonSearchbar: Wrap,
+        IonRefresher: Wrap,
+        IonRefresherContent: Wrap,
+        IonItemSliding: Wrap,
+        IonItemOptions: Wrap,
+        IonItemOption: Wrap,
+        IonIcon: Wrap,
+        IonButtons: Wrap,
+        IonButton: Wrap,
+        IonTabs: Wrap,
+        IonTabBar: Wrap,
+        IonTabButton: Wrap,
+        IonBackButton: Wrap,
+        IonAlert: Wrap,
+        IonNote: Wrap,
+        IonListHeader: Wrap,
     };
 });
 

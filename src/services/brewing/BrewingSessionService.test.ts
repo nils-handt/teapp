@@ -25,6 +25,59 @@ vi.mock('../../repositories/BrewingVesselRepository', () => ({
 import fs from 'fs';
 import path from 'path';
 
+type ScenarioActionName = 'confirmSetupDone' | 'endSession' | 'startSession';
+
+type ScenarioAction = {
+    action: ScenarioActionName;
+    timestamp: number;
+};
+
+type ScenarioDataPoint = {
+    timestamp: number;
+    weight: number;
+};
+
+type ScenarioFile = {
+    actions?: ScenarioAction[];
+    data: ScenarioDataPoint[];
+};
+
+type ExpectedInfusionResult = {
+    duration: number | string;
+    restDuration?: number | string | null;
+    waterWeight: number | string;
+    wetTeaLeavesWeight: number | string;
+};
+
+type ExpectedSessionResult = {
+    currentWasteWater?: number | string | null;
+    dryTeaLeavesWeight: number | string;
+    infusions: ExpectedInfusionResult[];
+    lidWeight: number | string;
+    status: string;
+    teaName: string;
+    vesselWeight: number | string;
+};
+
+type SerializableInfusion = Omit<Infusion, 'session'> & {
+    session?: BrewingSession;
+};
+
+const stripSessionReference = (infusion: Infusion): Omit<Infusion, 'session'> => {
+    const serializableInfusion: SerializableInfusion = { ...infusion };
+    delete serializableInfusion.session;
+    return serializableInfusion;
+};
+
+const toSerializableSession = (session: BrewingSession | null) => (
+    session
+        ? {
+            ...session,
+            infusions: session.infusions.map(stripSessionReference),
+        }
+        : null
+);
+
 describe('BrewingSessionService', () => {
     const flushAsyncWork = async () => {
         await Promise.resolve();
@@ -298,7 +351,7 @@ describe('BrewingSessionService', () => {
             // Load scenario data
             const scenarioPath = path.join(testFilesDir, file);
             const scenarioContent = fs.readFileSync(scenarioPath, 'utf8');
-            const scenarioData = JSON.parse(scenarioContent);
+            const scenarioData = JSON.parse(scenarioContent) as ScenarioFile;
 
             // Load into mock scale
             mockScale.loadRecording(scenarioData.data);
@@ -318,8 +371,7 @@ describe('BrewingSessionService', () => {
             if (data.length > 0) {
                 // The simulation starts at the time of the first data point
                 let currentSimulationTime = data[0].timestamp;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                let currentAction: any = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
+                let currentAction: ScenarioAction | null = nextActionIndex < actions.length ? actions[nextActionIndex] : null;
 
                 for (let i = 1; i < data.length; i++) {
                     const dataTimestamp = data[i].timestamp;
@@ -398,23 +450,14 @@ describe('BrewingSessionService', () => {
             if (resultingSession?.status === 'active') {
                 await brewingSessionService.endSession();
                 // update resultingSession status, but keep data
-                resultingSession = { ...resultingSession, status: 'completed' } as any;
+                resultingSession = Object.assign(new BrewingSession(), resultingSession, { status: 'completed' });
             }
             const resultPath = path.resolve(testFilesDir, file.replace('.json', '.result.json'));
             const resultPathDebug = path.resolve(testFilesDir, file.replace('.json', '.result.debug.json'));
 
             // Hook to write debug file on failure
             onTestFailed(() => {
-                // Helper to remove circular references for debug file
-                const simpleSession = {
-                    ...resultingSession,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    infusions: resultingSession?.infusions?.map((i: any) => {
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                        const { session, ...rest } = i;
-                        return rest;
-                    })
-                };
+                const simpleSession = toSerializableSession(resultingSession);
                 fs.writeFileSync(resultPathDebug, JSON.stringify(simpleSession, null, 2));
                 console.log(`Test failed. Debug result written to ${resultPathDebug}`);
             });
@@ -428,7 +471,7 @@ describe('BrewingSessionService', () => {
             });
 
             if (fs.existsSync(resultPath)) {
-                const expectedResult = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+                const expectedResult = JSON.parse(fs.readFileSync(resultPath, 'utf8')) as ExpectedSessionResult;
 
                 // Fuzzy comparison configuration
                 const WEIGHT_TOLERANCE = 2; // grams
@@ -441,8 +484,12 @@ describe('BrewingSessionService', () => {
                     }
                 };
 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const compareSessions = (actual: any, expected: any) => {
+                const compareSessions = (actual: BrewingSession | null, expected: ExpectedSessionResult) => {
+                    expect(actual).toBeTruthy();
+                    if (!actual) {
+                        return;
+                    }
+
                     expect(actual.teaName).toBe(expected.teaName);
                     expect(actual.status).toBe(expected.status);
                     // Notes might be undefined/empty string mismatch, strict check is fine usually
@@ -457,8 +504,7 @@ describe('BrewingSessionService', () => {
 
                     expect(actual.infusions.length).toBe(expected.infusions.length);
 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    actual.infusions.forEach((actInf: any, index: number) => {
+                    actual.infusions.forEach((actInf, index) => {
                         const expectedInfusion = expected.infusions[index];
                         assertClose(actInf.waterWeight, expectedInfusion.waterWeight, WEIGHT_TOLERANCE, `infusion[${index}].waterWeight`);
                         assertClose(actInf.wetTeaLeavesWeight, expectedInfusion.wetTeaLeavesWeight, WEIGHT_TOLERANCE, `infusion[${index}].wetTeaLeavesWeight`);
@@ -478,15 +524,7 @@ describe('BrewingSessionService', () => {
             } else {
                 // Fail test if result file is missing (to prompt creation via debug file logic if needed, or manual creation)
                 // Write debug file explicitly so we can see what was generated
-                const simpleSession = {
-                    ...resultingSession,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    infusions: resultingSession?.infusions?.map((i: any) => {
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                        const { session, ...rest } = i;
-                        return rest;
-                    })
-                };
+                const simpleSession = toSerializableSession(resultingSession);
                 fs.writeFileSync(resultPathDebug, JSON.stringify(simpleSession, null, 2));
                 expect.fail(`Result file not found at ${resultPath}.`);
             }

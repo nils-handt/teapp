@@ -364,7 +364,7 @@ class BrewingSessionService {
             deltas.push(this.setupStepWeights[i] - this.setupStepWeights[i - 1]);
         }
 
-        let componentsAdded: number[] = [];
+        const componentsAdded: number[] = [];
         let maxLidRemoved = 0;
         let teaAdded = 0;
 

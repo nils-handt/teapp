@@ -1,12 +1,28 @@
 import { Capacitor } from '@capacitor/core';
 import { sqliteConnection } from '../database/dataSource';
 
+export interface BackupData {
+    database: string;
+    tables: unknown[];
+    overwrite?: boolean;
+    [key: string]: unknown;
+}
+
+export const isBackupData = (value: unknown): value is BackupData => {
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const backupData = value as Partial<BackupData>;
+    return typeof backupData.database === 'string' && Array.isArray(backupData.tables);
+};
+
 class BackupService {
     /**
      * Exports the entire database to a JSON object.
      * @returns The exported data as a JSON object.
      */
-    public async exportData(): Promise<any> {
+    public async exportData(): Promise<BackupData> {
         try {
             // Create a connection to the database if not already open
             // In this app, the connection is usually managed by TypeORM, but we need the raw connection for export
@@ -33,6 +49,10 @@ class BackupService {
             }
 
             const exportData = await db.exportToJson('full');
+            if (!exportData.export || !isBackupData(exportData.export)) {
+                throw new Error('Export returned invalid backup data');
+            }
+
             return exportData.export;
 
         } catch (error) {
@@ -45,7 +65,7 @@ class BackupService {
      * Imports data from a JSON object into the database.
      * @param data The JSON data to import.
      */
-    public async importData(data: any): Promise<void> {
+    public async importData(data: BackupData): Promise<void> {
         try {
             const dbName = 'teapp';
             // Check connection but don't strictly need it open for import if using plugin directly? 
@@ -66,14 +86,14 @@ class BackupService {
             }
 
             // Validating basic structure - data should be the object that exportToJson returns
-            if (!data || !data.database || !data.tables) {
+            if (!isBackupData(data)) {
                 throw new Error('Invalid backup file format');
             }
 
             // Force overwrite to ensure we start with a clean state matching the backup
-            data.overwrite = true;
+            const backupData: BackupData = { ...data, overwrite: true };
 
-            const jsonString = JSON.stringify(data);
+            const jsonString = JSON.stringify(backupData);
 
             // Validate JSON
             const isValid = await sqliteConnection.isJsonValid(jsonString);

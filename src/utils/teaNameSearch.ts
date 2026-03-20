@@ -10,7 +10,7 @@ export const normalizeTeaName = (value: string): string =>
         .trim()
         .replace(/\s+/g, ' ');
 
-const stableBaseSort = <ItemType,>(a: { index: number }, b: { index: number }) => a.index - b.index;
+const stableBaseSort = (a: { index: number }, b: { index: number }) => a.index - b.index;
 
 const rankTeaNamesByTerm = (teaNames: string[], term: string) =>
     matchSorter(teaNames, term, {

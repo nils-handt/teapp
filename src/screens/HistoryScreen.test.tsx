@@ -1,38 +1,66 @@
+import type { ChangeEvent, MouseEventHandler, PropsWithChildren } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
+import type { BrewingSession } from '../entities/BrewingSession.entity';
 
 const loadHistory = vi.fn();
 const loadKnownTeaNames = vi.fn();
 const deleteSession = vi.fn();
 
-let mockState: any;
+type HistorySession = Pick<BrewingSession, 'infusions' | 'sessionId' | 'startTime' | 'teaName'>;
+
+type HistoryScreenStore = {
+    deleteSession: (sessionId: string) => Promise<void> | void;
+    knownTeaNames: string[];
+    loadHistory: () => Promise<void> | void;
+    loadKnownTeaNames: (force?: boolean) => Promise<void> | void;
+    sessionList: HistorySession[];
+};
+
+type ButtonProps = PropsWithChildren<{
+    onClick?: MouseEventHandler<HTMLButtonElement>;
+}>;
+
+type SearchbarInputEvent = {
+    detail: {
+        value?: string;
+    };
+};
+
+type SearchbarProps = {
+    onIonInput?: (event: SearchbarInputEvent) => void;
+    placeholder?: string;
+    value?: string;
+};
+
+let mockState: HistoryScreenStore;
 
 vi.mock('../stores/useStore', () => ({
     useStore: () => mockState,
 }));
 
 vi.mock('@ionic/react', () => ({
-    IonContent: ({ children }: any) => <div>{children}</div>,
-    IonHeader: ({ children }: any) => <div>{children}</div>,
-    IonPage: ({ children }: any) => <div>{children}</div>,
-    IonTitle: ({ children }: any) => <div>{children}</div>,
-    IonToolbar: ({ children }: any) => <div>{children}</div>,
-    IonList: ({ children }: any) => <div>{children}</div>,
-    IonItem: ({ children }: any) => <div>{children}</div>,
-    IonLabel: ({ children }: any) => <div>{children}</div>,
-    IonNote: ({ children }: any) => <div>{children}</div>,
-    IonRefresher: ({ children }: any) => <div>{children}</div>,
-    IonRefresherContent: ({ children }: any) => <div>{children}</div>,
-    IonItemSliding: ({ children }: any) => <div>{children}</div>,
-    IonItemOptions: ({ children }: any) => <div>{children}</div>,
-    IonItemOption: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>,
+    IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonList: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonItem: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonLabel: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonNote: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonRefresher: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonRefresherContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonItemOptions: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonItemOption: ({ children, onClick }: ButtonProps) => <button onClick={onClick}>{children}</button>,
     IonIcon: () => null,
-    IonSearchbar: ({ value, onIonInput, placeholder }: any) => (
+    IonSearchbar: ({ value, onIonInput, placeholder }: SearchbarProps) => (
         <input
             aria-label={placeholder}
             value={value}
-            onChange={(event) => onIonInput({ detail: { value: event.target.value } })}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => onIonInput?.({ detail: { value: event.target.value } })}
         />
     ),
     useIonViewWillEnter: (callback: () => void) => callback(),
