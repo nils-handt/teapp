@@ -20,36 +20,43 @@ import { trashOutline, shareOutline } from 'ionicons/icons';
 import { shareFile } from '../utils/fileUtils';
 import { weightLoggerService } from '../services/WeightLoggerService';
 import { useStore } from '../stores/useStore';
+import { createLogger } from '../services/logging';
+
+const logger = createLogger('RecordingsScreen');
 
 const RecordingsScreen: React.FC = () => {
     const { refreshRecordings, savedRecordings } = useStore();
     const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        refreshRecordings();
+        logger.info('Loading recordings screen');
+        void refreshRecordings();
     }, [refreshRecordings]);
 
     const handleRefresh = async (event: CustomEvent) => {
+        logger.debug('Refreshing recordings from pull-to-refresh');
         await refreshRecordings();
         event.detail.complete();
     };
 
     const handleShare = async (fileName: string) => {
         try {
+            logger.info('Sharing recording', { fileName });
             const recording = await weightLoggerService.loadRecording(fileName);
             if (!recording) {
-                console.error('Failed to load recording for download');
+                logger.warn('Cannot share recording because it failed to load', { fileName });
                 return;
             }
             await shareFile(fileName, recording);
         } catch (error) {
-            console.error('Error sharing file:', error);
+            logger.error('Sharing recording failed', { fileName, error });
             // Fallback or alert user
         }
     };
 
     const handleDelete = async () => {
         if (fileToDelete) {
+            logger.info('Deleting recording', { fileName: fileToDelete });
             await weightLoggerService.deleteRecording(fileToDelete);
             await refreshRecordings();
             setFileToDelete(null);

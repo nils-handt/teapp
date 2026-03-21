@@ -120,7 +120,7 @@ export class DecentScale extends BluetoothScale {
     if (this.apiVersion === undefined) {
       if (data.byteLength === 10) this.apiVersion = '>1.3';
       else if (data.byteLength === 7) this.apiVersion = '<1.3';
-      this.logger.log(`Determined Decent API version: ${this.apiVersion}`);
+      this.logger.info(`Determined Decent API version: ${this.apiVersion}`);
     }
 
     if (uScaleData[1] === 0xce || uScaleData[1] === 0xca) {
@@ -132,7 +132,7 @@ export class DecentScale extends BluetoothScale {
       // Timer button pressed - Beanconqueror emits null, we should emit the command
       // This requires knowing the state, which we don't have here.
       // For now, we can just log it.
-      this.logger.log('Timer button pressed on scale');
+      this.logger.info('Timer button pressed on scale');
     }
   }
 

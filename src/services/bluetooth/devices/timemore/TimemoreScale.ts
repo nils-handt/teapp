@@ -37,7 +37,7 @@ export class TimemoreScale extends BluetoothScale {
   }
 
   async setTimer(command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Setting Timer command ' + command + '...');
+    this.logger.info(`Setting timer command ${command}`);
     if (command === SCALE_TIMER_COMMAND.START) {
       await this.write(new Uint8Array([0x08]));
     } else if (command === SCALE_TIMER_COMMAND.STOP) {

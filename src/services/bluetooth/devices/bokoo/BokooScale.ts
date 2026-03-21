@@ -22,7 +22,7 @@ export class BokooScale extends BluetoothScale {
   }
 
   async connect(): Promise<void> {
-    this.logger.log('Connecting...');
+    this.logger.info('Connecting');
     await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(
       this.device_id,
@@ -45,7 +45,7 @@ export class BokooScale extends BluetoothScale {
   }
 
   disconnectTriggered(): void {
-    this.logger.log('Disconnecting...');
+    this.logger.info('Disconnecting');
     bleAdapter.stopNotifications(
       this.device_id,
       BokooScale.SERVICE_UUID,
@@ -54,7 +54,7 @@ export class BokooScale extends BluetoothScale {
   }
 
   async setTimer(command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Setting Timer command ' + command + '...');
+    this.logger.info(`Setting timer command ${command}`);
     if (command === SCALE_TIMER_COMMAND.START) {
       await this.write(new Uint8Array([0x03, 0x0a, 0x04, 0x00, 0x00, 0x0a]));
     } else if (command === SCALE_TIMER_COMMAND.STOP) {

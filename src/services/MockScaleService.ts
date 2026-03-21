@@ -2,9 +2,9 @@ import { Subject } from 'rxjs';
 import { useStore } from '../stores/useStore';
 import { DiscoveredDevice } from './bluetooth/types/ble.types';
 import { IScaleService } from './interfaces/IScaleService';
-import { Logger } from './bluetooth/utils/Logger';
+import { createLogger } from './logging';
 
-const logger = new Logger('MockScaleService');
+const logger = createLogger('MockScaleService');
 
 interface RecordingData {
     timestamp: number;
@@ -27,7 +27,7 @@ export class MockScaleService implements IScaleService {
     constructor() { }
 
     async initialize(): Promise<void> {
-        logger.log('MockScaleService initialized.');
+        logger.info('Mock scale service initialized');
         // Initialize with store value if possible, but store accessed via hook or getState usually
         const storeSpeed = useStore.getState().playbackSpeed;
         if (storeSpeed) {
@@ -48,12 +48,12 @@ export class MockScaleService implements IScaleService {
     }
 
     async connect(device: DiscoveredDevice): Promise<void> {
-        logger.log(`Connecting to mock device: ${device.name}`);
+        logger.info(`Connecting to mock device: ${device.name}`);
         useStore.getState().setConnectionStatus('connecting');
         await new Promise(resolve => setTimeout(resolve, 100)); // Simulate delay
         useStore.getState().setConnectionStatus('connected');
         useStore.getState().setConnectedDevice(device);
-        logger.log('Mock device connected.');
+        logger.info('Mock device connected');
 
         if (this.recording.length > 0) {
             this.startReplay();
@@ -61,7 +61,7 @@ export class MockScaleService implements IScaleService {
     }
 
     async disconnect(): Promise<void> {
-        logger.log('Disconnecting mock device...');
+        logger.info('Disconnecting mock device');
         this.stopReplay();
         useStore.getState().setConnectionStatus('disconnected');
         useStore.getState().setConnectedDevice(null);
@@ -69,7 +69,7 @@ export class MockScaleService implements IScaleService {
     }
 
     async tare(): Promise<void> {
-        logger.log('Mock tare called - no-op for now');
+        logger.debug('Mock tare called - no-op');
     }
 
     getConnectionStatus() {
@@ -84,7 +84,7 @@ export class MockScaleService implements IScaleService {
 
     setPlaybackSpeed(speed: number) {
         if (speed <= 0) return;
-        logger.log(`Setting playback speed to ${speed}x`);
+        logger.info(`Setting playback speed to ${speed}x`);
 
         // If playing, we need to adjust startTime so that the current virtual time remains the same
         // but future time progresses faster.
@@ -148,13 +148,13 @@ export class MockScaleService implements IScaleService {
         }));
         this.recordingDuration = this.recording[this.recording.length - 1].timestamp;
 
-        logger.log(`Loaded recording with ${this.recording.length} samples. Duration: ${this.recordingDuration}ms`);
+        logger.info(`Loaded recording with ${this.recording.length} samples. Duration: ${this.recordingDuration}ms`);
     }
 
     startReplay() {
         if (this.isPlaying) return;
         if (this.recording.length === 0) {
-            logger.log('No recording loaded to play.');
+            logger.warn('No recording loaded to play');
             return;
         }
 
@@ -205,9 +205,9 @@ export class MockScaleService implements IScaleService {
                 this.startTime = now;
                 this.currentVirtualTime = 0;
                 this.lastEmitIndex = 0;
-                logger.log('Looping replay.');
+                logger.info('Looping replay');
             } else {
-                logger.log('Replay finished.');
+                logger.info('Replay finished');
                 this.pauseReplay();
                 // Ensure we emit the final state
                 this.currentVirtualTime = this.recordingDuration;

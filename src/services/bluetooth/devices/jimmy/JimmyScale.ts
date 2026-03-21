@@ -56,7 +56,7 @@ export class JimmyScale extends BluetoothScale {
   }
 
   async setTimer(_command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Standard timer commands not supported by Jimmy scale');
+    this.logger.warn('Standard timer commands are not supported by Jimmy scale');
   }
 
   async getWeight(): Promise<void> {

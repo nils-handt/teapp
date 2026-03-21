@@ -9,8 +9,11 @@ import { Infusion } from '../../entities/Infusion.entity';
 
 import { BrewingPhase, WeightTrend } from '../interfaces/brewing.types';
 import { keepAwakeService } from '../KeepAwakeService';
+import { createLogger } from '../logging';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
+
+const logger = createLogger('BrewingSessionService');
 
 class BrewingSessionService {
     private static instance: BrewingSessionService;
@@ -149,6 +152,7 @@ class BrewingSessionService {
     // --- Public Actions ---
 
     public startSession(teaName?: string, notes?: string) {
+        logger.info('Starting brewing session', { teaName: teaName ?? '', hasNotes: Boolean(notes) });
         const session = new BrewingSession();
         session.sessionId = crypto.randomUUID(); // Requires secure context or polyfill. If failing, move to uuid lib.
         session.teaName = teaName || '';
@@ -179,6 +183,10 @@ class BrewingSessionService {
     }
 
     public restoreSession(session: BrewingSession) {
+        logger.info('Restoring brewing session', {
+            sessionId: session.sessionId,
+            infusionCount: session.infusions?.length || 0,
+        });
         this.stopTimer();
         this.stopWeightSubscription();
 
@@ -203,9 +211,11 @@ class BrewingSessionService {
 
         this.initializeWeightSubscription();
         void keepAwakeService.keepAwake();
+        logger.info('Brewing session restored', { sessionId: restoredSession.sessionId, phase: resumedPhase });
     }
 
     public clearSession() {
+        logger.info('Clearing brewing session state');
         this.stopTimer();
         this.stopWeightSubscription();
         void keepAwakeService.allowSleep();
@@ -245,10 +255,18 @@ class BrewingSessionService {
             }
             this.lastStableWeight = weight;
             this.lastStableWasteWater = 0;
+            logger.info('Brewing setup confirmed', {
+                sessionId: session.sessionId,
+                trayWeight: session.trayWeight,
+                vesselWeight: session.vesselWeight,
+                lidWeight: session.lidWeight,
+                dryTeaLeavesWeight: session.dryTeaLeavesWeight,
+            });
         }
     }
 
     public async endSession() {
+        logger.info('Ending brewing session', { sessionId: this.session$.value?.sessionId ?? null });
         this.stopTimer();
         await keepAwakeService.allowSleep();
         const session = this.session$.value;
@@ -266,6 +284,10 @@ class BrewingSessionService {
             session.status = 'completed';
             await sessionRepository.saveSession(session);
             this.emitSession(session);
+            logger.info('Brewing session completed', {
+                sessionId: session.sessionId,
+                infusionCount: session.infusions?.length || 0,
+            });
         }
         this.state$.next(BrewingPhase.ENDED);
         this.currentInfusion$.next(null);
@@ -310,6 +332,7 @@ class BrewingSessionService {
             return;
         }
 
+        logger.info('Updating brewing vessel name', { sessionId: session.sessionId, name: trimmedName });
         void this.saveBrewingVesselForSession(session.sessionId, trimmedName);
     }
 
@@ -321,6 +344,7 @@ class BrewingSessionService {
 
         const normalizedValue = parseFloat(Math.max(0, value).toFixed(1));
         session[field] = normalizedValue;
+        logger.debug('Updating setup value', { sessionId: session.sessionId, field, value: normalizedValue });
 
         this.setupStepWeights = this.buildRestoredSetupWeights(session);
         this.emitSession(session);
@@ -485,6 +509,7 @@ class BrewingSessionService {
             if (this.assignBrewingVessel(session, null)) {
                 this.emitSession(session);
                 await sessionRepository.saveSession(session);
+                logger.info('Cleared brewing vessel assignment because setup weights are incomplete', { sessionId });
             }
             return;
         }
@@ -498,6 +523,11 @@ class BrewingSessionService {
         if (this.assignBrewingVessel(currentSession, brewingVessel)) {
             this.emitSession(currentSession);
             await sessionRepository.saveSession(currentSession);
+            logger.info('Synchronized brewing vessel assignment', {
+                sessionId,
+                vesselId: brewingVessel?.vesselId ?? null,
+                vesselName: brewingVessel?.name ?? null,
+            });
         }
     }
 
@@ -507,6 +537,7 @@ class BrewingSessionService {
             return;
         }
 
+        logger.info('Saving brewing vessel for session', { sessionId, name });
         const brewingVessel = session.brewingVessel ?? await brewingVesselRepository.findSimilarVessel(session.vesselWeight, session.lidWeight) ?? new BrewingVessel();
         if (!brewingVessel.vesselId) {
             brewingVessel.vesselId = crypto.randomUUID();
@@ -525,6 +556,11 @@ class BrewingSessionService {
         this.assignBrewingVessel(currentSession, savedBrewingVessel);
         this.emitSession(currentSession);
         await sessionRepository.saveSession(currentSession);
+        logger.info('Saved brewing vessel for session', {
+            sessionId,
+            vesselId: savedBrewingVessel.vesselId,
+            vesselName: savedBrewingVessel.name,
+        });
     }
 
     private deriveRestoredPhase(session: BrewingSession): BrewingPhase {
@@ -712,6 +748,10 @@ class BrewingSessionService {
         this.state$.next(BrewingPhase.INFUSION);
         this.maxWeightInPhase = this.currentWeight;
         this.startTimer();
+        logger.info('Starting infusion', {
+            sessionId: session?.sessionId ?? null,
+            infusionNumber,
+        });
     }
 
     private endInfusion(currentWeight: number, hasLid: boolean = true, liftTime?: number) {
@@ -758,6 +798,14 @@ class BrewingSessionService {
             this.lastStableWeight = hasLid ? currentWeight : currentWeight + lidWeight;
             this.lastStableWasteWater = session.currentWasteWater || 0;
             this.lowestLiftedWeight = Infinity;
+            logger.info('Ending infusion', {
+                sessionId: session.sessionId,
+                infusionNumber: infusion.infusionNumber,
+                hasLid,
+                durationSeconds: infusion.duration,
+                waterWeight: infusion.waterWeight,
+                wetTeaLeavesWeight: infusion.wetTeaLeavesWeight,
+            });
         }
 
         this.state$.next(BrewingPhase.REST);
@@ -797,6 +845,7 @@ class BrewingSessionService {
     // Manual Overrides
     public manuallyStartInfusion() {
         if (this.state$.value === BrewingPhase.READY || this.state$.value === BrewingPhase.REST || this.state$.value === BrewingPhase.SETUP) {
+            logger.warn('Manually starting infusion', { phase: this.state$.value });
             // Force state ready if setup
             if (this.state$.value === BrewingPhase.SETUP) this.confirmSetupDone();
 
@@ -807,6 +856,7 @@ class BrewingSessionService {
 
     public manuallyStopInfusion() {
         if (this.state$.value === BrewingPhase.INFUSION || this.state$.value === BrewingPhase.INFUSION_VESSEL_LIFTED) {
+            logger.warn('Manually stopping infusion', { phase: this.state$.value });
             this.endInfusion(this.currentWeight, true);
         }
     }

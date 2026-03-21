@@ -1,8 +1,8 @@
 import { BleClient, BleDevice, RequestBleDeviceOptions, ScanResult } from '@capacitor-community/bluetooth-le';
 import { UUID } from '../types/ble.types';
-import { Logger } from '../utils/Logger';
+import { createLogger } from '../../logging';
 
-const logger = new Logger('BleAdapter');
+const logger = createLogger('BleAdapter');
 
 interface RequestLEScanParams {
   callback: (result: ScanResult) => void;

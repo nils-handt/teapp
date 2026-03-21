@@ -18,11 +18,11 @@ export class FelicitaScale extends BluetoothScale {
   async connect(): Promise<void> {
     await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(this.device_id, Felicita.DATA_SERVICE, Felicita.DATA_CHARACTERISTIC, this.handleNotifications.bind(this));
-    this.logger.log('Felicita Scale connected');
+    this.logger.info('Felicita scale connected');
   }
 
   async tare(): Promise<void> {
-    this.logger.log('Taring...');
+    this.logger.info('Taring');
     await this.write([Felicita.CMD_TARE]);
   }
 
@@ -31,7 +31,7 @@ export class FelicitaScale extends BluetoothScale {
   }
 
   async setTimer(command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Setting Timer command ' + command + '...');
+    this.logger.info(`Setting timer command ${command}`);
     if (command === SCALE_TIMER_COMMAND.START) {
       await this.write([Felicita.CMD_START_TIMER]);
     } else if (command === SCALE_TIMER_COMMAND.STOP) {
@@ -46,7 +46,7 @@ export class FelicitaScale extends BluetoothScale {
   }
 
   disconnectTriggered(): void {
-    this.logger.log('Disconnecting...');
+    this.logger.info('Disconnecting');
     bleAdapter.stopNotifications(this.device_id, Felicita.DATA_SERVICE, Felicita.DATA_CHARACTERISTIC)
       .catch(err => this.logger.error('Error stopping notifications', err));
   }
@@ -59,7 +59,7 @@ export class FelicitaScale extends BluetoothScale {
   private handleNotifications(data: ArrayBufferLike): void {
     const view = new Uint8Array(data);
     if (view.length < 18) {
-      this.logger.log('Malformed status update received');
+      this.logger.warn('Malformed status update received');
       return;
     }
 

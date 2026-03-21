@@ -3,6 +3,9 @@ import { IScaleService } from './interfaces/IScaleService';
 import { RealScaleService } from './RealScaleService';
 import { MockScaleService } from './MockScaleService';
 import { DiscoveredDevice } from './bluetooth/types/ble.types';
+import { createLogger } from './logging';
+
+const logger = createLogger('BluetoothScaleService');
 
 class BluetoothScaleService implements IScaleService {
   private static instance: BluetoothScaleService;
@@ -35,22 +38,27 @@ class BluetoothScaleService implements IScaleService {
 
   // Proxy methods
   async initialize(): Promise<void> {
+    logger.info('Initializing active scale service', { mockMode: this.isMockMode });
     return this.activeService.initialize();
   }
 
   async connectNewDevice(): Promise<void> {
+    logger.info('Requesting connection to a new device', { mockMode: this.isMockMode });
     return this.activeService.connectNewDevice();
   }
 
   async connect(device: DiscoveredDevice): Promise<void> {
+    logger.info('Delegating device connection', { deviceId: device.id, deviceName: device.name, mockMode: this.isMockMode });
     return this.activeService.connect(device);
   }
 
   async disconnect(): Promise<void> {
+    logger.info('Delegating disconnect request', { mockMode: this.isMockMode });
     return this.activeService.disconnect();
   }
 
   async tare(): Promise<void> {
+    logger.info('Delegating tare request', { mockMode: this.isMockMode });
     return this.activeService.tare();
   }
 
@@ -64,7 +72,12 @@ class BluetoothScaleService implements IScaleService {
 
   // Mode switching
   async setMockMode(enabled: boolean) {
-    if (this.isMockMode === enabled) return;
+    if (this.isMockMode === enabled) {
+      logger.debug('Ignoring mock mode switch because the requested mode is already active', { enabled });
+      return;
+    }
+
+    logger.info('Switching scale service mode', { enabled });
 
     // Disconnect current service before switching
     if (this.getConnectionStatus() === 'connected' || this.getConnectionStatus() === 'connecting') {
@@ -79,6 +92,7 @@ class BluetoothScaleService implements IScaleService {
 
     // Initialize the new service if needed
     await this.activeService.initialize();
+    logger.info('Scale service mode switched', { enabled });
   }
 
   get isMockMode(): boolean {

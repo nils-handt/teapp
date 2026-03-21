@@ -1,6 +1,9 @@
 import { EntitySubscriberInterface, EventSubscriber } from 'typeorm';
 import { Capacitor } from '@capacitor/core';
 import { sqliteConnection } from './dataSource';
+import { createLogger } from '../services/logging';
+
+const logger = createLogger('WebPersistenceSubscriber');
 
 @EventSubscriber()
 export class WebPersistenceSubscriber implements EntitySubscriberInterface {
@@ -18,7 +21,7 @@ export class WebPersistenceSubscriber implements EntitySubscriberInterface {
             try {
                 await sqliteConnection.saveToStore('teapp');
             } catch (err) {
-                console.error('Failed to save to store', err);
+                logger.error('Failed to save SQLite state to the web store', err);
             }
         }
     }

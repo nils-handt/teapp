@@ -12,6 +12,17 @@ import {
   isBrewingScreenId,
   type BrewingScreenId,
 } from '../constants/brewingScreens';
+import {
+  configureLogger,
+  createLogger,
+  DEFAULT_LOGGER_CONFIG,
+  isLogLevel,
+  type LogLevel,
+} from '../services/logging';
+
+const logger = createLogger('Store');
+
+configureLogger(DEFAULT_LOGGER_CONFIG);
 
 // As per ARCHITECTURE.md
 interface BluetoothState {
@@ -55,6 +66,8 @@ interface HistoryState {
 interface SettingsState {
   scaleConfig: Record<string, unknown>;
   devMode: boolean;
+  logLevel: LogLevel;
+  logToFileEnabled: boolean;
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
   lastUsedBrewingScreen: BrewingScreenId;
@@ -73,6 +86,25 @@ interface WeightLoggerState {
 }
 
 export type StoreState = BluetoothState & BrewingState & HistoryState & SettingsState & WeightLoggerState;
+
+const applyLoggerSettings = (settings: Partial<SettingsState>): void => {
+  const nextLoggerConfig: {
+    minLevel?: LogLevel;
+    enableFileLogging?: boolean;
+  } = {};
+
+  if (settings.logLevel && isLogLevel(settings.logLevel)) {
+    nextLoggerConfig.minLevel = settings.logLevel;
+  }
+
+  if (typeof settings.logToFileEnabled === 'boolean') {
+    nextLoggerConfig.enableFileLogging = settings.logToFileEnabled;
+  }
+
+  if (Object.keys(nextLoggerConfig).length > 0) {
+    configureLogger(nextLoggerConfig);
+  }
+};
 
 export const useStore = create<StoreState>((set, get) => ({
   // BluetoothState
@@ -111,9 +143,11 @@ export const useStore = create<StoreState>((set, get) => ({
 
   setBrewingState: (newState) => set((state) => ({ ...state, ...newState })),
   restoreActiveSession: async () => {
+    logger.info('Restoring active brewing session from persistence');
     const activeSession = await sessionRepository.getActiveSession();
 
     if (activeSession) {
+      logger.info('Found active brewing session', { sessionId: activeSession.sessionId });
       brewingSessionService.restoreSession(activeSession);
       set({
         activeSession: brewingSessionService.session$.value,
@@ -125,6 +159,7 @@ export const useStore = create<StoreState>((set, get) => ({
       return;
     }
 
+    logger.info('No active brewing session found. Clearing in-memory session state');
     brewingSessionService.clearSession();
     set({
       activeSession: null,
@@ -187,19 +222,30 @@ export const useStore = create<StoreState>((set, get) => ({
   // SettingsState
   scaleConfig: {},
   devMode: false,
+  logLevel: DEFAULT_LOGGER_CONFIG.minLevel,
+  logToFileEnabled: DEFAULT_LOGGER_CONFIG.enableFileLogging,
   weightLoggerEnabled: false,
   playbackSpeed: 1,
   lastUsedBrewingScreen: DEFAULT_BREWING_SCREEN_ID,
   updateSettings: (settings) => {
+    applyLoggerSettings(settings);
     set((state) => ({ ...state, ...settings }));
     settingsRepository.saveSettingsState(settings);
+    logger.info('Updated settings', { keys: Object.keys(settings) });
   },
   loadSettings: async () => {
+    logger.info('Loading persisted settings');
     const allSettings = await settingsRepository.getAllSettings();
     const loadedSettings: Partial<SettingsState> = {};
 
     if (allSettings['devMode']) {
       loadedSettings.devMode = allSettings['devMode'] === 'true';
+    }
+    if (allSettings['logLevel'] && isLogLevel(allSettings['logLevel'])) {
+      loadedSettings.logLevel = allSettings['logLevel'];
+    }
+    if (allSettings['logToFileEnabled']) {
+      loadedSettings.logToFileEnabled = allSettings['logToFileEnabled'] === 'true';
     }
     if (allSettings['weightLoggerEnabled']) {
       loadedSettings.weightLoggerEnabled = allSettings['weightLoggerEnabled'] === 'true';
@@ -217,11 +263,13 @@ export const useStore = create<StoreState>((set, get) => ({
       try {
         loadedSettings.scaleConfig = JSON.parse(allSettings['scaleConfig']);
       } catch (e) {
-        console.error('Failed to parse scaleConfig', e);
+        logger.error('Failed to parse scaleConfig', e);
       }
     }
 
+    applyLoggerSettings(loadedSettings);
     set((state) => ({ ...state, ...loadedSettings }));
+    logger.info('Persisted settings loaded', { keys: Object.keys(loadedSettings) });
   },
 
   // WeightLoggerState
@@ -229,20 +277,24 @@ export const useStore = create<StoreState>((set, get) => ({
   recordingStartTime: null,
   savedRecordings: [],
   startRecording: () => {
+    logger.info('Starting weight recording');
     weightLoggerService.startRecording();
     set({ isRecording: true, recordingStartTime: Date.now() });
   },
   stopRecording: async (sessionName, notes) => {
+    logger.info('Stopping weight recording', { sessionName, hasNotes: Boolean(notes) });
     weightLoggerService.stopRecording();
     await weightLoggerService.saveRecording(sessionName, notes);
     const recordings = await weightLoggerService.getRecordings();
     set({ isRecording: false, recordingStartTime: null, savedRecordings: recordings });
   },
   discardRecording: () => {
+    logger.info('Discarding active weight recording');
     weightLoggerService.stopRecording();
     set({ isRecording: false, recordingStartTime: null });
   },
   refreshRecordings: async () => {
+    logger.debug('Refreshing saved recordings');
     const recordings = await weightLoggerService.getRecordings();
     set({ savedRecordings: recordings });
   },

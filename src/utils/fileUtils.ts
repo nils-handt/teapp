@@ -1,6 +1,9 @@
 import { Share } from '@capacitor/share';
 import { isPlatform } from '@ionic/react';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { createLogger } from '../services/logging';
+
+const logger = createLogger('FileUtils');
 
 /**
  * Shares a file.
@@ -17,9 +20,11 @@ export const shareFile = async (
     mimeType: string = 'application/json'
 ): Promise<void> => {
     try {
+        logger.info('Preparing file share', { fileName, mimeType });
         const stringData = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
 
         if (isPlatform('desktop') || isPlatform('pwa') || isPlatform('mobileweb')) {
+            logger.info('Using web download fallback for file share', { fileName });
             // Web platform fallback: Download the file
             const blob = new Blob([stringData], { type: mimeType });
             const url = URL.createObjectURL(blob);
@@ -31,6 +36,7 @@ export const shareFile = async (
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } else {
+            logger.info('Using native share sheet for file share', { fileName });
             // Native platform: Use Share plugin
             // First write the file to the cache directory
             await Filesystem.writeFile({
@@ -53,7 +59,7 @@ export const shareFile = async (
             });
         }
     } catch (error) {
-        console.error('Error sharing file:', error);
+        logger.error('File share failed', error);
         throw error;
     }
 };

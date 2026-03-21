@@ -87,7 +87,7 @@ export class Decoder {
       return [this.parseSettings(bytes.slice(messageStart + 3).buffer), remainingBuffer];
     }
 
-    this.log.log(`Non-event notification message command ${cmd}`);
+    this.log.debug(`Non-event notification message command ${cmd}`);
     return [null, remainingBuffer];
   }
 
@@ -128,7 +128,7 @@ export class Decoder {
         }
         break;
       default:
-        this.log.log(`Unknown message type ${msgType}`);
+        this.log.warn(`Unknown message type ${msgType}`);
         break;
     }
 

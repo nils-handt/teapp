@@ -57,7 +57,7 @@ export class AcaiaScale {
     this.connected = true;
     await this.initScales();
     this.startHeartbeatMonitor();
-    this.logger.log('Acaia Scale Connected');
+    this.logger.info('Acaia scale connected');
   }
 
   public disconnectTriggered() {

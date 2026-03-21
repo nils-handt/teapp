@@ -1,5 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { sqliteConnection } from '../database/dataSource';
+import { createLogger } from './logging';
+
+const logger = createLogger('BackupService');
 
 export interface BackupData {
     database: string;
@@ -23,6 +26,8 @@ class BackupService {
      * @returns The exported data as a JSON object.
      */
     public async exportData(): Promise<BackupData> {
+        logger.info('Starting database export');
+
         try {
             // Create a connection to the database if not already open
             // In this app, the connection is usually managed by TypeORM, but we need the raw connection for export
@@ -53,10 +58,11 @@ class BackupService {
                 throw new Error('Export returned invalid backup data');
             }
 
+            logger.info('Database export completed');
             return exportData.export;
 
         } catch (error) {
-            console.error('Export failed:', error);
+            logger.error('Database export failed', error);
             throw error;
         }
     }
@@ -66,6 +72,8 @@ class BackupService {
      * @param data The JSON data to import.
      */
     public async importData(data: BackupData): Promise<void> {
+        logger.info('Starting database import');
+
         try {
             const dbName = 'teapp';
             // Check connection but don't strictly need it open for import if using plugin directly? 
@@ -112,14 +120,14 @@ class BackupService {
                 try {
                     await sqliteConnection.saveToStore('teapp');
                 } catch (err) {
-                    console.error('Failed to save to store', err);
+                    logger.error('Failed to persist imported database to the web store', err);
                 }
             }
 
-            console.log('Import successful', result);
+            logger.info('Database import completed', { changes: result.changes });
 
         } catch (error) {
-            console.error('Import failed:', error);
+            logger.error('Database import failed', error);
             throw error;
         }
     }

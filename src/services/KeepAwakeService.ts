@@ -1,5 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { createLogger } from './logging';
+
+const logger = createLogger('KeepAwakeService');
 
 class KeepAwakeService {
   private static instance: KeepAwakeService;
@@ -24,32 +27,62 @@ class KeepAwakeService {
     try {
       const result = await KeepAwake.isSupported();
       this.isSupported = result.isSupported;
-    } catch {
+      logger.info('Resolved keep-awake support', { isSupported: this.isSupported });
+    } catch (error) {
       this.isSupported = false;
+      logger.error('Failed to determine keep-awake support', error);
     }
 
     return this.isSupported;
   }
 
   public async keepAwake(): Promise<void> {
-    if (!this.isAndroid()) return;
-    if (this.isActive) return;
-    if (!(await this.ensureSupported())) return;
-
-    await KeepAwake.keepAwake();
-    this.isActive = true;
-  }
-
-  public async allowSleep(): Promise<void> {
-    if (!this.isAndroid()) return;
-    if (!this.isActive) return;
+    if (!this.isAndroid()) {
+      logger.debug('Skipping keep-awake because the current platform is not Android');
+      return;
+    }
+    if (this.isActive) {
+      logger.debug('Skipping keep-awake because it is already active');
+      return;
+    }
     if (!(await this.ensureSupported())) {
-      this.isActive = false;
+      logger.warn('Skipping keep-awake because the feature is not supported');
       return;
     }
 
-    await KeepAwake.allowSleep();
-    this.isActive = false;
+    try {
+      await KeepAwake.keepAwake();
+      this.isActive = true;
+      logger.info('Keep-awake enabled');
+    } catch (error) {
+      logger.error('Failed to enable keep-awake', error);
+      throw error;
+    }
+  }
+
+  public async allowSleep(): Promise<void> {
+    if (!this.isAndroid()) {
+      logger.debug('Skipping allowSleep because the current platform is not Android');
+      return;
+    }
+    if (!this.isActive) {
+      logger.debug('Skipping allowSleep because keep-awake is not active');
+      return;
+    }
+    if (!(await this.ensureSupported())) {
+      this.isActive = false;
+      logger.warn('Resetting keep-awake state because the feature is not supported');
+      return;
+    }
+
+    try {
+      await KeepAwake.allowSleep();
+      this.isActive = false;
+      logger.info('Keep-awake disabled');
+    } catch (error) {
+      logger.error('Failed to disable keep-awake', error);
+      throw error;
+    }
   }
 
   public resetForTest(): void {

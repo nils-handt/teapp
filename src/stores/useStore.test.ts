@@ -9,6 +9,7 @@ import { settingsRepository } from '../repositories/SettingsRepository';
 import { DEFAULT_BREWING_SCREEN_ID } from '../constants/brewingScreens';
 import { brewingSessionService } from '../services/brewing/BrewingSessionService';
 import { BrewingPhase } from '../services/interfaces/brewing.types';
+import { configureLogger, DEFAULT_LOGGER_CONFIG } from '../services/logging';
 
 const mockBrewingSessionService = vi.hoisted(() => ({
     state$: { value: 'idle' },
@@ -17,6 +18,17 @@ const mockBrewingSessionService = vi.hoisted(() => ({
     timer$: { value: 0 },
     restoreSession: vi.fn(),
     clearSession: vi.fn(),
+}));
+
+const mockLogger = vi.hoisted(() => ({
+    configureLogger: vi.fn(),
+    createLogger: vi.fn(() => ({
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        log: vi.fn(),
+    })),
 }));
 
 // Mock WeightLoggerService
@@ -45,6 +57,16 @@ vi.mock('../repositories/SessionRepository', () => ({
 vi.mock('../services/brewing/BrewingSessionService', () => ({
     brewingSessionService: mockBrewingSessionService,
 }));
+
+vi.mock('../services/logging', async () => {
+    const actual = await vi.importActual<typeof import('../services/logging')>('../services/logging');
+
+    return {
+        ...actual,
+        configureLogger: mockLogger.configureLogger,
+        createLogger: mockLogger.createLogger,
+    };
+});
 
 // Mock SettingsRepository
 vi.mock('../repositories/SettingsRepository', () => ({
@@ -75,6 +97,8 @@ describe('useStore', () => {
             // Settings
             scaleConfig: {},
             devMode: false,
+            logLevel: DEFAULT_LOGGER_CONFIG.minLevel,
+            logToFileEnabled: DEFAULT_LOGGER_CONFIG.enableFileLogging,
             weightLoggerEnabled: false,
             playbackSpeed: 1,
             lastUsedBrewingScreen: DEFAULT_BREWING_SCREEN_ID,
@@ -144,12 +168,27 @@ describe('useStore', () => {
     });
 
     describe('Settings Slice', () => {
+        it('should start with default logger settings before persisted settings load', () => {
+            expect(useStore.getState().logLevel).toBe(DEFAULT_LOGGER_CONFIG.minLevel);
+            expect(useStore.getState().logToFileEnabled).toBe(DEFAULT_LOGGER_CONFIG.enableFileLogging);
+        });
+
         it('should update settings', () => {
             useStore.getState().updateSettings({ devMode: true, playbackSpeed: 2, lastUsedBrewingScreen: 4 });
             expect(useStore.getState().devMode).toBe(true);
             expect(useStore.getState().playbackSpeed).toBe(2);
             expect(useStore.getState().lastUsedBrewingScreen).toBe(4);
             expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({ devMode: true, playbackSpeed: 2, lastUsedBrewingScreen: 4 });
+            expect(configureLogger).not.toHaveBeenCalled();
+        });
+
+        it('should push logger settings into the runtime logger on update', () => {
+            useStore.getState().updateSettings({ logLevel: 'warn', logToFileEnabled: true });
+
+            expect(useStore.getState().logLevel).toBe('warn');
+            expect(useStore.getState().logToFileEnabled).toBe(true);
+            expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({ logLevel: 'warn', logToFileEnabled: true });
+            expect(configureLogger).toHaveBeenCalledWith({ minLevel: 'warn', enableFileLogging: true });
         });
 
         it('should load persisted brewing screen setting', async () => {
@@ -162,6 +201,19 @@ describe('useStore', () => {
 
             expect(useStore.getState().lastUsedBrewingScreen).toBe(5);
             expect(useStore.getState().devMode).toBe(true);
+        });
+
+        it('should load persisted logger settings and apply them to the runtime logger', async () => {
+            vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
+                logLevel: 'error',
+                logToFileEnabled: 'true',
+            });
+
+            await useStore.getState().loadSettings();
+
+            expect(useStore.getState().logLevel).toBe('error');
+            expect(useStore.getState().logToFileEnabled).toBe(true);
+            expect(configureLogger).toHaveBeenCalledWith({ minLevel: 'error', enableFileLogging: true });
         });
     });
 

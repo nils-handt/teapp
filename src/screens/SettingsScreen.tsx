@@ -24,6 +24,9 @@ import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { backupService, isBackupData, type BackupData } from '../services/BackupService';
 import { shareFile } from '../utils/fileUtils';
 import { BREWING_SCREEN_OPTIONS, isBrewingScreenId } from '../constants/brewingScreens';
+import { createLogger, isLogLevel, LOG_LEVELS } from '../services/logging';
+
+const logger = createLogger('SettingsScreen');
 
 const SettingsScreen: React.FC = () => {
   const history = useHistory();
@@ -31,6 +34,8 @@ const SettingsScreen: React.FC = () => {
     connectionStatus,
     connectedDevice,
     devMode,
+    logLevel,
+    logToFileEnabled,
     weightLoggerEnabled,
     playbackSpeed,
     lastUsedBrewingScreen,
@@ -58,6 +63,12 @@ const SettingsScreen: React.FC = () => {
   const handleBrewingScreenChange = (value: number) => {
     if (isBrewingScreenId(value)) {
       updateSettings({ lastUsedBrewingScreen: value });
+    }
+  };
+
+  const handleLogLevelChange = (value: string) => {
+    if (isLogLevel(value)) {
+      updateSettings({ logLevel: value });
     }
   };
 
@@ -90,7 +101,7 @@ const SettingsScreen: React.FC = () => {
       await shareFile(fileName, data);
       setToastMessage('Backup created successfully');
     } catch (error) {
-      console.error('Backup failed:', error);
+      logger.error('Backup failed', error);
       setToastMessage('Backup failed');
     }
   };
@@ -126,7 +137,7 @@ const SettingsScreen: React.FC = () => {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      console.error('Restore failed:', error);
+      logger.error('Restore failed', error);
       setToastMessage('Restore failed');
     } finally {
       setRestoreData(null);
@@ -229,6 +240,30 @@ const SettingsScreen: React.FC = () => {
                   slot="end"
                   checked={isMockMode}
                   onIonChange={e => toggleMockMode(e.detail.checked)}
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Log Level</IonLabel>
+                <IonSelect
+                  value={logLevel}
+                  onIonChange={e => handleLogLevelChange(e.detail.value)}
+                  interface="popover"
+                >
+                  {LOG_LEVELS.map((levelOption) => (
+                    <IonSelectOption key={levelOption} value={levelOption}>
+                      {levelOption}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Save Logs To File</IonLabel>
+                <IonToggle
+                  slot="end"
+                  checked={logToFileEnabled}
+                  onIonChange={e => updateSettings({ logToFileEnabled: e.detail.checked })}
                 />
               </IonItem>
 

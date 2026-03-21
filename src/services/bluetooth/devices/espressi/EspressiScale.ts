@@ -102,7 +102,7 @@ export class EspressiScale extends BluetoothScale {
       const weightIsStable = uScaleData[1] === 0xce;
       this.setWeight(newWeight / 10.0, weightIsStable);
     } else if (uScaleData[1] === 0xaa && uScaleData[2] === 0x02) {
-      this.logger.log('Timer button pressed on scale');
+      this.logger.info('Timer button pressed on scale');
     }
   }
 }

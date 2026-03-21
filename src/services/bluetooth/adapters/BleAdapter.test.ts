@@ -32,7 +32,10 @@ describe('BleAdapter.stopNotifications', () => {
 
         expect(consoleSpy).toHaveBeenCalledWith(
             expect.stringContaining('[BleAdapter] Notifications already stopped for characteristic fff4.'),
-            expect.any(Error)
+            expect.objectContaining({
+                name: 'Error',
+                message: expect.stringContaining('GATT Server is disconnected'),
+            })
         );
 
         consoleSpy.mockRestore();
@@ -48,7 +51,10 @@ describe('BleAdapter.stopNotifications', () => {
 
         expect(consoleSpy).toHaveBeenCalledWith(
             expect.stringContaining('[BleAdapter] Error stopping notifications for characteristic fff4:'),
-            expect.any(Error)
+            expect.objectContaining({
+                name: 'Error',
+                message: expect.stringContaining('Permission denied while stopping notifications'),
+            })
         );
 
         consoleSpy.mockRestore();

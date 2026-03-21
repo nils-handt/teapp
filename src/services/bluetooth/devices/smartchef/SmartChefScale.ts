@@ -29,7 +29,7 @@ export class SmartChefScale extends BluetoothScale {
   }
 
   async tare(): Promise<void> {
-    this.logger.log('Tare not supported on SmartChef scale');
+    this.logger.warn('Tare is not supported on SmartChef scale');
   }
 
   async setLed(_on: boolean): Promise<void> {
@@ -37,7 +37,7 @@ export class SmartChefScale extends BluetoothScale {
   }
 
   async setTimer(_command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Timer not supported on SmartChef scale');
+    this.logger.warn('Timer is not supported on SmartChef scale');
   }
 
   async getWeight(): Promise<void> {
@@ -61,7 +61,7 @@ export class SmartChefScale extends BluetoothScale {
       }
       this.setWeight(weight, true); // Stability not indicated
     } else {
-      this.logger.log('Malformed status update received');
+      this.logger.warn('Malformed status update received');
     }
   }
 }

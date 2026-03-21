@@ -2,6 +2,9 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { bluetoothScaleService } from './BluetoothScaleService';
 import { Subscription } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
+import { createLogger } from './logging';
+
+const logger = createLogger('WeightLoggerService');
 
 interface WeightDataPoint {
     timestamp: number;
@@ -22,7 +25,10 @@ class WeightLoggerService {
     public recordingStartTime: number | null = null;
 
     public startRecording() {
-        if (this.isRecording) return;
+        if (this.isRecording) {
+            logger.debug('Ignoring startRecording because a recording is already active');
+            return;
+        }
 
         this.isRecording = true;
         this.currentSessionData = [];
@@ -38,11 +44,14 @@ class WeightLoggerService {
             }
         });
 
-        console.log('Weight recording started');
+        logger.info('Weight recording started');
     }
 
     public stopRecording(): WeightDataPoint[] {
-        if (!this.isRecording) return [];
+        if (!this.isRecording) {
+            logger.debug('Ignoring stopRecording because there is no active recording');
+            return [];
+        }
 
         this.isRecording = false;
         this.recordingStartTime = null;
@@ -52,7 +61,7 @@ class WeightLoggerService {
             this.weightSubscription = null;
         }
 
-        console.log(`Weight recording stopped. Captured ${this.currentSessionData.length} data points.`);
+        logger.info('Weight recording stopped', { capturedPoints: this.currentSessionData.length });
         return [...this.currentSessionData];
     }
 
@@ -60,7 +69,7 @@ class WeightLoggerService {
         const dataToSave = this.isRecording ? [...this.currentSessionData] : this.currentSessionData;
 
         if (dataToSave.length === 0) {
-            console.warn('No data to save');
+            logger.warn('Skipping recording save because there is no data to persist', { sessionName });
             return;
         }
 
@@ -81,9 +90,9 @@ class WeightLoggerService {
                 encoding: Encoding.UTF8,
                 recursive: true
             });
-            console.log(`Recording saved to recordings/${fileName}`);
+            logger.info('Recording saved', { fileName, sessionName, capturedPoints: dataToSave.length });
         } catch (e) {
-            console.error('Error saving recording:', e);
+            logger.error('Failed to save recording', e);
             throw e;
         }
     }
@@ -94,9 +103,11 @@ class WeightLoggerService {
                 path: 'recordings',
                 directory: Directory.Data
             });
+            logger.debug('Loaded recording file list', { count: result.files.length });
             return result.files.map(f => f.name);
         } catch {
             // Directory might not exist yet
+            logger.debug('Recording directory does not exist yet');
             return [];
         }
     }
@@ -108,9 +119,10 @@ class WeightLoggerService {
                 directory: Directory.Data,
                 encoding: Encoding.UTF8
             });
+            logger.info('Loaded recording', { fileName });
             return JSON.parse(result.data as string);
         } catch (e) {
-            console.error('Error loading recording:', e);
+            logger.error('Failed to load recording', { fileName, error: e });
             return null;
         }
     }
@@ -121,8 +133,9 @@ class WeightLoggerService {
                 path: `recordings/${fileName}`,
                 directory: Directory.Data
             });
+            logger.info('Deleted recording', { fileName });
         } catch (e) {
-            console.error('Error deleting recording:', e);
+            logger.error('Failed to delete recording', { fileName, error: e });
             throw e;
         }
     }
@@ -140,6 +153,7 @@ class WeightLoggerService {
                     path: fileName,
                     directory: Directory.Cache
                 });
+                logger.info('Resolved Android recording URI', { fileName });
                 return result.uri;
             }
 
@@ -147,9 +161,10 @@ class WeightLoggerService {
                 path: `recordings/${fileName}`,
                 directory: Directory.Data
             });
+            logger.info('Resolved recording URI', { fileName });
             return result.uri;
         } catch (e) {
-            console.error('Error getting recording URI:', e);
+            logger.error('Failed to resolve recording URI', { fileName, error: e });
             throw e;
         }
     }

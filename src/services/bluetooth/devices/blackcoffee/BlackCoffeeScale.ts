@@ -23,11 +23,11 @@ export class BlackCoffeeScale extends BluetoothScale {
   }
 
   async setTimer(_command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Timer not supported on BlackCoffee scale');
+    this.logger.warn('Timer is not supported on BlackCoffee scale');
   }
 
   async connect(): Promise<void> {
-    this.logger.log('Connecting...');
+    this.logger.info('Connecting');
     await bleAdapter.connect(this.device_id, this.handleDeviceDisconnect.bind(this));
     await bleAdapter.startNotifications(
       this.device_id,
@@ -38,11 +38,11 @@ export class BlackCoffeeScale extends BluetoothScale {
   }
 
   async tare(): Promise<void> {
-    this.logger.log('Tare not supported on BlackCoffee scale');
+    this.logger.warn('Tare is not supported on BlackCoffee scale');
   }
 
   async setLed(_on: boolean): Promise<void> {
-    this.logger.log('SetLed not supported on BlackCoffee scale');
+    this.logger.warn('LED control is not supported on BlackCoffee scale');
   }
 
   async getWeight(): Promise<void> {
@@ -50,7 +50,7 @@ export class BlackCoffeeScale extends BluetoothScale {
   }
 
   disconnectTriggered(): void {
-    this.logger.log('Disconnecting...');
+    this.logger.info('Disconnecting');
     bleAdapter.stopNotifications(
       this.device_id,
       BlackCoffeeScale.DATA_SERVICE,
@@ -69,7 +69,7 @@ export class BlackCoffeeScale extends BluetoothScale {
       const weight = ((isNegative ? -1 : 1) * parseInt(hexWeight, 16)) / 1000;
       this.setWeight(weight, isStill);
     } else {
-      this.logger.log('Malformed status update received');
+      this.logger.warn('Malformed status update received');
     }
   }
 }

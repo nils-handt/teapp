@@ -37,7 +37,7 @@ export class WeighMyBruScale extends BluetoothScale {
   }
 
   async setTimer(command: SCALE_TIMER_COMMAND): Promise<void> {
-    this.logger.log('Setting Timer command ' + command + '...');
+    this.logger.info(`Setting timer command ${command}`);
     if (command === SCALE_TIMER_COMMAND.START) {
       await this.write(new Uint8Array([0x03, 0x0a, 0x02, 0x01, 0x00]));
     } else if (command === SCALE_TIMER_COMMAND.STOP) {

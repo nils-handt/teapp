@@ -9,13 +9,17 @@ import { useStore } from './stores/useStore';
 import { bluetoothScaleService } from './services/BluetoothScaleService';
 import { useBrewingSync } from './hooks/useBrewingSync';
 import { getBrewingScreenPath } from './constants/brewingScreens';
+import { createLogger } from './services/logging';
+
+const logger = createLogger('App');
 
 const App: React.FC = () => {
   const Router = Capacitor.getPlatform() === 'web' ? IonReactHashRouter : IonReactRouter;
   const lastUsedBrewingScreen = useStore((state) => state.lastUsedBrewingScreen);
 
   useEffect(() => {
-    bluetoothScaleService.initialize();
+    logger.info('Starting application bootstrap tasks');
+    void bluetoothScaleService.initialize();
     void useStore.getState().loadSettings();
     void useStore.getState().restoreActiveSession();
   }, []);

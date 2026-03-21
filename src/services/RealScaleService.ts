@@ -6,12 +6,12 @@ import { BluetoothScale } from './bluetooth/base/BluetoothScale';
 import { AVAILABLE_SCALES } from './bluetooth/index';
 import { DiscoveredDevice, LimitedPeripheralData, PeripheralData } from './bluetooth/types/ble.types';
 import { ScaleType, WeightChangeEvent } from './bluetooth/types/scale.types';
-import { Logger } from './bluetooth/utils/Logger';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import { ScaleDevice } from '../entities/ScaleDevice.entity';
 import { IScaleService } from './interfaces/IScaleService';
+import { createLogger } from './logging';
 
-const logger = new Logger('RealScaleService');
+const logger = createLogger('RealScaleService');
 const RECONNECT_DELAY_MS = [1000, 2000, 4000];
 const MAX_RECONNECT_ATTEMPTS = 3;
 
@@ -43,17 +43,17 @@ export class RealScaleService implements IScaleService {
     async initialize(): Promise<void> {
         const preferredId = await settingsRepository.getPreferredDeviceId();
         if (!preferredId) {
-            logger.log('No preferred device saved.');
+            logger.debug('No preferred device saved');
             return;
         }
 
         const savedDevice = await settingsRepository.getScaleDevice(preferredId);
         if (!savedDevice) {
-            logger.log(`Preferred device ${preferredId} not found in known devices.`);
+            logger.warn(`Preferred device ${preferredId} was not found in known devices`);
             return;
         }
 
-        logger.log(`Attempting to auto-connect to preferred device: ${savedDevice.name}`);
+        logger.info(`Attempting to auto-connect to preferred device: ${savedDevice.name}`);
 
         try {
             const connectedDevices = await bleAdapter.getDevices();
@@ -63,7 +63,7 @@ export class RealScaleService implements IScaleService {
             if (!deviceAvailable) {
                 // Note: In a real scenario, we might want to scan again if not found, 
                 // but for now we follow existing logic.
-                logger.log(`Device ${savedDevice.deviceId} not found in permitted devices. Skipping auto-connect.`);
+                logger.warn(`Device ${savedDevice.deviceId} was not found in permitted devices. Skipping auto-connect.`);
                 return;
             }
 
@@ -83,29 +83,29 @@ export class RealScaleService implements IScaleService {
 
             await this.connect(device);
         } catch (error) {
-            logger.error('Auto-connect failed:', error);
+            logger.error('Auto-connect failed', error);
         }
     }
 
 
     async connectNewDevice(): Promise<void> {
         if (this.getConnectionStatus() === 'connected') {
-            logger.log('Already connected to a device. Disconnect first.');
+            logger.warn('Already connected to a device. Disconnect first.');
             return;
         }
 
         try {
-            logger.log('Requesting device...');
+            logger.info('Requesting device');
             const device: BleDevice = await bleAdapter.requestDevice({
                 optionalServices: SCALE_OPTIONAL_SERVICES,
             });
 
             if (!device) {
-                logger.log('No device selected.');
+                logger.info('No device selected');
                 return;
             }
 
-            logger.log(`Device selected: ${device.name} (${device.deviceId})`);
+            logger.info(`Device selected: ${device.name} (${device.deviceId})`);
 
             const peripheral: LimitedPeripheralData = {
                 id: device.deviceId,
@@ -131,7 +131,7 @@ export class RealScaleService implements IScaleService {
             await this.connect(discoveredDevice);
 
         } catch (error) {
-            logger.error('Failed to connect to new device:', error);
+            logger.error('Failed to connect to new device', error);
             useStore.getState().setConnectionStatus('disconnected');
         }
     }
@@ -153,7 +153,7 @@ export class RealScaleService implements IScaleService {
             throw new Error('Failed to instantiate scale class.');
         }
         this.currentScale.setDisconnectHandler(this.handleScaleDisconnect.bind(this));
-        logger.log(`Connecting to ${this.currentScale.device_name}...`);
+        logger.info(`Connecting to ${this.currentScale.device_name}`);
 
         try {
             await this.currentScale.connect();
@@ -162,7 +162,7 @@ export class RealScaleService implements IScaleService {
             useStore.getState().setConnectedDevice(device);
             this.lastDevice = device;
             this.reconnectAttempts = 0;
-            logger.log(`Successfully connected to ${this.currentScale.device_name}.`);
+            logger.info(`Successfully connected to ${this.currentScale.device_name}`);
 
             const scaleDevice: ScaleDevice = {
                 deviceId: device.id,
@@ -175,7 +175,7 @@ export class RealScaleService implements IScaleService {
             await settingsRepository.saveScaleDevice(scaleDevice);
 
         } catch (error) {
-            logger.error(`Connection to ${device.name} failed:`, error);
+            logger.error(`Connection to ${device.name} failed`, error);
             await this.handleDisconnect(false);
             throw error;
         }
@@ -184,12 +184,12 @@ export class RealScaleService implements IScaleService {
     async disconnect(): Promise<void> {
         if (!this.currentScale) return;
         const connectedDevice = this.getConnectedDevice();
-        logger.log(`Disconnecting from ${this.currentScale.device_name}...`);
+        logger.info(`Disconnecting from ${this.currentScale.device_name}`);
         this.disconnectInProgress = true;
         try {
             await this.currentScale.disconnectTriggered();
         } catch (err) {
-            logger.error('Error during scale specific disconnect cleanup:', err);
+            logger.error('Error during scale-specific disconnect cleanup', err);
         }
         try {
             if (connectedDevice) {
@@ -234,9 +234,9 @@ export class RealScaleService implements IScaleService {
                 useStore.getState().setCurrentWeight(event.weight.actual);
                 this.weight$.next(event.weight.actual);
             }),
-            this.currentScale.tareEvent.subscribe(() => logger.log('Tare event received')),
-            this.currentScale.timerEvent.subscribe(() => logger.log('Timer event received')),
-            this.currentScale.flowChange.subscribe(() => logger.log('Flow change event received'))
+            this.currentScale.tareEvent.subscribe(() => logger.debug('Tare event received')),
+            this.currentScale.timerEvent.subscribe(() => logger.debug('Timer event received')),
+            this.currentScale.flowChange.subscribe(() => logger.debug('Flow change event received'))
         );
     }
 
@@ -249,10 +249,10 @@ export class RealScaleService implements IScaleService {
         useStore.getState().setCurrentWeight(0);
 
         if (unexpected && lastConnectedDevice) {
-            logger.log('Unexpected disconnection. Attempting to reconnect...');
+            logger.warn('Unexpected disconnection. Attempting to reconnect');
             this.attemptReconnect(lastConnectedDevice);
         } else {
-            logger.log('Scale disconnected.');
+            logger.info('Scale disconnected');
             if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
             this.reconnectAttempts = 0;
         }
@@ -260,7 +260,7 @@ export class RealScaleService implements IScaleService {
 
     private async handleScaleDisconnect(): Promise<void> {
         if (this.disconnectInProgress) {
-            logger.log('Ignoring disconnect callback during manual disconnect.');
+            logger.debug('Ignoring disconnect callback during manual disconnect');
             return;
         }
 
@@ -277,7 +277,7 @@ export class RealScaleService implements IScaleService {
         const delay = RECONNECT_DELAY_MS[this.reconnectAttempts];
         this.reconnectAttempts++;
 
-        logger.log(`Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts})...`);
+        logger.warn(`Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts})`);
 
         this.reconnectTimer = setTimeout(async () => {
             try {
