@@ -8,6 +8,7 @@ import {
 } from '@ionic/react';
 import React, { useState } from 'react';
 import DesignSwitcher from '../../components/DesignSwitcher';
+import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
 import TeaNameEditorModal from '../../components/TeaNameEditorModal';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
@@ -39,6 +40,14 @@ type AlertState =
     }
     | null;
 
+type NoteEditorTarget =
+    | { mode: 'editable' }
+    | { mode: 'saved'; infusionId: string }
+    | null;
+
+const QUICK_WEAK_NOTES = ['weak', 'very weak'] as const;
+const QUICK_STRONG_NOTES = ['strong', 'very strong'] as const;
+
 const PHASE_COPY: Record<BrewingPhase, { label: string; message: string }> = {
     [BrewingPhase.IDLE]: { label: 'Zen', message: '' },
     [BrewingPhase.SETUP]: { label: 'Setup', message: '' },
@@ -62,6 +71,7 @@ const BrewingZen: React.FC = () => {
         brewingPhase,
         connectionStatus,
         currentWeight,
+        editableInfusionMetadata,
         timerValue,
         knownTeaNames,
         loadKnownTeaNames,
@@ -70,6 +80,11 @@ const BrewingZen: React.FC = () => {
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
     const [alertState, setAlertState] = useState<AlertState>(null);
     const [draftValue, setDraftValue] = useState('');
+    const [noteEditorTarget, setNoteEditorTarget] = useState<NoteEditorTarget>(null);
+    const [noteDraft, setNoteDraft] = useState('');
+    const [isTemperatureEditorOpen, setIsTemperatureEditorOpen] = useState(false);
+    const [temperatureDraft, setTemperatureDraft] = useState('');
+    const [temperatureError, setTemperatureError] = useState('');
 
     const phaseCopy = PHASE_COPY[brewingPhase] ?? PHASE_COPY[BrewingPhase.IDLE];
     const hasTeaName = Boolean(activeSession?.teaName?.trim());
@@ -77,6 +92,14 @@ const BrewingZen: React.FC = () => {
     const hasBrewingVesselName = Boolean(activeSession?.brewingVessel?.name?.trim());
     const brewingVesselLabel = activeSession?.brewingVessel?.name?.trim()
         || (hasBrewingVesselWeights ? 'no vessel selected' : 'detect vessel first');
+    const activeQuickWeakIndex = QUICK_WEAK_NOTES.indexOf(editableInfusionMetadata.note as typeof QUICK_WEAK_NOTES[number]);
+    const activeQuickStrongIndex = QUICK_STRONG_NOTES.indexOf(editableInfusionMetadata.note as typeof QUICK_STRONG_NOTES[number]);
+    const hasCustomInfusionNote = Boolean(
+        editableInfusionMetadata.note.trim()
+        && activeQuickWeakIndex === -1
+        && activeQuickStrongIndex === -1
+    );
+    const canEditInfusionMetadata = editableInfusionMetadata.source !== 'none';
 
     const openAlert = (field: EditableField) => {
         if (!activeSession) {
@@ -132,6 +155,153 @@ const BrewingZen: React.FC = () => {
         setAlertState(null);
         setDraftValue('');
     };
+
+    const openEditableNoteEditor = () => {
+        if (!canEditInfusionMetadata) {
+            return;
+        }
+
+        setNoteEditorTarget({ mode: 'editable' });
+        setNoteDraft(editableInfusionMetadata.note);
+    };
+
+    const openSavedInfusionNoteEditor = (infusionId: string, currentNote: string) => {
+        setNoteEditorTarget({ mode: 'saved', infusionId });
+        setNoteDraft(currentNote);
+    };
+
+    const closeNoteEditor = () => {
+        setNoteEditorTarget(null);
+        setNoteDraft('');
+    };
+
+    const handleNoteSave = () => {
+        const trimmedNote = noteDraft.trim();
+
+        if (noteEditorTarget?.mode === 'editable') {
+            brewingSessionService.updateEditableInfusionNote(trimmedNote);
+        }
+
+        if (noteEditorTarget?.mode === 'saved') {
+            brewingSessionService.updateSavedInfusionNote(noteEditorTarget.infusionId, trimmedNote);
+        }
+
+        closeNoteEditor();
+    };
+
+    const openTemperatureEditor = () => {
+        if (!canEditInfusionMetadata) {
+            return;
+        }
+
+        setTemperatureDraft(
+            editableInfusionMetadata.temperature === null || editableInfusionMetadata.temperature === undefined
+                ? ''
+                : String(editableInfusionMetadata.temperature)
+        );
+        setTemperatureError('');
+        setIsTemperatureEditorOpen(true);
+    };
+
+    const closeTemperatureEditor = () => {
+        setIsTemperatureEditorOpen(false);
+        setTemperatureDraft('');
+        setTemperatureError('');
+    };
+
+    const handleTemperatureSave = () => {
+        const trimmedValue = temperatureDraft.trim();
+        if (!trimmedValue) {
+            brewingSessionService.updateEditableInfusionTemperature(null);
+            closeTemperatureEditor();
+            return;
+        }
+
+        const parsedValue = Number.parseFloat(trimmedValue);
+        if (Number.isNaN(parsedValue) || parsedValue < 0 || parsedValue > 212) {
+            setTemperatureError('Enter a temperature between 0 and 212.');
+            return;
+        }
+
+        brewingSessionService.updateEditableInfusionTemperature(parsedValue);
+        closeTemperatureEditor();
+    };
+
+    const cycleQuickNote = (direction: 'weak' | 'strong') => {
+        if (!canEditInfusionMetadata) {
+            return;
+        }
+
+        const options = direction === 'weak' ? QUICK_WEAK_NOTES : QUICK_STRONG_NOTES;
+        const currentNote = editableInfusionMetadata.note;
+        const nextNote = currentNote === options[0]
+            ? options[1]
+            : currentNote === options[1]
+                ? ''
+                : options[0];
+
+        brewingSessionService.updateEditableInfusionNote(nextNote);
+    };
+
+    const renderInfusionControlButton = (
+        buttonLabel: string,
+        value: string,
+        onClick: () => void,
+        options?: { active?: boolean; customColor?: string }
+    ) => (
+        <button
+            type="button"
+            aria-label={buttonLabel}
+            onClick={onClick}
+            disabled={!canEditInfusionMetadata}
+            style={{
+                flex: 1,
+                minHeight: '44px',
+                borderRadius: '14px',
+                border: `1px solid ${options?.active ? '#1f1f1f' : ZEN_PALETTE.border}`,
+                background: options?.active ? (options?.customColor ?? '#1f1f1f') : '#f0efe9',
+                color: options?.active ? '#ffffff' : ZEN_PALETTE.muted,
+                fontSize: '1rem',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                cursor: canEditInfusionMetadata ? 'pointer' : 'not-allowed',
+                opacity: canEditInfusionMetadata ? 1 : 0.5,
+            }}
+        >
+            {value}
+        </button>
+    );
+
+    const renderInfusionControls = () => (
+        <section style={{ ...zenPanelStyle, padding: '16px', display: 'flex', gap: '10px' }}>
+            {renderInfusionControlButton(
+                'Weak note',
+                activeQuickWeakIndex === 1 ? '--' : '-',
+                () => cycleQuickNote('weak'),
+                { active: activeQuickWeakIndex >= 0 }
+            )}
+            {renderInfusionControlButton(
+                'Infusion temperature',
+                editableInfusionMetadata.temperature === null || editableInfusionMetadata.temperature === undefined
+                    ? 'temp'
+                    : String(editableInfusionMetadata.temperature),
+                openTemperatureEditor,
+                { active: editableInfusionMetadata.temperature !== null && editableInfusionMetadata.temperature !== undefined }
+            )}
+            {renderInfusionControlButton(
+                'Custom note',
+                'note',
+                openEditableNoteEditor,
+                { active: hasCustomInfusionNote, customColor: '#454f46' }
+            )}
+            {renderInfusionControlButton(
+                'Strong note',
+                activeQuickStrongIndex === 1 ? '++' : '+',
+                () => cycleQuickNote('strong'),
+                { active: activeQuickStrongIndex >= 0 }
+            )}
+        </section>
+    );
 
     const handleAlertSave = () => {
         if (!alertState) {
@@ -254,6 +424,7 @@ const BrewingZen: React.FC = () => {
 
     const renderActiveView = (options?: { greyTimer?: boolean }) => (
         <div style={zenStackStyle}>
+            {renderInfusionControls()}
             <section style={{ ...zenSecondaryPanelStyle, textAlign: 'center' }}>
                 <p style={{ margin: 0, color: ZEN_PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
                     {phaseCopy.label}
@@ -343,6 +514,7 @@ const BrewingZen: React.FC = () => {
             teaNameAction={() => openAlert('teaName')}
             brewingVesselAction={() => openAlert('brewingVesselName')}
             brewingVesselActionDisabled={!hasBrewingVesselWeights}
+            onInfusionPress={openSavedInfusionNoteEditor}
             footer={(
                 <IonButton
                     expand="block"
@@ -412,6 +584,14 @@ const BrewingZen: React.FC = () => {
                     onCancel={closeEditor}
                     onSave={handleAlertSave}
                 />
+                <InfusionNoteEditorModal
+                    isOpen={Boolean(noteEditorTarget)}
+                    title="Edit Infusion Note"
+                    value={noteDraft}
+                    onChange={setNoteDraft}
+                    onCancel={closeNoteEditor}
+                    onSave={handleNoteSave}
+                />
 
                 {alertState && alertState.field !== 'teaName' && (
                     <div
@@ -463,6 +643,72 @@ const BrewingZen: React.FC = () => {
                                 <IonButton
                                     shape="round"
                                     onClick={handleAlertSave}
+                                    style={zenPrimaryButtonStyle}
+                                >
+                                    Save
+                                </IonButton>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {isTemperatureEditorOpen && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(20, 28, 22, 0.24)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px',
+                            zIndex: 1000,
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: 'min(420px, 100%)',
+                                borderRadius: '24px',
+                                background: '#fffdf8',
+                                border: `1px solid ${ZEN_PALETTE.border}`,
+                                boxShadow: '0 18px 36px rgba(40, 52, 40, 0.18)',
+                                padding: '22px',
+                            }}
+                        >
+                            <h3 style={{ margin: '0 0 14px', fontSize: '1.1rem', fontWeight: 500 }}>Infusion Temperature</h3>
+                            <input
+                                autoFocus
+                                type="number"
+                                value={temperatureDraft}
+                                onChange={(event) => {
+                                    setTemperatureDraft(event.target.value);
+                                    if (temperatureError) {
+                                        setTemperatureError('');
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 16px',
+                                    borderRadius: '16px',
+                                    border: `1px solid ${temperatureError ? '#c14a3f' : ZEN_PALETTE.border}`,
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    marginBottom: '10px',
+                                }}
+                            />
+                            <p style={{ margin: '0 0 16px', color: temperatureError ? '#c14a3f' : ZEN_PALETTE.muted, fontSize: '0.92rem' }}>
+                                {temperatureError || 'Enter a number from 0 to 212. Leave blank to clear it.'}
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                <IonButton
+                                    shape="round"
+                                    onClick={closeTemperatureEditor}
+                                    style={{ '--background': '#ece8df', '--color': '#000000' }}
+                                >
+                                    Cancel
+                                </IonButton>
+                                <IonButton
+                                    shape="round"
+                                    onClick={handleTemperatureSave}
                                     style={zenPrimaryButtonStyle}
                                 >
                                     Save

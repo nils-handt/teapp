@@ -19,6 +19,14 @@ export const useBrewingSync = () => {
             setBrewingState({ currentInfusion: infusion });
         });
 
+        const firstInfusionDraftSub = brewingSessionService.firstInfusionDraft$.subscribe((firstInfusionDraft) => {
+            setBrewingState({ firstInfusionDraft });
+        });
+
+        const editableInfusionMetadataSub = brewingSessionService.editableInfusionMetadata$.subscribe((editableInfusionMetadata) => {
+            setBrewingState({ editableInfusionMetadata });
+        });
+
         const timerSub = brewingSessionService.timer$.subscribe((time) => {
             setBrewingState({ timerValue: time });
         });
@@ -27,6 +35,8 @@ export const useBrewingSync = () => {
             stateSub.unsubscribe();
             sessionSub.unsubscribe();
             infusionSub.unsubscribe();
+            firstInfusionDraftSub.unsubscribe();
+            editableInfusionMetadataSub.unsubscribe();
             timerSub.unsubscribe();
         };
     }, [setBrewingState]);

@@ -2,7 +2,7 @@ import type { MouseEventHandler, PropsWithChildren } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
-import { BrewingPhase } from '../../services/interfaces/brewing.types';
+import { BrewingPhase, type EditableInfusionMetadata, type InfusionMetadataDraft } from '../../services/interfaces/brewing.types';
 import type { BrewingVessel } from '../../entities/BrewingVessel.entity';
 
 const {
@@ -15,6 +15,9 @@ const {
     updateTeaName,
     updateBrewingVesselName,
     updateSetupValue,
+    updateEditableInfusionNote,
+    updateEditableInfusionTemperature,
+    updateSavedInfusionNote,
     loadKnownTeaNames,
     upsertKnownTeaName,
 } = vi.hoisted(() => ({
@@ -27,6 +30,9 @@ const {
     updateTeaName: vi.fn(),
     updateBrewingVesselName: vi.fn(),
     updateSetupValue: vi.fn(),
+    updateEditableInfusionNote: vi.fn(),
+    updateEditableInfusionTemperature: vi.fn(),
+    updateSavedInfusionNote: vi.fn(),
     loadKnownTeaNames: vi.fn(),
     upsertKnownTeaName: vi.fn(),
 }));
@@ -35,7 +41,9 @@ type BrewingZenInfusion = {
     duration: number;
     infusionId: string;
     infusionNumber: number;
+    note?: string | null;
     restDuration: number;
+    temperature?: number | null;
     waterWeight: number;
     wetTeaLeavesWeight: number;
 };
@@ -57,6 +65,8 @@ type BrewingZenStore = {
     brewingPhase: BrewingPhase;
     connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'scanning';
     currentWeight: number;
+    editableInfusionMetadata: EditableInfusionMetadata;
+    firstInfusionDraft: InfusionMetadataDraft;
     knownTeaNames: string[];
     loadKnownTeaNames: () => Promise<void> | void;
     timerValue: number;
@@ -100,6 +110,9 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
         updateTeaName,
         updateBrewingVesselName,
         updateSetupValue,
+        updateEditableInfusionNote,
+        updateEditableInfusionTemperature,
+        updateSavedInfusionNote,
     },
 }));
 
@@ -134,12 +147,24 @@ describe('BrewingZen', () => {
                         waterWeight: 100.5,
                         wetTeaLeavesWeight: 18.2,
                         restDuration: 35,
+                        note: '',
+                        temperature: null,
                     },
                 ],
             },
             brewingPhase: BrewingPhase.SETUP,
             connectionStatus: 'connected',
             currentWeight: 63.5,
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'none',
+            },
+            firstInfusionDraft: {
+                note: '',
+                temperature: null,
+            },
             timerValue: 92000,
             knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
             loadKnownTeaNames,
@@ -171,6 +196,12 @@ describe('BrewingZen', () => {
 
     it('shows the tea placeholder in ready when no tea name exists and hides live weight', () => {
         mockState.brewingPhase = BrewingPhase.READY;
+        mockState.editableInfusionMetadata = {
+            infusionId: null,
+            note: '',
+            temperature: null,
+            source: 'draft',
+        };
 
         render(<BrewingZen />);
 
@@ -182,6 +213,12 @@ describe('BrewingZen', () => {
     it('hides the tea field in ready when a tea name has been selected', () => {
         mockState.brewingPhase = BrewingPhase.READY;
         mockState.activeSession!.teaName = 'Morning Sencha';
+        mockState.editableInfusionMetadata = {
+            infusionId: null,
+            note: '',
+            temperature: null,
+            source: 'draft',
+        };
 
         render(<BrewingZen />);
 
@@ -191,6 +228,12 @@ describe('BrewingZen', () => {
 
     it('greys out the timer during rest', () => {
         mockState.brewingPhase = BrewingPhase.REST;
+        mockState.editableInfusionMetadata = {
+            infusionId: 'inf-1',
+            note: '',
+            temperature: 180,
+            source: 'resting',
+        };
 
         render(<BrewingZen />);
 
@@ -214,10 +257,97 @@ describe('BrewingZen', () => {
 
     it('shows an end infusion action while infusing', () => {
         mockState.brewingPhase = BrewingPhase.INFUSION;
+        mockState.editableInfusionMetadata = {
+            infusionId: 'inf-1',
+            note: '',
+            temperature: null,
+            source: 'current',
+        };
 
         render(<BrewingZen />);
 
         expect(screen.getByRole('button', { name: 'End Infusion' })).toBeDefined();
+    });
+
+    it('cycles weak quick notes from the top controls', () => {
+        mockState.brewingPhase = BrewingPhase.READY;
+        mockState.editableInfusionMetadata = {
+            infusionId: null,
+            note: '',
+            temperature: null,
+            source: 'draft',
+        };
+
+        const { rerender } = render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Weak note' }));
+        expect(updateEditableInfusionNote).toHaveBeenCalledWith('weak');
+
+        mockState.editableInfusionMetadata.note = 'weak';
+        rerender(<BrewingZen />);
+        fireEvent.click(screen.getByRole('button', { name: 'Weak note' }));
+        expect(updateEditableInfusionNote).toHaveBeenLastCalledWith('very weak');
+
+        mockState.editableInfusionMetadata.note = 'very weak';
+        rerender(<BrewingZen />);
+        fireEvent.click(screen.getByRole('button', { name: 'Weak note' }));
+        expect(updateEditableInfusionNote).toHaveBeenLastCalledWith('');
+    });
+
+    it('replaces quick notes with a custom note', () => {
+        mockState.brewingPhase = BrewingPhase.REST;
+        mockState.editableInfusionMetadata = {
+            infusionId: 'inf-1',
+            note: 'strong',
+            temperature: 180,
+            source: 'resting',
+        };
+
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Custom note' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'floral finish' } });
+        fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+
+        expect(updateEditableInfusionNote).toHaveBeenCalledWith('floral finish');
+    });
+
+    it('validates and saves infusion temperature from the top controls', () => {
+        mockState.brewingPhase = BrewingPhase.INFUSION;
+        mockState.editableInfusionMetadata = {
+            infusionId: 'inf-1',
+            note: '',
+            temperature: null,
+            source: 'current',
+        };
+
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Infusion temperature' }));
+        fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '300' } });
+        fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+
+        expect(screen.getByText('Enter a temperature between 0 and 212.')).toBeDefined();
+        expect(updateEditableInfusionTemperature).not.toHaveBeenCalled();
+
+        fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '185' } });
+        fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+
+        expect(updateEditableInfusionTemperature).toHaveBeenCalledWith(185);
+    });
+
+    it('edits the saved infusion note from the ended summary cards', () => {
+        mockState.brewingPhase = BrewingPhase.ENDED;
+        mockState.activeSession!.teaName = 'Cloud Mist';
+        mockState.activeSession!.infusions[0].note = 'sweet';
+
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: /Infusion 1/i }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'fruitier than before' } });
+        fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+
+        expect(updateSavedInfusionNote).toHaveBeenCalledWith('inf-1', 'fruitier than before');
     });
 
     it('uses the shared tea editor suggestions when saving a tea name', () => {

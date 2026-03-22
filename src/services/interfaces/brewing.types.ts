@@ -14,3 +14,13 @@ export enum WeightTrend {
     DECREASING = 'DECREASING',
     CHAOTIC = 'CHAOTIC'
 }
+
+export type InfusionMetadataDraft = {
+    note: string;
+    temperature: number | null;
+};
+
+export type EditableInfusionMetadata = InfusionMetadataDraft & {
+    infusionId: string | null;
+    source: 'none' | 'draft' | 'current' | 'resting';
+};

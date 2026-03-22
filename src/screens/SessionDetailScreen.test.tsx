@@ -79,7 +79,21 @@ describe('SessionDetailScreen', () => {
                 trayWeight: 0,
                 dryTeaLeavesWeight: 6.4,
                 brewingVessel: null,
-                infusions: [],
+                infusions: [
+                    {
+                        infusionId: 'inf-1',
+                        infusionNumber: 1,
+                        startTime: '2026-03-14T10:01:00.000Z',
+                        duration: 25,
+                        restDuration: 30,
+                        waterWeight: 100,
+                        wetTeaLeavesWeight: 18,
+                        note: 'bright',
+                        temperature: 185,
+                        sessionId: 'session-1',
+                        session: undefined as never,
+                    },
+                ],
             },
             knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
             selectSession,
@@ -103,6 +117,22 @@ describe('SessionDetailScreen', () => {
         await waitFor(() => {
             expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({ teaName: 'ORT 2015 Gao Jia Shan' }));
             expect(upsertKnownTeaName).toHaveBeenCalledWith('ORT 2015 Gao Jia Shan');
+        });
+    });
+
+    it('edits an infusion note by pressing the infusion box', async () => {
+        render(<SessionDetailScreen />);
+
+        expect(screen.getByText('Temp 185°')).toBeDefined();
+
+        fireEvent.click(screen.getByRole('button', { name: /Infusion 1/i }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'honey finish' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({
+                infusions: [expect.objectContaining({ infusionId: 'inf-1', note: 'honey finish' })],
+            }));
         });
     });
 });

@@ -3,7 +3,11 @@ import { DiscoveredDevice } from '../services/bluetooth/types/ble.types';
 import { weightLoggerService } from '../services/WeightLoggerService';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import { sessionRepository } from '../repositories/SessionRepository';
-import { BrewingPhase } from '../services/interfaces/brewing.types';
+import {
+  BrewingPhase,
+  type EditableInfusionMetadata,
+  type InfusionMetadataDraft,
+} from '../services/interfaces/brewing.types';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
 import { brewingSessionService } from '../services/brewing/BrewingSessionService';
@@ -43,6 +47,8 @@ interface BluetoothState {
 interface BrewingState {
   activeSession: BrewingSession | null;
   currentInfusion: Infusion | null;
+  editableInfusionMetadata: EditableInfusionMetadata;
+  firstInfusionDraft: InfusionMetadataDraft;
   timerStatus: 'stopped' | 'running' | 'paused';
   brewingPhase: BrewingPhase;
   timerValue: number;
@@ -137,6 +143,16 @@ export const useStore = create<StoreState>((set, get) => ({
   // BrewingState
   activeSession: null,
   currentInfusion: null,
+  editableInfusionMetadata: {
+    infusionId: null,
+    note: '',
+    temperature: null,
+    source: 'none',
+  },
+  firstInfusionDraft: {
+    note: '',
+    temperature: null,
+  },
   timerStatus: 'stopped',
   brewingPhase: BrewingPhase.IDLE,
   timerValue: 0,
@@ -152,6 +168,8 @@ export const useStore = create<StoreState>((set, get) => ({
       set({
         activeSession: brewingSessionService.session$.value,
         currentInfusion: brewingSessionService.currentInfusion$.value,
+        editableInfusionMetadata: brewingSessionService.editableInfusionMetadata$.value,
+        firstInfusionDraft: brewingSessionService.firstInfusionDraft$.value,
         brewingPhase: brewingSessionService.state$.value,
         timerValue: brewingSessionService.timer$.value,
         timerStatus: 'stopped',
@@ -164,6 +182,8 @@ export const useStore = create<StoreState>((set, get) => ({
     set({
       activeSession: null,
       currentInfusion: null,
+      editableInfusionMetadata: brewingSessionService.editableInfusionMetadata$.value,
+      firstInfusionDraft: brewingSessionService.firstInfusionDraft$.value,
       brewingPhase: BrewingPhase.IDLE,
       timerValue: 0,
       timerStatus: 'stopped',

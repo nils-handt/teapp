@@ -14,8 +14,10 @@ import {
 } from '@ionic/react';
 import { trash, pencil } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
+import InfusionNoteEditorModal from '../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../components/SessionSummaryView';
 import TeaNameEditorModal from '../components/TeaNameEditorModal';
+import { BrewingSession } from '../entities/BrewingSession.entity';
 import { useStore } from '../stores/useStore';
 
 const TOAST_DURATION = 2000;
@@ -28,6 +30,8 @@ const SessionDetailScreen: React.FC = () => {
     const [showNotesAlert, setShowNotesAlert] = useState(false);
     const [showTeaNameEditor, setShowTeaNameEditor] = useState(false);
     const [teaNameDraft, setTeaNameDraft] = useState('');
+    const [infusionNoteDraft, setInfusionNoteDraft] = useState('');
+    const [editingInfusionId, setEditingInfusionId] = useState<string | null>(null);
     const [present] = useIonToast();
 
     useEffect(() => {
@@ -85,6 +89,39 @@ const SessionDetailScreen: React.FC = () => {
         void loadKnownTeaNames();
     };
 
+    const openInfusionNoteEditor = (infusionId: string, currentNote: string) => {
+        setEditingInfusionId(infusionId);
+        setInfusionNoteDraft(currentNote);
+    };
+
+    const closeInfusionNoteEditor = () => {
+        setEditingInfusionId(null);
+        setInfusionNoteDraft('');
+    };
+
+    const handleInfusionNoteSave = async () => {
+        if (!selectedSession || !editingInfusionId) {
+            return;
+        }
+
+        const updatedSession = {
+            ...selectedSession,
+            infusions: selectedSession.infusions.map((infusion) => (
+                infusion.infusionId === editingInfusionId
+                    ? { ...infusion, note: infusionNoteDraft.trim() }
+                    : infusion
+            )),
+        };
+
+        await updateSession(updatedSession as BrewingSession);
+        closeInfusionNoteEditor();
+        present({
+            message: 'Infusion updated',
+            duration: TOAST_DURATION,
+            color: 'success'
+        });
+    };
+
     if (!selectedSession) {
         return (
             <IonPage>
@@ -131,6 +168,7 @@ const SessionDetailScreen: React.FC = () => {
                         session={selectedSession}
                         brewingVesselLabel={brewingVesselLabel}
                         teaNameAction={openTeaNameEditor}
+                        onInfusionPress={openInfusionNoteEditor}
                         showNotes
                     />
                 </div>
@@ -184,6 +222,14 @@ const SessionDetailScreen: React.FC = () => {
                     onChange={setTeaNameDraft}
                     onCancel={() => setShowTeaNameEditor(false)}
                     onSave={handleTeaNameSave}
+                />
+                <InfusionNoteEditorModal
+                    isOpen={Boolean(editingInfusionId)}
+                    title="Edit Infusion Note"
+                    value={infusionNoteDraft}
+                    onChange={setInfusionNoteDraft}
+                    onCancel={closeInfusionNoteEditor}
+                    onSave={handleInfusionNoteSave}
                 />
             </IonContent>
         </IonPage>

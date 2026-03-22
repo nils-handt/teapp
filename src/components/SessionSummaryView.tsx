@@ -3,6 +3,7 @@ import { BrewingSession } from '../entities/BrewingSession.entity';
 import {
     formatZenDateTime,
     formatZenSeconds,
+    formatZenTemperature,
     formatZenWeight,
     zenActionRowStyle,
     zenMetricGridCardStyle,
@@ -27,6 +28,7 @@ type SessionSummaryViewProps = {
     teaNameAction?: () => void;
     brewingVesselAction?: () => void;
     brewingVesselActionDisabled?: boolean;
+    onInfusionPress?: (infusionId: string, currentNote: string) => void;
     showNotes?: boolean;
     footer?: React.ReactNode;
 };
@@ -79,6 +81,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     teaNameAction,
     brewingVesselAction,
     brewingVesselActionDisabled = false,
+    onInfusionPress,
     showNotes = false,
     footer,
 }) => {
@@ -157,13 +160,21 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 {(session.infusions?.length ?? 0) > 0 ? (
                     <div style={{ display: 'grid', gap: '10px' }}>
                         {session.infusions.map((infusion) => (
-                            <div
+                            <button
                                 key={infusion.infusionId}
+                                type="button"
+                                onClick={() => onInfusionPress?.(infusion.infusionId, infusion.note ?? '')}
+                                disabled={!onInfusionPress}
                                 style={{
+                                    width: '100%',
                                     padding: '14px 16px',
                                     borderRadius: '18px',
                                     border: `1px solid ${ZEN_PALETTE.border}`,
                                     background: 'rgba(255,255,255,0.58)',
+                                    textAlign: 'left',
+                                    color: ZEN_PALETTE.text,
+                                    cursor: onInfusionPress ? 'pointer' : 'default',
+                                    opacity: 1,
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -174,8 +185,16 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                                     <span>Water {formatZenWeight(infusion.waterWeight)}</span>
                                     <span>Wet leaves {formatZenWeight(infusion.wetTeaLeavesWeight)}</span>
                                     <span>Rest {formatZenSeconds(infusion.restDuration)}</span>
+                                    {infusion.temperature !== null && infusion.temperature !== undefined && (
+                                        <span>{formatZenTemperature(infusion.temperature)}</span>
+                                    )}
                                 </div>
-                            </div>
+                                {infusion.note?.trim() && (
+                                    <div style={{ marginTop: '10px', color: ZEN_PALETTE.text, fontSize: '0.95rem' }}>
+                                        {infusion.note}
+                                    </div>
+                                )}
+                            </button>
                         ))}
                     </div>
                 ) : (

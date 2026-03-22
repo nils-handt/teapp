@@ -196,6 +196,112 @@ describe('BrewingSessionService', () => {
         );
     });
 
+    it('should copy the first infusion draft note and temperature into infusion 1', () => {
+        brewingSessionService.startSession('Draft Tea');
+        brewingSessionService.confirmSetupDone();
+
+        brewingSessionService.updateFirstInfusionDraftNote('weak');
+        brewingSessionService.updateFirstInfusionDraftTemperature(185);
+        brewingSessionService.manuallyStartInfusion();
+
+        expect(brewingSessionService.currentInfusion$.value).toEqual(
+            expect.objectContaining({
+                infusionNumber: 1,
+                note: 'weak',
+                temperature: 185,
+            })
+        );
+    });
+
+    it('should persist active infusion note and temperature when the infusion ends', () => {
+        brewingSessionService.startSession('Test Tea');
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        brewingSessionService.manuallyStartInfusion();
+
+        brewingSessionService.updateCurrentInfusionNote('very strong');
+        brewingSessionService.updateCurrentInfusionTemperature(190);
+        brewingSessionService.manuallyStopInfusion();
+
+        expect(brewingSessionService.session$.value?.infusions[0]).toEqual(
+            expect.objectContaining({
+                note: 'very strong',
+                temperature: 190,
+            })
+        );
+        expect(sessionRepository.saveSession).toHaveBeenCalled();
+    });
+
+    it('should update the resting infusion metadata instead of an upcoming infusion', () => {
+        brewingSessionService.startSession('Test Tea');
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        brewingSessionService.manuallyStartInfusion();
+        brewingSessionService.manuallyStopInfusion();
+
+        const savedInfusionId = brewingSessionService.session$.value?.infusions[0].infusionId;
+        brewingSessionService.updateRestingInfusionNote('floral');
+        brewingSessionService.updateRestingInfusionTemperature(180);
+
+        expect(brewingSessionService.editableInfusionMetadata$.value).toEqual(
+            expect.objectContaining({
+                source: 'resting',
+                infusionId: savedInfusionId,
+                note: 'floral',
+                temperature: 180,
+            })
+        );
+        expect(brewingSessionService.session$.value?.infusions[0]).toEqual(
+            expect.objectContaining({
+                infusionId: savedInfusionId,
+                note: 'floral',
+                temperature: 180,
+            })
+        );
+    });
+
+    it('should seed later infusions with the previous infusion temperature only', () => {
+        brewingSessionService.startSession('Test Tea');
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        brewingSessionService.manuallyStartInfusion();
+        brewingSessionService.updateCurrentInfusionNote('strong');
+        brewingSessionService.updateCurrentInfusionTemperature(176);
+        brewingSessionService.manuallyStopInfusion();
+
+        brewingSessionService.updateRestingInfusionNote('adjusted after tasting');
+        brewingSessionService.updateRestingInfusionTemperature(182);
+        brewingSessionService.manuallyStartInfusion();
+
+        expect(brewingSessionService.currentInfusion$.value).toEqual(
+            expect.objectContaining({
+                infusionNumber: 2,
+                note: '',
+                temperature: 182,
+            })
+        );
+    });
+
+    it('should update a saved infusion note by infusion id', () => {
+        brewingSessionService.startSession('Test Tea');
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        brewingSessionService.manuallyStartInfusion();
+        brewingSessionService.manuallyStopInfusion();
+
+        const infusionId = brewingSessionService.session$.value?.infusions[0].infusionId;
+        expect(infusionId).toBeTruthy();
+
+        brewingSessionService.updateSavedInfusionNote(infusionId || '', 'fruitier');
+
+        expect(brewingSessionService.session$.value?.infusions[0].note).toBe('fruitier');
+        expect(sessionRepository.saveSession).toHaveBeenCalled();
+    });
+
     it('should attach a matching brewing vessel when setup weights change', async () => {
         const brewingVessel = new BrewingVessel();
         brewingVessel.vesselId = 'vessel-1';

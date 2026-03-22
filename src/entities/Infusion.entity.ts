@@ -24,6 +24,12 @@ export class Infusion {
     @Column('float', { nullable: true })
     wetTeaLeavesWeight!: number;
 
+    @Column('text', { nullable: true })
+    note!: string | null;
+
+    @Column('float', { nullable: true })
+    temperature!: number | null;
+
     @ManyToOne(() => BrewingSession, (session) => session.infusions, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'sessionId' })
     session!: BrewingSession;

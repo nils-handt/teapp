@@ -7,13 +7,19 @@ import { BrewingSession } from '../../entities/BrewingSession.entity';
 import { BrewingVessel } from '../../entities/BrewingVessel.entity';
 import { Infusion } from '../../entities/Infusion.entity';
 
-import { BrewingPhase, WeightTrend } from '../interfaces/brewing.types';
+import {
+    BrewingPhase,
+    type EditableInfusionMetadata,
+    type InfusionMetadataDraft,
+    WeightTrend,
+} from '../interfaces/brewing.types';
 import { keepAwakeService } from '../KeepAwakeService';
 import { createLogger } from '../logging';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
 
 const logger = createLogger('BrewingSessionService');
+const EMPTY_INFUSION_METADATA: InfusionMetadataDraft = { note: '', temperature: null };
 
 class BrewingSessionService {
     private static instance: BrewingSessionService;
@@ -23,6 +29,12 @@ class BrewingSessionService {
     public state$ = new BehaviorSubject<BrewingPhase>(BrewingPhase.IDLE);
     public session$ = new BehaviorSubject<BrewingSession | null>(null);
     public currentInfusion$ = new BehaviorSubject<Infusion | null>(null);
+    public firstInfusionDraft$ = new BehaviorSubject<InfusionMetadataDraft>(EMPTY_INFUSION_METADATA);
+    public editableInfusionMetadata$ = new BehaviorSubject<EditableInfusionMetadata>({
+        ...EMPTY_INFUSION_METADATA,
+        infusionId: null,
+        source: 'none',
+    });
     public timer$ = new BehaviorSubject<number>(0); // ms
 
     // Internal state tracking
@@ -65,11 +77,226 @@ class BrewingSessionService {
         return BrewingSessionService.instance;
     }
 
+    private setPhase(phase: BrewingPhase) {
+        this.state$.next(phase);
+        this.refreshEditableInfusionMetadata();
+    }
+
     private emitSession(session: BrewingSession) {
         this.session$.next({
             ...session,
             infusions: [...(session.infusions || [])],
         });
+        this.refreshEditableInfusionMetadata();
+    }
+
+    private emitCurrentInfusion(infusion: Infusion | null) {
+        this.currentInfusion$.next(infusion ? { ...infusion } : null);
+        this.refreshEditableInfusionMetadata();
+    }
+
+    private setFirstInfusionDraft(draft: InfusionMetadataDraft) {
+        this.firstInfusionDraft$.next({
+            note: draft.note.trim(),
+            temperature: draft.temperature ?? null,
+        });
+        this.refreshEditableInfusionMetadata();
+    }
+
+    private getLastInfusion(session: BrewingSession | null): Infusion | null {
+        if (!session?.infusions?.length) {
+            return null;
+        }
+
+        return session.infusions[session.infusions.length - 1];
+    }
+
+    private getRestingInfusion(): Infusion | null {
+        const session = this.session$.value;
+        const currentInfusion = this.currentInfusion$.value;
+        const lastInfusion = this.getLastInfusion(session);
+
+        if (currentInfusion && lastInfusion?.infusionId === currentInfusion.infusionId) {
+            return currentInfusion;
+        }
+
+        return lastInfusion;
+    }
+
+    private refreshEditableInfusionMetadata() {
+        const session = this.session$.value;
+        const phase = this.state$.value;
+        const currentInfusion = this.currentInfusion$.value;
+        const firstInfusionDraft = this.firstInfusionDraft$.value;
+
+        let nextMetadata: EditableInfusionMetadata = {
+            ...EMPTY_INFUSION_METADATA,
+            infusionId: null,
+            source: 'none',
+        };
+
+        if (phase === BrewingPhase.READY && (session?.infusions?.length ?? 0) === 0) {
+            nextMetadata = {
+                ...firstInfusionDraft,
+                infusionId: null,
+                source: 'draft',
+            };
+        } else if ((phase === BrewingPhase.INFUSION || phase === BrewingPhase.INFUSION_VESSEL_LIFTED) && currentInfusion) {
+            nextMetadata = {
+                note: currentInfusion.note ?? '',
+                temperature: currentInfusion.temperature ?? null,
+                infusionId: currentInfusion.infusionId,
+                source: 'current',
+            };
+        } else if (phase === BrewingPhase.REST) {
+            const restingInfusion = this.getRestingInfusion();
+            if (restingInfusion) {
+                nextMetadata = {
+                    note: restingInfusion.note ?? '',
+                    temperature: restingInfusion.temperature ?? null,
+                    infusionId: restingInfusion.infusionId,
+                    source: 'resting',
+                };
+            }
+        }
+
+        this.editableInfusionMetadata$.next(nextMetadata);
+    }
+
+    private updateSavedInfusion(infusionId: string, updates: Partial<Pick<Infusion, 'note' | 'temperature'>>) {
+        const session = this.session$.value;
+        if (!session) {
+            return;
+        }
+
+        const targetInfusion = session.infusions?.find((infusion) => infusion.infusionId === infusionId);
+        if (!targetInfusion) {
+            return;
+        }
+
+        if (updates.note !== undefined) {
+            targetInfusion.note = updates.note;
+        }
+
+        if (updates.temperature !== undefined) {
+            targetInfusion.temperature = updates.temperature;
+        }
+
+        const currentInfusion = this.currentInfusion$.value;
+        if (currentInfusion?.infusionId === infusionId) {
+            if (updates.note !== undefined) {
+                currentInfusion.note = updates.note;
+            }
+            if (updates.temperature !== undefined) {
+                currentInfusion.temperature = updates.temperature;
+            }
+            this.emitCurrentInfusion(currentInfusion);
+        }
+
+        this.emitSession(session);
+        void sessionRepository.saveSession(session);
+    }
+
+    public updateFirstInfusionDraftNote(note: string) {
+        this.setFirstInfusionDraft({
+            ...this.firstInfusionDraft$.value,
+            note,
+        });
+    }
+
+    public updateFirstInfusionDraftTemperature(temperature: number | null) {
+        this.setFirstInfusionDraft({
+            ...this.firstInfusionDraft$.value,
+            temperature,
+        });
+    }
+
+    public updateCurrentInfusionNote(note: string) {
+        const infusion = this.currentInfusion$.value;
+        const activePhase = this.state$.value === BrewingPhase.INFUSION || this.state$.value === BrewingPhase.INFUSION_VESSEL_LIFTED;
+        if (!infusion || !activePhase) {
+            return;
+        }
+
+        infusion.note = note.trim();
+        this.emitCurrentInfusion(infusion);
+    }
+
+    public updateCurrentInfusionTemperature(temperature: number | null) {
+        const infusion = this.currentInfusion$.value;
+        const activePhase = this.state$.value === BrewingPhase.INFUSION || this.state$.value === BrewingPhase.INFUSION_VESSEL_LIFTED;
+        if (!infusion || !activePhase) {
+            return;
+        }
+
+        infusion.temperature = temperature;
+        this.emitCurrentInfusion(infusion);
+    }
+
+    public updateRestingInfusionNote(note: string) {
+        if (this.state$.value !== BrewingPhase.REST) {
+            return;
+        }
+
+        const restingInfusion = this.getRestingInfusion();
+        if (!restingInfusion) {
+            return;
+        }
+
+        this.updateSavedInfusion(restingInfusion.infusionId, { note: note.trim() });
+    }
+
+    public updateRestingInfusionTemperature(temperature: number | null) {
+        if (this.state$.value !== BrewingPhase.REST) {
+            return;
+        }
+
+        const restingInfusion = this.getRestingInfusion();
+        if (!restingInfusion) {
+            return;
+        }
+
+        this.updateSavedInfusion(restingInfusion.infusionId, { temperature });
+    }
+
+    public updateEditableInfusionNote(note: string) {
+        const phase = this.state$.value;
+
+        if (phase === BrewingPhase.READY && (this.session$.value?.infusions?.length ?? 0) === 0) {
+            this.updateFirstInfusionDraftNote(note);
+            return;
+        }
+
+        if (phase === BrewingPhase.INFUSION || phase === BrewingPhase.INFUSION_VESSEL_LIFTED) {
+            this.updateCurrentInfusionNote(note);
+            return;
+        }
+
+        if (phase === BrewingPhase.REST) {
+            this.updateRestingInfusionNote(note);
+        }
+    }
+
+    public updateEditableInfusionTemperature(temperature: number | null) {
+        const phase = this.state$.value;
+
+        if (phase === BrewingPhase.READY && (this.session$.value?.infusions?.length ?? 0) === 0) {
+            this.updateFirstInfusionDraftTemperature(temperature);
+            return;
+        }
+
+        if (phase === BrewingPhase.INFUSION || phase === BrewingPhase.INFUSION_VESSEL_LIFTED) {
+            this.updateCurrentInfusionTemperature(temperature);
+            return;
+        }
+
+        if (phase === BrewingPhase.REST) {
+            this.updateRestingInfusionTemperature(temperature);
+        }
+    }
+
+    public updateSavedInfusionNote(infusionId: string, note: string) {
+        this.updateSavedInfusion(infusionId, { note: note.trim() });
     }
 
     private initializeWeightSubscription() {
@@ -172,8 +399,10 @@ class BrewingSessionService {
         this.lastStableWasteWater = 0;
         this.maxWeightInPhase = 0;
         this.setupStepWeights = [0];
+        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
+        this.emitCurrentInfusion(null);
         this.emitSession(session);
-        this.state$.next(BrewingPhase.SETUP);
+        this.setPhase(BrewingPhase.SETUP);
 
         this.initializeWeightSubscription();
         void keepAwakeService.keepAwake();
@@ -201,13 +430,14 @@ class BrewingSessionService {
         this.lastLiftTime = 0;
         this.timerStartTime = 0;
         this.timer$.next(0);
-        this.currentInfusion$.next(null);
+        this.emitCurrentInfusion(null);
+        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
         this.setupStepWeights = this.buildRestoredSetupWeights(restoredSession);
         this.lastStableWasteWater = restoredSession.currentWasteWater || 0;
         this.lastStableWeight = this.calculateRestoredStableWeight(restoredSession);
 
-        this.session$.next(restoredSession);
-        this.state$.next(resumedPhase);
+        this.emitSession(restoredSession);
+        this.setPhase(resumedPhase);
 
         this.initializeWeightSubscription();
         void keepAwakeService.keepAwake();
@@ -230,9 +460,10 @@ class BrewingSessionService {
         this.setupStepWeights = [];
 
         this.timer$.next(0);
-        this.currentInfusion$.next(null);
+        this.emitCurrentInfusion(null);
         this.session$.next(null);
-        this.state$.next(BrewingPhase.IDLE);
+        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
+        this.setPhase(BrewingPhase.IDLE);
     }
 
     public confirmSetupDone() {
@@ -244,7 +475,7 @@ class BrewingSessionService {
             sessionRepository.saveSession(session);
             this.emitSession(session);
 
-            this.state$.next(BrewingPhase.READY);
+            this.setPhase(BrewingPhase.READY);
 
             // Normalize lastStableWeight to include Lid if missing
             let weight = this.currentWeight;
@@ -289,8 +520,8 @@ class BrewingSessionService {
                 infusionCount: session.infusions?.length || 0,
             });
         }
-        this.state$.next(BrewingPhase.ENDED);
-        this.currentInfusion$.next(null);
+        this.emitCurrentInfusion(null);
+        this.setPhase(BrewingPhase.ENDED);
         this.stopWeightSubscription();
     }
 
@@ -660,7 +891,7 @@ class BrewingSessionService {
                 session.currentWasteWater = wasteWater;
                 this.emitSession(session);
             }
-            this.state$.next(BrewingPhase.INFUSION_VESSEL_LIFTED);
+            this.setPhase(BrewingPhase.INFUSION_VESSEL_LIFTED);
             this.stopTimer(); // Pause timer while lifted
             return;
         }
@@ -707,7 +938,7 @@ class BrewingSessionService {
                 this.endInfusion(weight, false, this.lastLiftTime);
             } else {
                 // Resumed (put back with water)
-                this.state$.next(BrewingPhase.INFUSION);
+                this.setPhase(BrewingPhase.INFUSION);
                 const liftDuration = Date.now() - this.lastLiftTime;
                 const currentTimer = this.timer$.value;
                 this.timer$.next(currentTimer + liftDuration);
@@ -732,20 +963,29 @@ class BrewingSessionService {
             }
         }
 
+        const previousInfusion = this.getLastInfusion(session);
+        const firstInfusionDraft = this.firstInfusionDraft$.value;
+
         const infusion = new Infusion();
         infusion.infusionId = crypto.randomUUID();
         infusion.infusionNumber = infusionNumber;
         infusion.startTime = new Date().toISOString();
         infusion.sessionId = session?.sessionId || '';
         infusion.duration = 0;
+        infusion.note = infusionNumber === 1 ? firstInfusionDraft.note : '';
+        infusion.temperature = infusionNumber === 1 ? firstInfusionDraft.temperature : previousInfusion?.temperature ?? null;
 
         if (session) {
             // We can't push to session.infusions directly if it's not set up to observe, but we can mutate and emit.
             // Better to define relationship properly.
         }
 
-        this.currentInfusion$.next(infusion);
-        this.state$.next(BrewingPhase.INFUSION);
+        if (infusionNumber === 1) {
+            this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
+        }
+
+        this.emitCurrentInfusion(infusion);
+        this.setPhase(BrewingPhase.INFUSION);
         this.maxWeightInPhase = this.currentWeight;
         this.startTimer();
         logger.info('Starting infusion', {
@@ -790,9 +1030,10 @@ class BrewingSessionService {
             infusion.session = session;
             session.infusions = [...(session.infusions || []), infusion];
 
-            sessionRepository.saveSession(session);
+            void sessionRepository.saveSession(session);
 
             this.emitSession(session);
+            this.emitCurrentInfusion(infusion);
 
             // Update lastStableWeight (normalized to V + L + WetLeaves)
             this.lastStableWeight = hasLid ? currentWeight : currentWeight + lidWeight;
@@ -808,7 +1049,7 @@ class BrewingSessionService {
             });
         }
 
-        this.state$.next(BrewingPhase.REST);
+        this.setPhase(BrewingPhase.REST);
 
         let startOffset = 0;
         if (liftTime) {
@@ -880,9 +1121,10 @@ class BrewingSessionService {
         this.timerStartTime = 0;
         this.setupStepWeights = [];
 
-        this.state$.next(BrewingPhase.ENDED);
+        this.setPhase(BrewingPhase.ENDED);
         this.session$.next(null);
-        this.currentInfusion$.next(null);
+        this.emitCurrentInfusion(null);
+        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
         this.timer$.next(0);
     }
 }
