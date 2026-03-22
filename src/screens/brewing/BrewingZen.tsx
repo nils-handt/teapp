@@ -259,8 +259,8 @@ const BrewingZen: React.FC = () => {
                 minHeight: '44px',
                 borderRadius: '14px',
                 border: `1px solid ${options?.active ? '#1f1f1f' : ZEN_PALETTE.border}`,
-                background: options?.active ? (options?.customColor ?? '#1f1f1f') : '#f0efe9',
-                color: options?.active ? '#ffffff' : ZEN_PALETTE.muted,
+                background: options?.active ? ZEN_PALETTE.background : 'transparent',
+                color: options?.active ? '#000000' : ZEN_PALETTE.muted,
                 fontSize: '1rem',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -284,7 +284,7 @@ const BrewingZen: React.FC = () => {
                 'Infusion temperature',
                 editableInfusionMetadata.temperature === null || editableInfusionMetadata.temperature === undefined
                     ? 'temp'
-                    : String(editableInfusionMetadata.temperature),
+                    : `${editableInfusionMetadata.temperature}°`,
                 openTemperatureEditor,
                 { active: editableInfusionMetadata.temperature !== null && editableInfusionMetadata.temperature !== undefined }
             )}
@@ -292,7 +292,7 @@ const BrewingZen: React.FC = () => {
                 'Custom note',
                 'note',
                 openEditableNoteEditor,
-                { active: hasCustomInfusionNote, customColor: '#454f46' }
+                { active: hasCustomInfusionNote }
             )}
             {renderInfusionControlButton(
                 'Strong note',
@@ -695,9 +695,11 @@ const BrewingZen: React.FC = () => {
                                     marginBottom: '10px',
                                 }}
                             />
-                            <p style={{ margin: '0 0 16px', color: temperatureError ? '#c14a3f' : ZEN_PALETTE.muted, fontSize: '0.92rem' }}>
-                                {temperatureError || 'Enter a number from 0 to 212. Leave blank to clear it.'}
-                            </p>
+                            {temperatureError && (
+                                <p style={{ margin: '0 0 16px', color: '#c14a3f', fontSize: '0.92rem' }}>
+                                    {temperatureError}
+                                </p>
+                            )}
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
                                 <IonButton
                                     shape="round"
