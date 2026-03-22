@@ -28,6 +28,30 @@ import { createLogger, isLogLevel, LOG_LEVELS } from '../services/logging';
 
 const logger = createLogger('SettingsScreen');
 
+type ToggleSettingItemProps = {
+  checked: boolean;
+  label: string;
+  onToggle: (checked: boolean) => void | Promise<void>;
+};
+
+const ToggleSettingItem: React.FC<ToggleSettingItemProps> = ({ checked, label, onToggle }) => {
+  const handleToggleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+  };
+
+  return (
+    <IonItem button detail={false} onClick={() => onToggle(!checked)}>
+      <IonLabel>{label}</IonLabel>
+      <IonToggle
+        slot="end"
+        checked={checked}
+        onClick={handleToggleClick}
+        onIonChange={e => onToggle(e.detail.checked)}
+      />
+    </IonItem>
+  );
+};
+
 const SettingsScreen: React.FC = () => {
   const history = useHistory();
   const {
@@ -223,25 +247,19 @@ const SettingsScreen: React.FC = () => {
           <IonListHeader>
             <IonLabel>Development</IonLabel>
           </IonListHeader>
-          <IonItem>
-            <IonLabel>Dev Mode</IonLabel>
-            <IonToggle
-              slot="end"
-              checked={devMode}
-              onIonChange={e => updateSettings({ devMode: e.detail.checked })}
-            />
-          </IonItem>
+          <ToggleSettingItem
+            label="Dev Mode"
+            checked={devMode}
+            onToggle={(checked) => updateSettings({ devMode: checked })}
+          />
 
           {devMode && (
             <>
-              <IonItem>
-                <IonLabel>Use Mock Scale</IonLabel>
-                <IonToggle
-                  slot="end"
-                  checked={isMockMode}
-                  onIonChange={e => toggleMockMode(e.detail.checked)}
-                />
-              </IonItem>
+              <ToggleSettingItem
+                label="Use Mock Scale"
+                checked={isMockMode}
+                onToggle={toggleMockMode}
+              />
 
               <IonItem>
                 <IonLabel>Log Level</IonLabel>
@@ -258,14 +276,11 @@ const SettingsScreen: React.FC = () => {
                 </IonSelect>
               </IonItem>
 
-              <IonItem>
-                <IonLabel>Save Logs To File</IonLabel>
-                <IonToggle
-                  slot="end"
-                  checked={logToFileEnabled}
-                  onIonChange={e => updateSettings({ logToFileEnabled: e.detail.checked })}
-                />
-              </IonItem>
+              <ToggleSettingItem
+                label="Save Logs To File"
+                checked={logToFileEnabled}
+                onToggle={(checked) => updateSettings({ logToFileEnabled: checked })}
+              />
 
               {isMockMode && (
                 <IonCard>
@@ -298,14 +313,11 @@ const SettingsScreen: React.FC = () => {
                 </IonCard>
               )}
 
-              <IonItem>
-                <IonLabel>Enable Weight Logger</IonLabel>
-                <IonToggle
-                  slot="end"
-                  checked={weightLoggerEnabled}
-                  onIonChange={e => updateSettings({ weightLoggerEnabled: e.detail.checked })}
-                />
-              </IonItem>
+              <ToggleSettingItem
+                label="Enable Weight Logger"
+                checked={weightLoggerEnabled}
+                onToggle={(checked) => updateSettings({ weightLoggerEnabled: checked })}
+              />
 
               {weightLoggerEnabled && (
                 <IonItem button onClick={() => history.push('/recordings')}>
