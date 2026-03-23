@@ -19,13 +19,22 @@ import {
   useIonViewWillEnter
 } from '@ionic/react';
 import { trash } from 'ionicons/icons';
-import { useStore } from '../stores/useStore';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { calculateSessionStats } from '../utils/SessionStatistics';
 import { filterSessionsByTeaName, getTeaNameSuggestions } from '../utils/teaNameSearch';
+import { useShallow } from 'zustand/react/shallow';
+import { useHistoryStore } from '../stores/useHistoryStore';
 
 const HistoryScreen: React.FC = () => {
-  const { sessionList, loadHistory, deleteSession, knownTeaNames, loadKnownTeaNames } = useStore();
+  const { sessionList, loadHistory, deleteSession, knownTeaNames, loadKnownTeaNames } = useHistoryStore(
+    useShallow((state) => ({
+      sessionList: state.sessionList,
+      loadHistory: state.loadHistory,
+      deleteSession: state.deleteSession,
+      knownTeaNames: state.knownTeaNames,
+      loadKnownTeaNames: state.loadKnownTeaNames,
+    }))
+  );
   const [searchText, setSearchText] = useState('');
 
   // Load history when entering the view

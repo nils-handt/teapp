@@ -18,12 +18,15 @@ import {
   getBrewingScreenPath,
   isBrewingScreenId,
 } from '../constants/brewingScreens';
-import { useStore } from '../stores/useStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 const Tabs: React.FC = () => {
   const location = useLocation();
-  const lastUsedBrewingScreen = useStore((state) => state.lastUsedBrewingScreen);
-  const updateSettings = useStore((state) => state.updateSettings);
+  const { lastUsedBrewingScreen, updateSettings } = useSettingsStore(useShallow((state) => ({
+    lastUsedBrewingScreen: state.lastUsedBrewingScreen,
+    updateSettings: state.updateSettings,
+  })));
   const brewingTabPath = getBrewingScreenPath(lastUsedBrewingScreen ?? DEFAULT_BREWING_SCREEN_ID);
 
   useEffect(() => {

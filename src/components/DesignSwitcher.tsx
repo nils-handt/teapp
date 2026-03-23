@@ -3,11 +3,11 @@ import { apps } from 'ionicons/icons';
 import React, { useState } from 'react';
 import { useHistory } from 'react-router';
 import { BREWING_SCREEN_OPTIONS, getBrewingScreenPath } from '../constants/brewingScreens';
-import { useStore } from '../stores/useStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 const DesignSwitcher: React.FC = () => {
     const history = useHistory();
-    const updateSettings = useStore((state) => state.updateSettings);
+    const updateSettings = useSettingsStore((state) => state.updateSettings);
     const [showPopover, setShowPopover] = useState<{ open: boolean, event: Event | undefined }>({
         open: false,
         event: undefined,

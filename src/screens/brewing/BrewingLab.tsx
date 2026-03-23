@@ -1,13 +1,23 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonButton } from '@ionic/react';
 import React, { useMemo } from 'react';
-import { useStore } from '../../stores/useStore';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import { brewingSessionService } from '../../services/brewing/BrewingSessionService';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
+import { useShallow } from 'zustand/react/shallow';
+import { useBrewingStore } from '../../stores/useBrewingStore';
+import { useScaleStore } from '../../stores/useScaleStore';
 
 const BrewingLab: React.FC = () => {
-    const { brewingPhase, timerValue, currentWeight, activeSession, currentInfusion } = useStore();
+    const { brewingPhase, timerValue, activeSession, currentInfusion } = useBrewingStore(
+        useShallow((state) => ({
+            brewingPhase: state.brewingPhase,
+            timerValue: state.timerValue,
+            activeSession: state.activeSession,
+            currentInfusion: state.currentInfusion,
+        }))
+    );
+    const currentWeight = useScaleStore((state) => state.currentWeight);
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
 
     const formatTime = (ms: number) => {

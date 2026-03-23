@@ -1,14 +1,19 @@
 import type { PropsWithChildren } from 'react';
 import { render, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { useStore } from './stores/useStore';
+import { brewingStore, initialBrewingStoreState } from './stores/useBrewingStore';
+import { initialSettingsStoreValues, settingsStore } from './stores/useSettingsStore';
 
 // Mock dependencies
 vi.mock('./services/BluetoothScaleService', () => ({
     bluetoothScaleService: {
         initialize: vi.fn(),
     },
+}));
+
+vi.mock('./hooks/useBrewingSync', () => ({
+    useBrewingSync: vi.fn(),
 }));
 
 vi.mock('./repositories/SettingsRepository', () => ({
@@ -62,6 +67,11 @@ vi.mock('@ionic/react', async () => {
 
 
 describe('App', () => {
+    beforeEach(() => {
+        settingsStore.setState(initialSettingsStoreValues);
+        brewingStore.setState(initialBrewingStoreState);
+    });
+
     it('renders without crashing', async () => {
         let baseElement: HTMLElement | null = null;
         await act(async () => {
@@ -74,12 +84,14 @@ describe('App', () => {
     });
 
     it('triggers active session recovery on mount', async () => {
-        const restoreSpy = vi.spyOn(useStore.getState(), 'restoreActiveSession');
+        const restoreSpy = vi.spyOn(brewingStore.getState(), 'restoreActiveSession');
+        const loadSettingsSpy = vi.spyOn(settingsStore.getState(), 'loadSettings');
 
         await act(async () => {
             render(<App />);
         });
 
         expect(restoreSpy).toHaveBeenCalled();
+        expect(loadSettingsSpy).toHaveBeenCalled();
     });
 });

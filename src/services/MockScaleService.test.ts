@@ -1,19 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MockScaleService } from './MockScaleService';
-import { useStore } from '../stores/useStore';
-
-// Mock the store
-vi.mock('../stores/useStore', () => ({
-    useStore: {
-        getState: vi.fn(),
-    },
-}));
+import { initialScaleStoreState, scaleStore } from '../stores/useScaleStore';
+import { initialSettingsStoreValues, settingsStore } from '../stores/useSettingsStore';
 
 describe('MockScaleService', () => {
     let service: MockScaleService;
-    let mockSetCurrentWeight: Mock;
-    let mockSetConnectionStatus: Mock;
-    let mockSetConnectedDevice: Mock;
 
     const originalRecordingData = [
         { "timestamp": 1760000001000, "weight": 50 },
@@ -35,18 +26,8 @@ describe('MockScaleService', () => {
 
     beforeEach(() => {
         vi.useFakeTimers();
-
-        // Setup store mocks
-        mockSetCurrentWeight = vi.fn();
-        mockSetConnectionStatus = vi.fn();
-        mockSetConnectedDevice = vi.fn();
-
-        (useStore.getState as Mock).mockReturnValue({
-            playbackSpeed: 1,
-            setConnectionStatus: mockSetConnectionStatus,
-            setConnectedDevice: mockSetConnectedDevice,
-            setCurrentWeight: mockSetCurrentWeight,
-        });
+        scaleStore.setState(initialScaleStoreState);
+        settingsStore.setState(initialSettingsStoreValues);
 
         service = new MockScaleService();
         service.initialize();
@@ -64,8 +45,7 @@ describe('MockScaleService', () => {
         }
         service.startReplay();
 
-        // Initial emission
-        expect(mockSetCurrentWeight).toHaveBeenLastCalledWith(data[0].weight);
+        expect(scaleStore.getState().currentWeight).toBe(data[0].weight);
 
         for (let i = 1; i < data.length; i++) {
             const previousTime = data[i - 1].timestamp;
@@ -81,8 +61,7 @@ describe('MockScaleService', () => {
             // Advance time
             vi.advanceTimersByTime(waitTime);
 
-            // Assertion
-            expect(mockSetCurrentWeight).toHaveBeenLastCalledWith(data[i].weight);
+            expect(scaleStore.getState().currentWeight).toBe(data[i].weight);
         }
     };
 

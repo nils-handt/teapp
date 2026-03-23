@@ -1,8 +1,9 @@
 import { Subject } from 'rxjs';
-import { useStore } from '../stores/useStore';
 import { DiscoveredDevice } from './bluetooth/types/ble.types';
 import { IScaleService } from './interfaces/IScaleService';
 import { createLogger } from './logging';
+import { scaleStore } from '../stores/useScaleStore';
+import { settingsStore } from '../stores/useSettingsStore';
 
 const logger = createLogger('MockScaleService');
 
@@ -28,8 +29,7 @@ export class MockScaleService implements IScaleService {
 
     async initialize(): Promise<void> {
         logger.info('Mock scale service initialized');
-        // Initialize with store value if possible, but store accessed via hook or getState usually
-        const storeSpeed = useStore.getState().playbackSpeed;
+        const storeSpeed = settingsStore.getState().playbackSpeed;
         if (storeSpeed) {
             this.playbackSpeed = storeSpeed;
         }
@@ -49,10 +49,10 @@ export class MockScaleService implements IScaleService {
 
     async connect(device: DiscoveredDevice): Promise<void> {
         logger.info(`Connecting to mock device: ${device.name}`);
-        useStore.getState().setConnectionStatus('connecting');
+        scaleStore.getState().setConnectionStatus('connecting');
         await new Promise(resolve => setTimeout(resolve, 100)); // Simulate delay
-        useStore.getState().setConnectionStatus('connected');
-        useStore.getState().setConnectedDevice(device);
+        scaleStore.getState().setConnectionStatus('connected');
+        scaleStore.getState().setConnectedDevice(device);
         logger.info('Mock device connected');
 
         if (this.recording.length > 0) {
@@ -63,9 +63,9 @@ export class MockScaleService implements IScaleService {
     async disconnect(): Promise<void> {
         logger.info('Disconnecting mock device');
         this.stopReplay();
-        useStore.getState().setConnectionStatus('disconnected');
-        useStore.getState().setConnectedDevice(null);
-        useStore.getState().setCurrentWeight(0);
+        scaleStore.getState().setConnectionStatus('disconnected');
+        scaleStore.getState().setConnectedDevice(null);
+        scaleStore.getState().setCurrentWeight(0);
     }
 
     async tare(): Promise<void> {
@@ -73,11 +73,11 @@ export class MockScaleService implements IScaleService {
     }
 
     getConnectionStatus() {
-        return useStore.getState().connectionStatus;
+        return scaleStore.getState().connectionStatus;
     }
 
     getConnectedDevice() {
-        return useStore.getState().connectedDevice;
+        return scaleStore.getState().connectedDevice;
     }
 
     // Mock Specific Methods
@@ -247,7 +247,7 @@ export class MockScaleService implements IScaleService {
     }
 
     private emitWeight(weight: number) {
-        useStore.getState().setCurrentWeight(weight);
+        scaleStore.getState().setCurrentWeight(weight);
         this.weight$.next(weight);
     }
 }

@@ -1,34 +1,48 @@
 import { useEffect } from 'react';
-import { useStore } from '../stores/useStore';
 import { brewingSessionService } from '../services/brewing/BrewingSessionService';
+import { useShallow } from 'zustand/react/shallow';
+import { useBrewingStore } from '../stores/useBrewingStore';
 
 export const useBrewingSync = () => {
-    const setBrewingState = useStore((state) => state.setBrewingState);
+    const {
+        setActiveSession,
+        setBrewingPhase,
+        setCurrentInfusion,
+        setEditableInfusionMetadata,
+        setFirstInfusionDraft,
+        setTimerValue,
+    } = useBrewingStore(useShallow((state) => ({
+        setActiveSession: state.setActiveSession,
+        setBrewingPhase: state.setBrewingPhase,
+        setCurrentInfusion: state.setCurrentInfusion,
+        setEditableInfusionMetadata: state.setEditableInfusionMetadata,
+        setFirstInfusionDraft: state.setFirstInfusionDraft,
+        setTimerValue: state.setTimerValue,
+    })));
 
     useEffect(() => {
-        // Subscribe to Service State
         const stateSub = brewingSessionService.state$.subscribe((phase) => {
-            setBrewingState({ brewingPhase: phase });
+            setBrewingPhase(phase);
         });
 
         const sessionSub = brewingSessionService.session$.subscribe((session) => {
-            setBrewingState({ activeSession: session });
+            setActiveSession(session);
         });
 
         const infusionSub = brewingSessionService.currentInfusion$.subscribe((infusion) => {
-            setBrewingState({ currentInfusion: infusion });
+            setCurrentInfusion(infusion);
         });
 
         const firstInfusionDraftSub = brewingSessionService.firstInfusionDraft$.subscribe((firstInfusionDraft) => {
-            setBrewingState({ firstInfusionDraft });
+            setFirstInfusionDraft(firstInfusionDraft);
         });
 
         const editableInfusionMetadataSub = brewingSessionService.editableInfusionMetadata$.subscribe((editableInfusionMetadata) => {
-            setBrewingState({ editableInfusionMetadata });
+            setEditableInfusionMetadata(editableInfusionMetadata);
         });
 
         const timerSub = brewingSessionService.timer$.subscribe((time) => {
-            setBrewingState({ timerValue: time });
+            setTimerValue(time);
         });
 
         return () => {
@@ -39,7 +53,14 @@ export const useBrewingSync = () => {
             editableInfusionMetadataSub.unsubscribe();
             timerSub.unsubscribe();
         };
-    }, [setBrewingState]);
+    }, [
+        setActiveSession,
+        setBrewingPhase,
+        setCurrentInfusion,
+        setEditableInfusionMetadata,
+        setFirstInfusionDraft,
+        setTimerValue,
+    ]);
 
-    return null; // This hook doesn't render anything
+    return null;
 };

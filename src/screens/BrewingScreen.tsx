@@ -1,11 +1,19 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { useStore } from '../stores/useStore';
 import DesignSwitcher from '../components/DesignSwitcher';
 import { useBrewingControl } from '../hooks/useBrewingControl';
+import { useShallow } from 'zustand/react/shallow';
+import { useRecordingStore } from '../stores/useRecordingStore';
+import { useScaleStore } from '../stores/useScaleStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 const BrewingScreen: React.FC = () => {
-  const { currentWeight, connectionStatus, weightLoggerEnabled, isRecording } = useStore();
+  const { currentWeight, connectionStatus } = useScaleStore(useShallow((state) => ({
+    currentWeight: state.currentWeight,
+    connectionStatus: state.connectionStatus,
+  })));
+  const weightLoggerEnabled = useSettingsStore((state) => state.weightLoggerEnabled);
+  const isRecording = useRecordingStore((state) => state.isRecording);
   const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
   const [elapsedTime, setElapsedTime] = useState(0);
 

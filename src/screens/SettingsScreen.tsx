@@ -19,12 +19,14 @@ import {
   IonAlert
 } from '@ionic/react';
 import { useHistory } from 'react-router';
-import { useStore } from '../stores/useStore';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { backupService, isBackupData, type BackupData } from '../services/BackupService';
 import { shareFile } from '../utils/fileUtils';
 import { BREWING_SCREEN_OPTIONS, isBrewingScreenId } from '../constants/brewingScreens';
 import { createLogger, isLogLevel, LOG_LEVELS } from '../services/logging';
+import { useShallow } from 'zustand/react/shallow';
+import { useScaleStore } from '../stores/useScaleStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 const logger = createLogger('SettingsScreen');
 
@@ -54,9 +56,11 @@ const ToggleSettingItem: React.FC<ToggleSettingItemProps> = ({ checked, label, o
 
 const SettingsScreen: React.FC = () => {
   const history = useHistory();
+  const { connectionStatus, connectedDevice } = useScaleStore(useShallow((state) => ({
+    connectionStatus: state.connectionStatus,
+    connectedDevice: state.connectedDevice,
+  })));
   const {
-    connectionStatus,
-    connectedDevice,
     devMode,
     logLevel,
     logToFileEnabled,
@@ -64,7 +68,15 @@ const SettingsScreen: React.FC = () => {
     playbackSpeed,
     lastUsedBrewingScreen,
     updateSettings
-  } = useStore();
+  } = useSettingsStore(useShallow((state) => ({
+    devMode: state.devMode,
+    logLevel: state.logLevel,
+    logToFileEnabled: state.logToFileEnabled,
+    weightLoggerEnabled: state.weightLoggerEnabled,
+    playbackSpeed: state.playbackSpeed,
+    lastUsedBrewingScreen: state.lastUsedBrewingScreen,
+    updateSettings: state.updateSettings,
+  })));
 
   const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
   const [toastMessage, setToastMessage] = useState<string | null>(null);

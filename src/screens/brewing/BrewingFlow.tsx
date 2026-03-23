@@ -1,14 +1,20 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFabButton, IonIcon } from '@ionic/react';
 import React, { useEffect, useRef } from 'react';
-import { useStore } from '../../stores/useStore';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import { brewingSessionService } from '../../services/brewing/BrewingSessionService';
 import { play, stop, refresh, checkmarkCircle } from 'ionicons/icons';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
+import { useShallow } from 'zustand/react/shallow';
+import { useBrewingStore } from '../../stores/useBrewingStore';
+import { useScaleStore } from '../../stores/useScaleStore';
 
 const BrewingFlow: React.FC = () => {
-    const { brewingPhase, timerValue, currentWeight } = useStore();
+    const { brewingPhase, timerValue } = useBrewingStore(useShallow((state) => ({
+        brewingPhase: state.brewingPhase,
+        timerValue: state.timerValue,
+    })));
+    const currentWeight = useScaleStore((state) => state.currentWeight);
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationFrameRef = useRef<number>();

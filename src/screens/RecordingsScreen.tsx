@@ -19,13 +19,17 @@ import {
 import { trashOutline, shareOutline } from 'ionicons/icons';
 import { shareFile } from '../utils/fileUtils';
 import { weightLoggerService } from '../services/WeightLoggerService';
-import { useStore } from '../stores/useStore';
 import { createLogger } from '../services/logging';
+import { useShallow } from 'zustand/react/shallow';
+import { useRecordingStore } from '../stores/useRecordingStore';
 
 const logger = createLogger('RecordingsScreen');
 
 const RecordingsScreen: React.FC = () => {
-    const { refreshRecordings, savedRecordings } = useStore();
+    const { refreshRecordings, savedRecordings } = useRecordingStore(useShallow((state) => ({
+        refreshRecordings: state.refreshRecordings,
+        savedRecordings: state.savedRecordings,
+    })));
     const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
     useEffect(() => {

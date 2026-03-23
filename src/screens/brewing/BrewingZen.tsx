@@ -12,10 +12,13 @@ import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
 import TeaNameEditorModal from '../../components/TeaNameEditorModal';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
-import { useStore } from '../../stores/useStore';
 import { bluetoothScaleService } from '../../services/BluetoothScaleService';
 import { brewingSessionService } from '../../services/brewing/BrewingSessionService';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
+import { useShallow } from 'zustand/react/shallow';
+import { useBrewingStore } from '../../stores/useBrewingStore';
+import { useHistoryStore } from '../../stores/useHistoryStore';
+import { useScaleStore } from '../../stores/useScaleStore';
 import {
     formatZenWeight,
     zenActionRowStyle,
@@ -66,17 +69,25 @@ const formatTime = (ms: number) => {
 };
 
 const BrewingZen: React.FC = () => {
-    const {
-        activeSession,
-        brewingPhase,
-        connectionStatus,
-        currentWeight,
-        editableInfusionMetadata,
-        timerValue,
-        knownTeaNames,
-        loadKnownTeaNames,
-        upsertKnownTeaName,
-    } = useStore();
+    const { activeSession, brewingPhase, editableInfusionMetadata, timerValue } = useBrewingStore(
+        useShallow((state) => ({
+            activeSession: state.activeSession,
+            brewingPhase: state.brewingPhase,
+            editableInfusionMetadata: state.editableInfusionMetadata,
+            timerValue: state.timerValue,
+        }))
+    );
+    const { connectionStatus, currentWeight } = useScaleStore(useShallow((state) => ({
+        connectionStatus: state.connectionStatus,
+        currentWeight: state.currentWeight,
+    })));
+    const { knownTeaNames, loadKnownTeaNames, upsertKnownTeaName } = useHistoryStore(
+        useShallow((state) => ({
+            knownTeaNames: state.knownTeaNames,
+            loadKnownTeaNames: state.loadKnownTeaNames,
+            upsertKnownTeaName: state.upsertKnownTeaName,
+        }))
+    );
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
     const [alertState, setAlertState] = useState<AlertState>(null);
     const [draftValue, setDraftValue] = useState('');

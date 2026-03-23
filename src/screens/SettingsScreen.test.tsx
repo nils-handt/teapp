@@ -1,7 +1,18 @@
 import type { ChangeEvent, MouseEventHandler, PropsWithChildren } from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsScreen from './SettingsScreen';
+import type { DiscoveredDevice } from '../services/bluetooth/types/ble.types';
+import {
+    initialScaleStoreState,
+    scaleStore,
+    type ScaleStoreState,
+} from '../stores/useScaleStore';
+import {
+    initialSettingsStoreValues,
+    settingsStore,
+    type SettingsStoreValues,
+} from '../stores/useSettingsStore';
 
 const testState = vi.hoisted(() => {
     const setMockMode = vi.fn().mockResolvedValue(undefined);
@@ -27,9 +38,6 @@ const testState = vi.hoisted(() => {
         push: vi.fn(),
         setMockMode,
         shareFile: vi.fn(),
-        store: {
-            current: undefined as unknown,
-        },
         updateSettings: vi.fn(),
     };
 });
@@ -43,16 +51,19 @@ type SettingsUpdate = Partial<{
     weightLoggerEnabled: boolean;
 }>;
 
-type SettingsScreenStore = {
-    connectedDevice: { id: string; name: string } | null;
-    connectionStatus: 'connected' | 'connecting' | 'disconnected';
-    devMode: boolean;
-    lastUsedBrewingScreen: number;
-    logLevel: string;
-    logToFileEnabled: boolean;
-    playbackSpeed: number;
+type SettingsScreenSettingsSeed = {
+    devMode: SettingsStoreValues['devMode'];
+    lastUsedBrewingScreen: SettingsStoreValues['lastUsedBrewingScreen'];
+    logLevel: SettingsStoreValues['logLevel'];
+    logToFileEnabled: SettingsStoreValues['logToFileEnabled'];
+    playbackSpeed: SettingsStoreValues['playbackSpeed'];
     updateSettings: (settings: SettingsUpdate) => void;
-    weightLoggerEnabled: boolean;
+    weightLoggerEnabled: SettingsStoreValues['weightLoggerEnabled'];
+};
+
+type SettingsScreenScaleSeed = {
+    connectedDevice: DiscoveredDevice | null;
+    connectionStatus: ScaleStoreState['connectionStatus'];
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -88,10 +99,6 @@ type ToggleProps = {
     onIonChange?: (event: ToggleChangeEvent) => void;
 };
 
-vi.mock('../stores/useStore', () => ({
-    useStore: () => testState.store.current,
-}));
-
 vi.mock('react-router', () => ({
     useHistory: () => ({ push: testState.push }),
 }));
@@ -113,11 +120,17 @@ vi.mock('../utils/fileUtils', () => ({
 }));
 
 vi.mock('../constants/brewingScreens', () => ({
+    DEFAULT_BREWING_SCREEN_ID: 1,
     BREWING_SCREEN_OPTIONS: [{ id: 1, name: 'Zen' }],
     isBrewingScreenId: (value: number) => value === 1,
 }));
 
 vi.mock('../services/logging', () => ({
+    DEFAULT_LOGGER_CONFIG: {
+        minLevel: 'info',
+        enableFileLogging: false,
+    },
+    configureLogger: vi.fn(),
     LOG_LEVELS: ['debug', 'info', 'warn', 'error'],
     createLogger: () => ({
         error: vi.fn(),
@@ -164,25 +177,34 @@ vi.mock('@ionic/react', () => ({
     IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
 }));
 
-const createMockState = (overrides: Partial<Omit<SettingsScreenStore, 'updateSettings'>> = {}): SettingsScreenStore => ({
-    connectedDevice: null,
-    connectionStatus: 'disconnected',
-    devMode: false,
-    lastUsedBrewingScreen: 1,
-    logLevel: 'info',
-    logToFileEnabled: false,
-    playbackSpeed: 1,
-    updateSettings: (settings) => testState.updateSettings(settings),
-    weightLoggerEnabled: false,
-    ...overrides,
-});
-
 const renderScreen = (
-    overrides: Partial<Omit<SettingsScreenStore, 'updateSettings'>> = {},
+    settingsOverrides: Partial<Omit<SettingsScreenSettingsSeed, 'updateSettings'>> = {},
+    scaleOverrides: Partial<SettingsScreenScaleSeed> = {},
     options: { isMockMode?: boolean } = {},
 ) => {
     testState.bluetoothScaleService.isMockMode = options.isMockMode ?? false;
-    testState.store.current = createMockState(overrides);
+    scaleStore.setState(initialScaleStoreState);
+    scaleStore.setState({
+        connectedDevice: null,
+        connectionStatus: 'disconnected',
+        ...scaleOverrides,
+    });
+
+    settingsStore.setState(initialSettingsStoreValues);
+    settingsStore.setState({
+        devMode: false,
+        lastUsedBrewingScreen: 1,
+        logLevel: 'info',
+        logToFileEnabled: false,
+        playbackSpeed: 1,
+        updateSettings: (settings) => {
+            testState.updateSettings(settings);
+            settingsStore.setState(settings);
+        },
+        weightLoggerEnabled: false,
+        ...settingsOverrides,
+    });
+
     return render(<SettingsScreen />);
 };
 
@@ -190,12 +212,9 @@ describe('SettingsScreen', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         testState.bluetoothScaleService.isMockMode = false;
-        testState.updateSettings.mockImplementation((settings: SettingsUpdate) => {
-            testState.store.current = {
-                ...(testState.store.current as SettingsScreenStore),
-                ...settings,
-            };
-        });
+        settingsStore.setState(initialSettingsStoreValues);
+        scaleStore.setState(initialScaleStoreState);
+        testState.updateSettings.mockImplementation(() => undefined);
     });
 
     it('toggles dev mode when the row is clicked', () => {
@@ -217,7 +236,7 @@ describe('SettingsScreen', () => {
     });
 
     it('toggles mock mode when the row is clicked', async () => {
-        renderScreen({ devMode: true }, { isMockMode: false });
+        renderScreen({ devMode: true }, {}, { isMockMode: false });
 
         fireEvent.click(screen.getByRole('button', { name: /Use Mock Scale/i }));
 
@@ -241,7 +260,9 @@ describe('SettingsScreen', () => {
 
         expect(screen.getByRole('button', { name: /Manage Recordings/i })).not.toBeNull();
 
-        testState.store.current = createMockState({ devMode: true, weightLoggerEnabled: false });
+        act(() => {
+            settingsStore.setState({ devMode: true, weightLoggerEnabled: false });
+        });
         rerender(<SettingsScreen />);
 
         expect(screen.queryByRole('button', { name: /Manage Recordings/i })).toBeNull();

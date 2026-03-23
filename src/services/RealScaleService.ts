@@ -1,6 +1,5 @@
 import { BleDevice, numberToUUID } from '@capacitor-community/bluetooth-le';
 import { Subscription, Subject } from 'rxjs';
-import { useStore } from '../stores/useStore';
 import { bleAdapter } from './bluetooth/adapters/BleAdapter';
 import { BluetoothScale } from './bluetooth/base/BluetoothScale';
 import { AVAILABLE_SCALES } from './bluetooth/index';
@@ -10,6 +9,7 @@ import { settingsRepository } from '../repositories/SettingsRepository';
 import { ScaleDevice } from '../entities/ScaleDevice.entity';
 import { IScaleService } from './interfaces/IScaleService';
 import { createLogger } from './logging';
+import { scaleStore } from '../stores/useScaleStore';
 
 const logger = createLogger('RealScaleService');
 const RECONNECT_DELAY_MS = [1000, 2000, 4000];
@@ -132,7 +132,7 @@ export class RealScaleService implements IScaleService {
 
         } catch (error) {
             logger.error('Failed to connect to new device', error);
-            useStore.getState().setConnectionStatus('disconnected');
+            scaleStore.getState().setConnectionStatus('disconnected');
         }
     }
 
@@ -141,7 +141,7 @@ export class RealScaleService implements IScaleService {
             throw new Error(`Device ${device.id} is not a supported scale.`);
         }
 
-        useStore.getState().setConnectionStatus('connecting');
+        scaleStore.getState().setConnectionStatus('connecting');
 
         const scaleInfo = AVAILABLE_SCALES.find((s) => s.scaleType === device.scaleType);
         if (!scaleInfo) {
@@ -158,8 +158,8 @@ export class RealScaleService implements IScaleService {
         try {
             await this.currentScale.connect();
             this.subscribeToScaleEvents();
-            useStore.getState().setConnectionStatus('connected');
-            useStore.getState().setConnectedDevice(device);
+            scaleStore.getState().setConnectionStatus('connected');
+            scaleStore.getState().setConnectedDevice(device);
             this.lastDevice = device;
             this.reconnectAttempts = 0;
             logger.info(`Successfully connected to ${this.currentScale.device_name}`);
@@ -209,11 +209,11 @@ export class RealScaleService implements IScaleService {
     }
 
     getConnectionStatus() {
-        return useStore.getState().connectionStatus;
+        return scaleStore.getState().connectionStatus;
     }
 
     getConnectedDevice() {
-        return useStore.getState().connectedDevice;
+        return scaleStore.getState().connectedDevice;
     }
 
     private identifyScale(peripheral: LimitedPeripheralData): ScaleType | null {
@@ -231,7 +231,7 @@ export class RealScaleService implements IScaleService {
 
         this.subscriptions.push(
             this.currentScale.weightChange.subscribe((event: WeightChangeEvent) => {
-                useStore.getState().setCurrentWeight(event.weight.actual);
+                scaleStore.getState().setCurrentWeight(event.weight.actual);
                 this.weight$.next(event.weight.actual);
             }),
             this.currentScale.tareEvent.subscribe(() => logger.debug('Tare event received')),
@@ -244,9 +244,9 @@ export class RealScaleService implements IScaleService {
         const lastConnectedDevice = this.lastDevice;
         this.cleanup();
 
-        useStore.getState().setConnectionStatus('disconnected');
-        useStore.getState().setConnectedDevice(null);
-        useStore.getState().setCurrentWeight(0);
+        scaleStore.getState().setConnectionStatus('disconnected');
+        scaleStore.getState().setConnectedDevice(null);
+        scaleStore.getState().setCurrentWeight(0);
 
         if (unexpected && lastConnectedDevice) {
             logger.warn('Unexpected disconnection. Attempting to reconnect');

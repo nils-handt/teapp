@@ -1,9 +1,12 @@
 import type { MouseEventHandler, PropsWithChildren } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
-import { BrewingPhase, type EditableInfusionMetadata, type InfusionMetadataDraft } from '../../services/interfaces/brewing.types';
-import type { BrewingVessel } from '../../entities/BrewingVessel.entity';
+import { BrewingPhase, type EditableInfusionMetadata } from '../../services/interfaces/brewing.types';
+import type { BrewingSession } from '../../entities/BrewingSession.entity';
+import { brewingStore, initialBrewingStoreState } from '../../stores/useBrewingStore';
+import { historyStore, initialHistoryStoreState } from '../../stores/useHistoryStore';
+import { initialScaleStoreState, scaleStore } from '../../stores/useScaleStore';
 
 const {
     connectNewDevice,
@@ -33,43 +36,25 @@ const {
     updateEditableInfusionNote: vi.fn(),
     updateEditableInfusionTemperature: vi.fn(),
     updateSavedInfusionNote: vi.fn(),
-    loadKnownTeaNames: vi.fn(),
+    loadKnownTeaNames: vi.fn().mockResolvedValue(undefined),
     upsertKnownTeaName: vi.fn(),
 }));
 
-type BrewingZenInfusion = {
-    duration: number;
-    infusionId: string;
-    infusionNumber: number;
-    note?: string | null;
-    restDuration: number;
-    temperature?: number | null;
-    waterWeight: number;
-    wetTeaLeavesWeight: number;
-};
-
-type BrewingZenSession = {
-    brewingVessel: Pick<BrewingVessel, 'name'> | null;
-    dryTeaLeavesWeight: number;
-    endTime: string;
-    infusions: BrewingZenInfusion[];
-    lidWeight: number;
-    startTime: string;
-    teaName: string;
-    trayWeight: number;
-    vesselWeight: number;
-};
-
-type BrewingZenStore = {
-    activeSession: BrewingZenSession | null;
+type BrewingZenBrewingSeed = {
+    activeSession: BrewingSession | null;
     brewingPhase: BrewingPhase;
+    editableInfusionMetadata: EditableInfusionMetadata;
+    timerValue: number;
+};
+
+type BrewingZenScaleSeed = {
     connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'scanning';
     currentWeight: number;
-    editableInfusionMetadata: EditableInfusionMetadata;
-    firstInfusionDraft: InfusionMetadataDraft;
+};
+
+type BrewingZenHistorySeed = {
     knownTeaNames: string[];
-    loadKnownTeaNames: () => Promise<void> | void;
-    timerValue: number;
+    loadKnownTeaNames: (force?: boolean) => Promise<void>;
     upsertKnownTeaName: (teaName: string) => void;
 };
 
@@ -77,9 +62,6 @@ type ButtonProps = PropsWithChildren<{
     disabled?: boolean;
     onClick?: MouseEventHandler<HTMLButtonElement>;
 }>;
-
-let mockState: BrewingZenStore;
-
 vi.mock('../../components/DesignSwitcher', () => ({
     default: () => <div>Design Switcher</div>,
 }));
@@ -90,10 +72,6 @@ vi.mock('../../hooks/useBrewingControl', () => ({
         handleEndSession,
         recordingAlert: null,
     }),
-}));
-
-vi.mock('../../stores/useStore', () => ({
-    useStore: () => mockState,
 }));
 
 vi.mock('../../services/BluetoothScaleService', () => ({
@@ -127,16 +105,29 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('BrewingZen', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState = {
+    const seedStores = (
+        brewingOverrides: Partial<BrewingZenBrewingSeed> = {},
+        scaleOverrides: Partial<BrewingZenScaleSeed> = {},
+        historyOverrides: Partial<BrewingZenHistorySeed> = {},
+    ) => {
+        brewingStore.setState(initialBrewingStoreState);
+        scaleStore.setState(initialScaleStoreState);
+        historyStore.setState(initialHistoryStoreState);
+
+        brewingStore.setState({
             activeSession: {
+                sessionId: 'session-1',
                 teaName: '',
                 brewingVessel: null,
                 vesselWeight: 95.2,
                 lidWeight: 14.1,
                 trayWeight: 0,
                 dryTeaLeavesWeight: 6.4,
+                currentWasteWater: 0,
+                notes: '',
+                status: 'active',
+                waterTemperature: 0,
+                brewingVesselId: null,
                 startTime: '2026-03-14T10:00:00.000Z',
                 endTime: '2026-03-14T10:10:00.000Z',
                 infusions: [
@@ -145,35 +136,46 @@ describe('BrewingZen', () => {
                         infusionNumber: 1,
                         duration: 25,
                         waterWeight: 100.5,
+                        startTime: '2026-03-14T10:01:00.000Z',
                         wetTeaLeavesWeight: 18.2,
                         restDuration: 35,
                         note: '',
                         temperature: null,
+                        sessionId: 'session-1',
+                        session: undefined as never,
                     },
                 ],
             },
             brewingPhase: BrewingPhase.SETUP,
-            connectionStatus: 'connected',
-            currentWeight: 63.5,
             editableInfusionMetadata: {
                 infusionId: null,
                 note: '',
                 temperature: null,
                 source: 'none',
             },
-            firstInfusionDraft: {
-                note: '',
-                temperature: null,
-            },
             timerValue: 92000,
+            ...brewingOverrides,
+        });
+        scaleStore.setState({
+            connectionStatus: 'connected',
+            currentWeight: 63.5,
+            ...scaleOverrides,
+        });
+        historyStore.setState({
             knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
             loadKnownTeaNames,
             upsertKnownTeaName,
-        };
+            ...historyOverrides,
+        });
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seedStores();
     });
 
     it('shows only the connect action when the scale is disconnected', () => {
-        mockState.connectionStatus = 'disconnected';
+        scaleStore.setState({ connectionStatus: 'disconnected' });
 
         render(<BrewingZen />);
 
@@ -195,13 +197,15 @@ describe('BrewingZen', () => {
     });
 
     it('shows the tea placeholder in ready when no tea name exists and hides live weight', () => {
-        mockState.brewingPhase = BrewingPhase.READY;
-        mockState.editableInfusionMetadata = {
-            infusionId: null,
-            note: '',
-            temperature: null,
-            source: 'draft',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.READY,
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'draft',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -211,14 +215,19 @@ describe('BrewingZen', () => {
     });
 
     it('hides the tea field in ready when a tea name has been selected', () => {
-        mockState.brewingPhase = BrewingPhase.READY;
-        mockState.activeSession!.teaName = 'Morning Sencha';
-        mockState.editableInfusionMetadata = {
-            infusionId: null,
-            note: '',
-            temperature: null,
-            source: 'draft',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.READY,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                teaName: 'Morning Sencha',
+            },
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'draft',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -227,13 +236,15 @@ describe('BrewingZen', () => {
     });
 
     it('greys out the timer during rest', () => {
-        mockState.brewingPhase = BrewingPhase.REST;
-        mockState.editableInfusionMetadata = {
-            infusionId: 'inf-1',
-            note: '',
-            temperature: 180,
-            source: 'resting',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.REST,
+            editableInfusionMetadata: {
+                infusionId: 'inf-1',
+                note: '',
+                temperature: 180,
+                source: 'resting',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -242,8 +253,13 @@ describe('BrewingZen', () => {
     });
 
     it('renders a detailed session summary when ended', () => {
-        mockState.brewingPhase = BrewingPhase.ENDED;
-        mockState.activeSession!.teaName = 'Cloud Mist';
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.ENDED,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                teaName: 'Cloud Mist',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -256,13 +272,15 @@ describe('BrewingZen', () => {
     });
 
     it('shows an end infusion action while infusing', () => {
-        mockState.brewingPhase = BrewingPhase.INFUSION;
-        mockState.editableInfusionMetadata = {
-            infusionId: 'inf-1',
-            note: '',
-            temperature: null,
-            source: 'current',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.INFUSION,
+            editableInfusionMetadata: {
+                infusionId: 'inf-1',
+                note: '',
+                temperature: null,
+                source: 'current',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -270,38 +288,56 @@ describe('BrewingZen', () => {
     });
 
     it('cycles weak quick notes from the top controls', () => {
-        mockState.brewingPhase = BrewingPhase.READY;
-        mockState.editableInfusionMetadata = {
-            infusionId: null,
-            note: '',
-            temperature: null,
-            source: 'draft',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.READY,
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'draft',
+            },
+        });
 
         const { rerender } = render(<BrewingZen />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Weak note' }));
         expect(updateEditableInfusionNote).toHaveBeenCalledWith('weak');
 
-        mockState.editableInfusionMetadata.note = 'weak';
+        act(() => {
+            brewingStore.setState({
+                editableInfusionMetadata: {
+                    ...brewingStore.getState().editableInfusionMetadata,
+                    note: 'weak',
+                },
+            });
+        });
         rerender(<BrewingZen />);
         fireEvent.click(screen.getByRole('button', { name: 'Weak note' }));
         expect(updateEditableInfusionNote).toHaveBeenLastCalledWith('very weak');
 
-        mockState.editableInfusionMetadata.note = 'very weak';
+        act(() => {
+            brewingStore.setState({
+                editableInfusionMetadata: {
+                    ...brewingStore.getState().editableInfusionMetadata,
+                    note: 'very weak',
+                },
+            });
+        });
         rerender(<BrewingZen />);
         fireEvent.click(screen.getByRole('button', { name: 'Weak note' }));
         expect(updateEditableInfusionNote).toHaveBeenLastCalledWith('');
     });
 
     it('replaces quick notes with a custom note', () => {
-        mockState.brewingPhase = BrewingPhase.REST;
-        mockState.editableInfusionMetadata = {
-            infusionId: 'inf-1',
-            note: 'strong',
-            temperature: 180,
-            source: 'resting',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.REST,
+            editableInfusionMetadata: {
+                infusionId: 'inf-1',
+                note: 'strong',
+                temperature: 180,
+                source: 'resting',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -313,13 +349,15 @@ describe('BrewingZen', () => {
     });
 
     it('validates and saves infusion temperature from the top controls', () => {
-        mockState.brewingPhase = BrewingPhase.INFUSION;
-        mockState.editableInfusionMetadata = {
-            infusionId: 'inf-1',
-            note: '',
-            temperature: null,
-            source: 'current',
-        };
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.INFUSION,
+            editableInfusionMetadata: {
+                infusionId: 'inf-1',
+                note: '',
+                temperature: null,
+                source: 'current',
+            },
+        });
 
         render(<BrewingZen />);
 
@@ -337,9 +375,19 @@ describe('BrewingZen', () => {
     });
 
     it('edits the saved infusion note from the ended summary cards', () => {
-        mockState.brewingPhase = BrewingPhase.ENDED;
-        mockState.activeSession!.teaName = 'Cloud Mist';
-        mockState.activeSession!.infusions[0].note = 'sweet';
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.ENDED,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                teaName: 'Cloud Mist',
+                infusions: [
+                    {
+                        ...brewingStore.getState().activeSession!.infusions[0],
+                        note: 'sweet',
+                    },
+                ],
+            },
+        });
 
         render(<BrewingZen />);
 

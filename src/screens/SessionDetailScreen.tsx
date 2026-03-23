@@ -18,14 +18,31 @@ import InfusionNoteEditorModal from '../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../components/SessionSummaryView';
 import TeaNameEditorModal from '../components/TeaNameEditorModal';
 import { BrewingSession } from '../entities/BrewingSession.entity';
-import { useStore } from '../stores/useStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useHistoryStore } from '../stores/useHistoryStore';
 
 const TOAST_DURATION = 2000;
 
 const SessionDetailScreen: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
     const history = useHistory();
-    const { selectedSession, selectSession, deleteSession, updateSession, knownTeaNames, loadKnownTeaNames, upsertKnownTeaName } = useStore();
+    const {
+        selectedSession,
+        selectSession,
+        deleteSession,
+        updateSession,
+        knownTeaNames,
+        loadKnownTeaNames,
+        upsertKnownTeaName,
+    } = useHistoryStore(useShallow((state) => ({
+        selectedSession: state.selectedSession,
+        selectSession: state.selectSession,
+        deleteSession: state.deleteSession,
+        updateSession: state.updateSession,
+        knownTeaNames: state.knownTeaNames,
+        loadKnownTeaNames: state.loadKnownTeaNames,
+        upsertKnownTeaName: state.upsertKnownTeaName,
+    })));
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [showNotesAlert, setShowNotesAlert] = useState(false);
     const [showTeaNameEditor, setShowTeaNameEditor] = useState(false);

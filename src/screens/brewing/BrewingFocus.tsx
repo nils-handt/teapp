@@ -1,14 +1,20 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon } from '@ionic/react';
 import React, { useEffect, useRef } from 'react';
-import { useStore } from '../../stores/useStore';
 import { BrewingPhase } from '../../services/interfaces/brewing.types';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import { brewingSessionService } from '../../services/brewing/BrewingSessionService';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { checkmarkCircle } from 'ionicons/icons';
+import { useShallow } from 'zustand/react/shallow';
+import { useBrewingStore } from '../../stores/useBrewingStore';
+import { useScaleStore } from '../../stores/useScaleStore';
 
 const BrewingFocus: React.FC = () => {
-    const { brewingPhase, timerValue, currentWeight } = useStore();
+    const { brewingPhase, timerValue } = useBrewingStore(useShallow((state) => ({
+        brewingPhase: state.brewingPhase,
+        timerValue: state.timerValue,
+    })));
+    const currentWeight = useScaleStore((state) => state.currentWeight);
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
     const contentRef = useRef<HTMLIonContentElement>(null);
 
@@ -138,4 +144,3 @@ const BrewingFocus: React.FC = () => {
 };
 
 export default BrewingFocus;
-

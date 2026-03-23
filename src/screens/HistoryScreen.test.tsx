@@ -3,19 +3,19 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
 import type { BrewingSession } from '../entities/BrewingSession.entity';
+import { BrewingSession as BrewingSessionEntity } from '../entities/BrewingSession.entity';
+import { historyStore, initialHistoryStoreState } from '../stores/useHistoryStore';
 
-const loadHistory = vi.fn();
-const loadKnownTeaNames = vi.fn();
-const deleteSession = vi.fn();
+const loadHistory = vi.fn().mockResolvedValue(undefined);
+const loadKnownTeaNames = vi.fn().mockResolvedValue(undefined);
+const deleteSession = vi.fn().mockResolvedValue(undefined);
 
-type HistorySession = Pick<BrewingSession, 'infusions' | 'sessionId' | 'startTime' | 'teaName'>;
-
-type HistoryScreenStore = {
-    deleteSession: (sessionId: string) => Promise<void> | void;
+type HistoryScreenStoreSeed = {
+    deleteSession: (sessionId: string) => Promise<void>;
     knownTeaNames: string[];
-    loadHistory: () => Promise<void> | void;
-    loadKnownTeaNames: (force?: boolean) => Promise<void> | void;
-    sessionList: HistorySession[];
+    loadHistory: () => Promise<void>;
+    loadKnownTeaNames: (force?: boolean) => Promise<void>;
+    sessionList: BrewingSession[];
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -33,12 +33,6 @@ type SearchbarProps = {
     placeholder?: string;
     value?: string;
 };
-
-let mockState: HistoryScreenStore;
-
-vi.mock('../stores/useStore', () => ({
-    useStore: () => mockState,
-}));
 
 vi.mock('@ionic/react', () => ({
     IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -67,28 +61,44 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('HistoryScreen', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState = {
+    const createSession = (sessionId: string, teaName: string, startTime: string): BrewingSession => {
+        const session = new BrewingSessionEntity();
+        session.sessionId = sessionId;
+        session.teaName = teaName;
+        session.startTime = startTime;
+        session.endTime = '';
+        session.vesselWeight = 0;
+        session.lidWeight = 0;
+        session.trayWeight = 0;
+        session.dryTeaLeavesWeight = 0;
+        session.currentWasteWater = 0;
+        session.notes = '';
+        session.status = 'completed';
+        session.waterTemperature = 0;
+        session.brewingVesselId = null;
+        session.brewingVessel = null;
+        session.infusions = [];
+        return session;
+    };
+
+    const seedHistoryStore = (overrides: Partial<HistoryScreenStoreSeed> = {}) => {
+        historyStore.setState(initialHistoryStoreState);
+        historyStore.setState({
             sessionList: [
-                {
-                    sessionId: '1',
-                    teaName: 'ORT 2015 Gao Jia Shan',
-                    startTime: '2026-03-14T10:00:00.000Z',
-                    infusions: [],
-                },
-                {
-                    sessionId: '2',
-                    teaName: 'Morning Sencha',
-                    startTime: '2026-03-15T10:00:00.000Z',
-                    infusions: [],
-                },
+                createSession('1', 'ORT 2015 Gao Jia Shan', '2026-03-14T10:00:00.000Z'),
+                createSession('2', 'Morning Sencha', '2026-03-15T10:00:00.000Z'),
             ],
             knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
             loadHistory,
             loadKnownTeaNames,
             deleteSession,
-        };
+            ...overrides,
+        });
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        seedHistoryStore();
     });
 
     it('loads history and cached tea names on enter', () => {

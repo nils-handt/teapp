@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Subject } from 'rxjs';
 import { RealScaleService } from './RealScaleService';
-import { useStore, type StoreState } from '../stores/useStore';
 import { bleAdapter } from './bluetooth/adapters/BleAdapter';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import { DiscoveredDevice, PeripheralData } from './bluetooth/types/ble.types';
+import { initialScaleStoreState, scaleStore } from '../stores/useScaleStore';
 
 const hoisted = vi.hoisted(() => {
     let disconnectCallback: (() => void | Promise<void>) | undefined;
@@ -93,12 +93,6 @@ const hoisted = vi.hoisted(() => {
     };
 });
 
-vi.mock('../stores/useStore', () => ({
-    useStore: {
-        getState: vi.fn(),
-    },
-}));
-
 vi.mock('./bluetooth/adapters/BleAdapter', () => ({
     bleAdapter: {
         connect: hoisted.connect,
@@ -131,21 +125,6 @@ vi.mock('./bluetooth/index', () => ({
 
 describe('RealScaleService', () => {
     let service: RealScaleService;
-    let storeState: Pick<
-        StoreState,
-        | 'availableDevices'
-        | 'clearAvailableDevices'
-        | 'connectedDevice'
-        | 'connectionStatus'
-        | 'currentWeight'
-        | 'isScanning'
-        | 'setAvailableDevices'
-        | 'addDiscoveredDevice'
-        | 'setConnectedDevice'
-        | 'setConnectionStatus'
-        | 'setCurrentWeight'
-        | 'setIsScanning'
-    >;
 
     const device: DiscoveredDevice = {
         id: 'scale-1',
@@ -165,52 +144,22 @@ describe('RealScaleService', () => {
         vi.clearAllMocks();
         hoisted.resetDisconnectCallback();
         hoisted.setFailDisconnectCleanup(false);
-
-        storeState = {
-            connectionStatus: 'disconnected',
-            connectedDevice: null,
-            currentWeight: 0,
-            availableDevices: [],
-            isScanning: false,
-            setConnectionStatus: (status) => {
-                storeState.connectionStatus = status;
-            },
-            setAvailableDevices: (devices) => {
-                storeState.availableDevices = devices;
-            },
-            addDiscoveredDevice: (discoveredDevice) => {
-                storeState.availableDevices = [...storeState.availableDevices, discoveredDevice];
-            },
-            clearAvailableDevices: () => {
-                storeState.availableDevices = [];
-            },
-            setConnectedDevice: (connectedDevice) => {
-                storeState.connectedDevice = connectedDevice;
-            },
-            setCurrentWeight: (weight) => {
-                storeState.currentWeight = weight;
-            },
-            setIsScanning: (scanning) => {
-                storeState.isScanning = scanning;
-            },
-        };
-
-        vi.mocked(useStore.getState).mockImplementation(() => storeState as StoreState);
+        scaleStore.setState(initialScaleStoreState);
         service = new RealScaleService();
     });
 
     it('reflects unexpected disconnects in the store and schedules reconnect', async () => {
         await service.connect(device);
-        storeState.currentWeight = 42.5;
+        scaleStore.getState().setCurrentWeight(42.5);
 
         const onDisconnect = hoisted.getDisconnectCallback();
         expect(onDisconnect).toBeTypeOf('function');
 
         await onDisconnect?.();
 
-        expect(storeState.connectionStatus).toBe('disconnected');
-        expect(storeState.connectedDevice).toBeNull();
-        expect(storeState.currentWeight).toBe(0);
+        expect(scaleStore.getState().connectionStatus).toBe('disconnected');
+        expect(scaleStore.getState().connectedDevice).toBeNull();
+        expect(scaleStore.getState().currentWeight).toBe(0);
 
         await vi.advanceTimersByTimeAsync(1000);
 
@@ -223,9 +172,9 @@ describe('RealScaleService', () => {
         await service.disconnect();
         await vi.runAllTimersAsync();
 
-        expect(storeState.connectionStatus).toBe('disconnected');
-        expect(storeState.connectedDevice).toBeNull();
-        expect(storeState.currentWeight).toBe(0);
+        expect(scaleStore.getState().connectionStatus).toBe('disconnected');
+        expect(scaleStore.getState().connectedDevice).toBeNull();
+        expect(scaleStore.getState().currentWeight).toBe(0);
         expect(vi.mocked(bleAdapter.connect)).toHaveBeenCalledTimes(1);
         expect(vi.mocked(bleAdapter.disconnect)).toHaveBeenCalledWith(device.id);
     });
@@ -237,8 +186,8 @@ describe('RealScaleService', () => {
         const onDisconnect = hoisted.getDisconnectCallback();
         await onDisconnect?.();
 
-        expect(storeState.connectionStatus).toBe('disconnected');
-        expect(storeState.connectedDevice).toBeNull();
+        expect(scaleStore.getState().connectionStatus).toBe('disconnected');
+        expect(scaleStore.getState().connectedDevice).toBeNull();
 
         await vi.advanceTimersByTimeAsync(1000);
 
@@ -248,8 +197,8 @@ describe('RealScaleService', () => {
     it('persists the connected scale after a successful connection', async () => {
         await service.connect(device);
 
-        expect(storeState.connectionStatus).toBe('connected');
-        expect(storeState.connectedDevice).toEqual(device);
+        expect(scaleStore.getState().connectionStatus).toBe('connected');
+        expect(scaleStore.getState().connectedDevice).toEqual(device);
         expect(settingsRepository.saveScaleDevice).toHaveBeenCalledTimes(1);
     });
 });

@@ -1,14 +1,24 @@
 import { useState } from 'react';
 import { IonAlert } from '@ionic/react';
-import { useStore } from '../stores/useStore';
 import { brewingSessionService } from '../services/brewing/BrewingSessionService';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { createLogger } from '../services/logging';
+import { useShallow } from 'zustand/react/shallow';
+import { useRecordingStore } from '../stores/useRecordingStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 const logger = createLogger('BrewingControl');
 
 export const useBrewingControl = () => {
-    const { weightLoggerEnabled, isRecording, startRecording, stopRecording, discardRecording } = useStore();
+    const weightLoggerEnabled = useSettingsStore((state) => state.weightLoggerEnabled);
+    const { isRecording, startRecording, stopRecording, discardRecording } = useRecordingStore(
+        useShallow((state) => ({
+            isRecording: state.isRecording,
+            startRecording: state.startRecording,
+            stopRecording: state.stopRecording,
+            discardRecording: state.discardRecording,
+        }))
+    );
     const [showSaveAlert, setShowSaveAlert] = useState(false);
 
     const startBrewingSession = (teaName?: string) => {
