@@ -28,6 +28,46 @@ const logger = createLogger('Store');
 
 configureLogger(DEFAULT_LOGGER_CONFIG);
 
+type ValueSubject<T> = {
+  value: T;
+};
+
+const DEFAULT_FIRST_INFUSION_DRAFT: InfusionMetadataDraft = {
+  note: '',
+  temperature: null,
+};
+
+const DEFAULT_EDITABLE_INFUSION_METADATA: EditableInfusionMetadata = {
+  ...DEFAULT_FIRST_INFUSION_DRAFT,
+  infusionId: null,
+  source: 'none',
+};
+
+const readSubjectValue = <T>(subject: ValueSubject<T> | undefined, fallback: T): T =>
+  subject?.value ?? fallback;
+
+const getBrewingServiceSnapshot = () => {
+  const service = brewingSessionService as typeof brewingSessionService & {
+    editableInfusionMetadata$?: ValueSubject<EditableInfusionMetadata>;
+    firstInfusionDraft$?: ValueSubject<InfusionMetadataDraft>;
+  };
+
+  return {
+    activeSession: readSubjectValue(brewingSessionService.session$, null),
+    currentInfusion: readSubjectValue(brewingSessionService.currentInfusion$, null),
+    editableInfusionMetadata: readSubjectValue(
+      service.editableInfusionMetadata$,
+      DEFAULT_EDITABLE_INFUSION_METADATA
+    ),
+    firstInfusionDraft: readSubjectValue(
+      service.firstInfusionDraft$,
+      DEFAULT_FIRST_INFUSION_DRAFT
+    ),
+    brewingPhase: readSubjectValue(brewingSessionService.state$, BrewingPhase.IDLE),
+    timerValue: readSubjectValue(brewingSessionService.timer$, 0),
+  };
+};
+
 // As per ARCHITECTURE.md
 interface BluetoothState {
   connectedDevice: DiscoveredDevice | null;
@@ -143,16 +183,8 @@ export const useStore = create<StoreState>((set, get) => ({
   // BrewingState
   activeSession: null,
   currentInfusion: null,
-  editableInfusionMetadata: {
-    infusionId: null,
-    note: '',
-    temperature: null,
-    source: 'none',
-  },
-  firstInfusionDraft: {
-    note: '',
-    temperature: null,
-  },
+  editableInfusionMetadata: DEFAULT_EDITABLE_INFUSION_METADATA,
+  firstInfusionDraft: DEFAULT_FIRST_INFUSION_DRAFT,
   timerStatus: 'stopped',
   brewingPhase: BrewingPhase.IDLE,
   timerValue: 0,
@@ -165,13 +197,9 @@ export const useStore = create<StoreState>((set, get) => ({
     if (activeSession) {
       logger.info('Found active brewing session', { sessionId: activeSession.sessionId });
       brewingSessionService.restoreSession(activeSession);
+      const brewingSnapshot = getBrewingServiceSnapshot();
       set({
-        activeSession: brewingSessionService.session$.value,
-        currentInfusion: brewingSessionService.currentInfusion$.value,
-        editableInfusionMetadata: brewingSessionService.editableInfusionMetadata$.value,
-        firstInfusionDraft: brewingSessionService.firstInfusionDraft$.value,
-        brewingPhase: brewingSessionService.state$.value,
-        timerValue: brewingSessionService.timer$.value,
+        ...brewingSnapshot,
         timerStatus: 'stopped',
       });
       return;
@@ -179,13 +207,9 @@ export const useStore = create<StoreState>((set, get) => ({
 
     logger.info('No active brewing session found. Clearing in-memory session state');
     brewingSessionService.clearSession();
+    const brewingSnapshot = getBrewingServiceSnapshot();
     set({
-      activeSession: null,
-      currentInfusion: null,
-      editableInfusionMetadata: brewingSessionService.editableInfusionMetadata$.value,
-      firstInfusionDraft: brewingSessionService.firstInfusionDraft$.value,
-      brewingPhase: BrewingPhase.IDLE,
-      timerValue: 0,
+      ...brewingSnapshot,
       timerStatus: 'stopped',
     });
   },
