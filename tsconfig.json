@@ -34,11 +34,14 @@
     "emitDecoratorMetadata": true,
     "types": [
       "vitest/globals",
-      "node"
+      "node",
+      "vite/client"
     ]
   },
   "include": [
     "src",
+    "tests",
+    "playwright.config.ts",
     "capacitor.config.ts"
   ],
   "references": [

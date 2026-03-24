@@ -1,4 +1,5 @@
 import { BleDevice, numberToUUID } from '@capacitor-community/bluetooth-le';
+import { Capacitor } from '@capacitor/core';
 import { Subscription, Subject } from 'rxjs';
 import { bleAdapter } from './bluetooth/adapters/BleAdapter';
 import { BluetoothScale } from './bluetooth/base/BluetoothScale';
@@ -14,6 +15,7 @@ import { scaleStore } from '../stores/useScaleStore';
 const logger = createLogger('RealScaleService');
 const RECONNECT_DELAY_MS = [1000, 2000, 4000];
 const MAX_RECONNECT_ATTEMPTS = 3;
+const WEB_RECONNECT_ADVERTISEMENT_TIMEOUT_MS = 25_000;
 
 // Collected Service UUIDs for optionalServices to ensure communication after connection
 // todo load dynamically from available scales
@@ -37,10 +39,23 @@ export class RealScaleService implements IScaleService {
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private lastDevice: DiscoveredDevice | null = null;
     private disconnectInProgress = false;
+    private initializePromise: Promise<void> | null = null;
 
     constructor() { }
 
     async initialize(): Promise<void> {
+        if (this.initializePromise) {
+            return this.initializePromise;
+        }
+
+        this.initializePromise = this.performInitialize().finally(() => {
+            this.initializePromise = null;
+        });
+
+        return this.initializePromise;
+    }
+
+    private async performInitialize(): Promise<void> {
         const preferredId = await settingsRepository.getPreferredDeviceId();
         if (!preferredId) {
             logger.debug('No preferred device saved');
@@ -55,38 +70,92 @@ export class RealScaleService implements IScaleService {
 
         logger.info(`Attempting to auto-connect to preferred device: ${savedDevice.name}`);
 
-        try {
-            const connectedDevices = await bleAdapter.getDevices();
-            const deviceAvailable = connectedDevices.find(d => d.deviceId === savedDevice.deviceId);
+        if (Capacitor.getPlatform() === 'web') {
+            await this.initializeWebPreferredDevice(savedDevice);
+            return;
+        }
 
-            // If strictly checking against currently advertising/connected devices:
+        await this.initializeNativePreferredDevice(savedDevice);
+    }
+
+    private async initializeWebPreferredDevice(savedDevice: ScaleDevice): Promise<void> {
+        const support = bleAdapter.getRememberedDeviceSupport();
+        try {
+            if (!support.canRestoreDevices || !support.canWatchAdvertisements) {
+                logger.warn('Browser does not support restoring permitted Bluetooth devices with advertisement watching. Skipping auto-connect.');
+                return;
+            }
+
+            const connectedDevices = await bleAdapter.getDevices([savedDevice.deviceId]);
+            const restoredDevice = connectedDevices.find((device) => device.deviceId === savedDevice.deviceId);
+
+            if (!restoredDevice) {
+                logger.warn(`Device ${savedDevice.deviceId} was not returned from remembered web devices. Skipping auto-connect.`);
+                return;
+            }
+
+            const watchResult = await bleAdapter.waitForDeviceAdvertisement(
+                savedDevice.deviceId,
+                WEB_RECONNECT_ADVERTISEMENT_TIMEOUT_MS
+            );
+
+            if (watchResult.status === 'advertisement-received') {
+                logger.info(`Observed advertisement for ${savedDevice.name}. Proceeding with reconnect.`);
+                await this.connectWithSource(this.createDiscoveredDevice(savedDevice, restoredDevice), 'auto-connect');
+                return;
+            }
+
+            if (watchResult.status === 'timeout') {
+                logger.warn(`Timed out waiting for advertisements from ${savedDevice.name}.`);
+                return;
+            }
+
+            if (watchResult.status === 'device-not-restored') {
+                logger.warn(`Device ${savedDevice.deviceId} was not restored while preparing advertisement watch.`);
+                return;
+            }
+
+            if (watchResult.status === 'unsupported') {
+                logger.warn('Browser could not start advertisement watching for remembered reconnect.');
+                return;
+            }
+
+            logger.error('Advertisement watch failed', watchResult.error);
+        } catch (error) {
+            logger.error('Web auto-connect failed', error);
+        }
+    }
+
+    private async initializeNativePreferredDevice(savedDevice: ScaleDevice): Promise<void> {
+        try {
+            const connectedDevices = await bleAdapter.getDevices([savedDevice.deviceId]);
+            const deviceAvailable = connectedDevices.find((device) => device.deviceId === savedDevice.deviceId);
+
             if (!deviceAvailable) {
-                // Note: In a real scenario, we might want to scan again if not found, 
-                // but for now we follow existing logic.
                 logger.warn(`Device ${savedDevice.deviceId} was not found in permitted devices. Skipping auto-connect.`);
                 return;
             }
 
-            // Reconstruct a DiscoveredDevice from the saved info
-            const device: DiscoveredDevice = {
-                id: savedDevice.deviceId,
-                name: savedDevice.name || 'Unknown Device',
-                rssi: -100, // Placeholder
-                scaleType: savedDevice.scaleType,
-                peripheral: {
-                    id: savedDevice.deviceId,
-                    name: savedDevice.name || 'Unknown Device',
-                    advertising: new ArrayBuffer(0),
-                    rssi: -100
-                }
-            };
-
-            await this.connect(device);
+            await this.connectWithSource(this.createDiscoveredDevice(savedDevice, deviceAvailable), 'auto-connect');
         } catch (error) {
             logger.error('Auto-connect failed', error);
         }
     }
 
+    private createDiscoveredDevice(savedDevice: ScaleDevice, restoredDevice?: BleDevice): DiscoveredDevice {
+        return {
+            id: savedDevice.deviceId,
+            name: restoredDevice?.name || savedDevice.name || 'Unknown Device',
+            rssi: -100,
+            scaleType: savedDevice.scaleType,
+            peripheral: {
+                id: savedDevice.deviceId,
+                name: restoredDevice?.name || savedDevice.name || 'Unknown Device',
+                advertising: new ArrayBuffer(0),
+                rssi: -100,
+            },
+        };
+    }
 
     async connectNewDevice(): Promise<void> {
         if (this.getConnectionStatus() === 'connected') {
@@ -137,6 +206,10 @@ export class RealScaleService implements IScaleService {
     }
 
     async connect(device: DiscoveredDevice): Promise<void> {
+        await this.connectWithSource(device, 'manual');
+    }
+
+    private async connectWithSource(device: DiscoveredDevice, _source: 'manual' | 'auto-connect' | 'reconnect'): Promise<void> {
         if (!device.scaleType) {
             throw new Error(`Device ${device.id} is not a supported scale.`);
         }
@@ -281,7 +354,7 @@ export class RealScaleService implements IScaleService {
 
         this.reconnectTimer = setTimeout(async () => {
             try {
-                await this.connect(device);
+                await this.connectWithSource(device, 'reconnect');
             } catch {
                 logger.error(`Reconnect attempt ${this.reconnectAttempts} failed.`);
             }

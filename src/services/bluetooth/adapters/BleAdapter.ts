@@ -4,6 +4,25 @@ import { createLogger } from '../../logging';
 
 const logger = createLogger('BleAdapter');
 
+type WebBluetoothDeviceLike = BluetoothDevice & {
+  watchAdvertisements?: (options?: { signal?: AbortSignal }) => Promise<void>;
+};
+
+type WebBluetoothLike = Bluetooth & {
+  getDevices?: () => Promise<BluetoothDevice[]>;
+};
+
+export interface RememberedDeviceSupport {
+  canRestoreDevices: boolean;
+  canWatchAdvertisements: boolean;
+}
+
+export interface AdvertisementWatchResult {
+  status: 'advertisement-received' | 'device-not-restored' | 'unsupported' | 'timeout' | 'error';
+  error?: string;
+  observedAt?: string;
+}
+
 interface RequestLEScanParams {
   callback: (result: ScanResult) => void;
   options?: RequestBleDeviceOptions;
@@ -55,14 +74,103 @@ class BleAdapter {
     }
   }
 
-  async getDevices(): Promise<BleDevice[]> {
+  async getDevices(deviceIds: string[] = []): Promise<BleDevice[]> {
     await this.ensureInitialized();
     try {
-      return await BleClient.getDevices([]);
+      return await BleClient.getDevices(deviceIds);
     } catch (error) {
       logger.error('Error getting devices:', error);
       return [];
     }
+  }
+
+  getRememberedDeviceSupport(): RememberedDeviceSupport {
+    const bluetooth = this.getNavigatorBluetooth();
+    const canRestoreDevices = Boolean(bluetooth && typeof bluetooth.getDevices === 'function');
+    const bluetoothDeviceCtor = (globalThis as Record<string, unknown>).BluetoothDevice as
+      | { prototype?: { watchAdvertisements?: unknown } }
+      | undefined;
+    const canWatchAdvertisements = Boolean(
+      bluetoothDeviceCtor?.prototype && typeof bluetoothDeviceCtor.prototype.watchAdvertisements === 'function'
+    );
+
+    return {
+      canRestoreDevices,
+      canWatchAdvertisements,
+    };
+  }
+
+  async waitForDeviceAdvertisement(deviceId: string, timeoutMs: number): Promise<AdvertisementWatchResult> {
+    await this.ensureInitialized();
+
+    const support = this.getRememberedDeviceSupport();
+    if (!support.canRestoreDevices || !support.canWatchAdvertisements) {
+      logger.warn('Web Bluetooth advertisement watching is unavailable for remembered reconnect', {
+        deviceId,
+        support,
+      });
+      return { status: 'unsupported' };
+    }
+
+    const device = await this.findWebBluetoothDevice(deviceId);
+    if (!device) {
+      logger.warn('Could not restore web Bluetooth device before advertisement watch', { deviceId });
+      return { status: 'device-not-restored' };
+    }
+
+    if (device.gatt?.connected) {
+      return {
+        status: 'advertisement-received',
+        observedAt: new Date().toISOString(),
+      };
+    }
+
+    return new Promise<AdvertisementWatchResult>((resolve) => {
+      const abortController = new AbortController();
+      let settled = false;
+
+      const finish = (result: AdvertisementWatchResult) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timeoutHandle);
+        device.removeEventListener('advertisementreceived', handleAdvertisement);
+        try {
+          abortController.abort();
+        } catch {
+          // Ignore abort failures during cleanup.
+        }
+        resolve(result);
+      };
+
+      const handleAdvertisement = () => {
+        finish({
+          status: 'advertisement-received',
+          observedAt: new Date().toISOString(),
+        });
+      };
+
+      const timeoutHandle = setTimeout(() => {
+        logger.warn('Timed out waiting for Bluetooth advertisement from remembered device', { deviceId, timeoutMs });
+        finish({ status: 'timeout' });
+      }, timeoutMs);
+
+      device.addEventListener('advertisementreceived', handleAdvertisement, { once: true });
+      device.watchAdvertisements?.({ signal: abortController.signal }).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.toLowerCase().includes('abort')) {
+          return;
+        }
+
+        logger.error(`Error watching advertisements for device ${deviceId}:`, error);
+        finish({
+          status: 'error',
+          error: message,
+        });
+      });
+    });
   }
 
   async stopLEScan(): Promise<void> {
@@ -144,6 +252,29 @@ class BleAdapter {
   // Helper to convert number array to ArrayBuffer for writing
   numbersToData(numbers: number[]): ArrayBufferLike {
     return new Uint8Array(numbers).buffer;
+  }
+
+  private getNavigatorBluetooth(): WebBluetoothLike | null {
+    if (typeof navigator === 'undefined' || !navigator.bluetooth) {
+      return null;
+    }
+
+    return navigator.bluetooth as WebBluetoothLike;
+  }
+
+  private async findWebBluetoothDevice(deviceId: string): Promise<WebBluetoothDeviceLike | null> {
+    const bluetooth = this.getNavigatorBluetooth();
+    if (!bluetooth || typeof bluetooth.getDevices !== 'function') {
+      return null;
+    }
+
+    try {
+      const devices = await bluetooth.getDevices();
+      return (devices.find((device) => device.id === deviceId) as WebBluetoothDeviceLike | undefined) ?? null;
+    } catch (error) {
+      logger.error(`Error restoring web Bluetooth device ${deviceId} for advertisement watch:`, error);
+      return null;
+    }
   }
 
   private isExpectedDisconnectedError(error: unknown): boolean {
