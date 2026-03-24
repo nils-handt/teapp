@@ -4,9 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { brewingStore, initialBrewingStoreState } from './stores/useBrewingStore';
 import { initialSettingsStoreValues, settingsStore } from './stores/useSettingsStore';
+import { bleAdapter } from './services/bluetooth/adapters/BleAdapter';
+import { Capacitor } from '@capacitor/core';
 
 const tutorialRenderState = vi.hoisted(() => ({
     render: vi.fn(),
+}));
+
+const platformMocks = vi.hoisted(() => ({
+    getPlatform: vi.fn(() => 'web'),
+}));
+
+const bleAdapterMocks = vi.hoisted(() => ({
+    getRequiredWebBluetoothSupport: vi.fn(() => ({ supported: true, missing: [] })),
 }));
 
 // Mock dependencies
@@ -40,10 +50,36 @@ vi.mock('./components/FirstRunTutorial', () => ({
     },
 }));
 
+vi.mock('./services/bluetooth/adapters/BleAdapter', () => ({
+    bleAdapter: {
+        getRequiredWebBluetoothSupport: bleAdapterMocks.getRequiredWebBluetoothSupport,
+    },
+}));
+
+vi.mock('@capacitor/core', () => ({
+    Capacitor: {
+        getPlatform: platformMocks.getPlatform,
+    },
+}));
+
 // Mock Ionic components to avoid issues with web components in JSDOM not being fully supported or needing setup
 vi.mock('@ionic/react', async () => {
     const actual = await vi.importActual<typeof import('@ionic/react')>('@ionic/react');
     const Wrap = ({ children }: PropsWithChildren) => <div>{children}</div>;
+    const IonAlert = ({
+        isOpen,
+        header,
+        message,
+    }: {
+        isOpen?: boolean;
+        header?: string;
+        message?: string;
+    }) => (isOpen ? (
+        <div role="alertdialog">
+            {header && <div>{header}</div>}
+            {message && <div>{message}</div>}
+        </div>
+    ) : null);
 
     return {
         ...actual,
@@ -70,7 +106,7 @@ vi.mock('@ionic/react', async () => {
         IonTabBar: Wrap,
         IonTabButton: Wrap,
         IonBackButton: Wrap,
-        IonAlert: Wrap,
+        IonAlert,
         IonNote: Wrap,
         IonListHeader: Wrap,
     };
@@ -79,9 +115,12 @@ vi.mock('@ionic/react', async () => {
 
 describe('App', () => {
     beforeEach(() => {
+        platformMocks.getPlatform.mockReturnValue('web');
+        bleAdapterMocks.getRequiredWebBluetoothSupport.mockReturnValue({ supported: true, missing: [] });
         settingsStore.setState(initialSettingsStoreValues);
         brewingStore.setState(initialBrewingStoreState);
         tutorialRenderState.render.mockClear();
+        vi.clearAllMocks();
     });
 
     it('renders without crashing', async () => {
@@ -133,5 +172,52 @@ describe('App', () => {
         });
         expect(screen.queryByText('First Run Tutorial Open')).toBeNull();
         expect(settingsStore.getState().isTutorialOpen).toBe(false);
+    });
+
+    it('shows a browser compatibility warning on web when required Bluetooth support is missing', async () => {
+        bleAdapterMocks.getRequiredWebBluetoothSupport.mockReturnValue({
+            supported: false,
+            missing: ['requestDevice'],
+        });
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText('Browser compatibility warning')).toBeDefined();
+        });
+        expect(
+            screen.getByText(/Bluetooth functionality may be limited in this browser because required Bluetooth features are missing/i)
+        ).toBeDefined();
+        expect(vi.mocked(bleAdapter.getRequiredWebBluetoothSupport)).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show a browser compatibility warning when required Bluetooth support is present', async () => {
+        bleAdapterMocks.getRequiredWebBluetoothSupport.mockReturnValue({
+            supported: true,
+            missing: [],
+        });
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        await waitFor(() => {
+            expect(vi.mocked(bleAdapter.getRequiredWebBluetoothSupport)).toHaveBeenCalledTimes(1);
+        });
+        expect(screen.queryByText('Browser compatibility warning')).toBeNull();
+    });
+
+    it('does not show a browser compatibility warning on non-web platforms', async () => {
+        platformMocks.getPlatform.mockReturnValue('android');
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        expect(screen.queryByText('Browser compatibility warning')).toBeNull();
+        expect(vi.mocked(Capacitor.getPlatform)).toHaveBeenCalled();
+        expect(vi.mocked(bleAdapter.getRequiredWebBluetoothSupport)).not.toHaveBeenCalled();
     });
 });

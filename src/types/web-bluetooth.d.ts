@@ -1,11 +1,17 @@
-interface BluetoothRemoteGATTServerLike {
+interface BluetoothRemoteGATTServer {
   connected?: boolean;
+  connect?: () => Promise<BluetoothRemoteGATTServer>;
+  disconnect?: () => void;
+}
+
+interface BluetoothRemoteGATTCharacteristic {
+  startNotifications?: () => Promise<BluetoothRemoteGATTCharacteristic>;
 }
 
 interface BluetoothDevice extends EventTarget {
   id: string;
   name?: string;
-  gatt?: BluetoothRemoteGATTServerLike | null;
+  gatt?: BluetoothRemoteGATTServer | null;
   watchAdvertisements?: (options?: { signal?: AbortSignal }) => Promise<void>;
 }
 
@@ -22,6 +28,17 @@ interface Window {
   BluetoothDevice?: {
     prototype?: {
       watchAdvertisements?: unknown;
+    };
+  };
+  BluetoothRemoteGATTServer?: {
+    prototype?: {
+      connect?: unknown;
+      disconnect?: unknown;
+    };
+  };
+  BluetoothRemoteGATTCharacteristic?: {
+    prototype?: {
+      startNotifications?: unknown;
     };
   };
 }

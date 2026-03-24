@@ -60,3 +60,129 @@ describe('BleAdapter.stopNotifications', () => {
         consoleSpy.mockRestore();
     });
 });
+
+type WebBluetoothSupportShape = {
+    requestDevice?: boolean;
+    connect?: boolean;
+    disconnect?: boolean;
+    startNotifications?: boolean;
+};
+
+const setRequiredWebBluetoothSupport = ({
+    requestDevice = false,
+    connect = false,
+    disconnect = false,
+    startNotifications = false,
+}: WebBluetoothSupportShape): void => {
+    Object.defineProperty(navigator, 'bluetooth', {
+        configurable: true,
+        value: requestDevice ? { requestDevice: vi.fn() } : undefined,
+    });
+
+    const bluetoothRemoteGATTServerCtor = function BluetoothRemoteGATTServer() {} as unknown as {
+        prototype: {
+            connect?: () => void;
+            disconnect?: () => void;
+        };
+    };
+    bluetoothRemoteGATTServerCtor.prototype = {};
+    if (connect) {
+        bluetoothRemoteGATTServerCtor.prototype.connect = vi.fn();
+    }
+    if (disconnect) {
+        bluetoothRemoteGATTServerCtor.prototype.disconnect = vi.fn();
+    }
+
+    Object.defineProperty(globalThis, 'BluetoothRemoteGATTServer', {
+        configurable: true,
+        value: bluetoothRemoteGATTServerCtor,
+    });
+
+    const bluetoothRemoteGATTCharacteristicCtor = function BluetoothRemoteGATTCharacteristic() {} as unknown as {
+        prototype: {
+            startNotifications?: () => void;
+        };
+    };
+    bluetoothRemoteGATTCharacteristicCtor.prototype = {};
+    if (startNotifications) {
+        bluetoothRemoteGATTCharacteristicCtor.prototype.startNotifications = vi.fn();
+    }
+
+    Object.defineProperty(globalThis, 'BluetoothRemoteGATTCharacteristic', {
+        configurable: true,
+        value: bluetoothRemoteGATTCharacteristicCtor,
+    });
+};
+
+describe('BleAdapter.getRequiredWebBluetoothSupport', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        setRequiredWebBluetoothSupport({});
+    });
+
+    it('reports requestDevice as missing when navigator.bluetooth.requestDevice is unavailable', () => {
+        setRequiredWebBluetoothSupport({
+            connect: true,
+            disconnect: true,
+            startNotifications: true,
+        });
+
+        expect(bleAdapter.getRequiredWebBluetoothSupport()).toEqual({
+            supported: false,
+            missing: ['requestDevice'],
+        });
+    });
+
+    it('reports connect as missing when BluetoothRemoteGATTServer.connect is unavailable', () => {
+        setRequiredWebBluetoothSupport({
+            requestDevice: true,
+            disconnect: true,
+            startNotifications: true,
+        });
+
+        expect(bleAdapter.getRequiredWebBluetoothSupport()).toEqual({
+            supported: false,
+            missing: ['connect'],
+        });
+    });
+
+    it('reports disconnect as missing when BluetoothRemoteGATTServer.disconnect is unavailable', () => {
+        setRequiredWebBluetoothSupport({
+            requestDevice: true,
+            connect: true,
+            startNotifications: true,
+        });
+
+        expect(bleAdapter.getRequiredWebBluetoothSupport()).toEqual({
+            supported: false,
+            missing: ['disconnect'],
+        });
+    });
+
+    it('reports startNotifications as missing when BluetoothRemoteGATTCharacteristic.startNotifications is unavailable', () => {
+        setRequiredWebBluetoothSupport({
+            requestDevice: true,
+            connect: true,
+            disconnect: true,
+        });
+
+        expect(bleAdapter.getRequiredWebBluetoothSupport()).toEqual({
+            supported: false,
+            missing: ['startNotifications'],
+        });
+    });
+
+    it('reports full support when all required Web Bluetooth functions are available', () => {
+        setRequiredWebBluetoothSupport({
+            requestDevice: true,
+            connect: true,
+            disconnect: true,
+            startNotifications: true,
+        });
+
+        expect(bleAdapter.getRequiredWebBluetoothSupport()).toEqual({
+            supported: true,
+            missing: [],
+        });
+    });
+});

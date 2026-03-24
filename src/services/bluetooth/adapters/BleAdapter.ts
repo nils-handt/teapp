@@ -17,6 +17,13 @@ export interface RememberedDeviceSupport {
   canWatchAdvertisements: boolean;
 }
 
+export type RequiredWebBluetoothFunction = 'requestDevice' | 'connect' | 'disconnect' | 'startNotifications';
+
+export interface RequiredWebBluetoothSupport {
+  supported: boolean;
+  missing: RequiredWebBluetoothFunction[];
+}
+
 export interface AdvertisementWatchResult {
   status: 'advertisement-received' | 'device-not-restored' | 'unsupported' | 'timeout' | 'error';
   error?: string;
@@ -82,6 +89,41 @@ class BleAdapter {
       logger.error('Error getting devices:', error);
       return [];
     }
+  }
+
+  getRequiredWebBluetoothSupport(): RequiredWebBluetoothSupport {
+    const missing: RequiredWebBluetoothFunction[] = [];
+    const bluetooth = this.getNavigatorBluetooth();
+    const bluetoothRemoteGATTServerCtor = (globalThis as Record<string, unknown>).BluetoothRemoteGATTServer as
+      | { prototype?: { connect?: unknown; disconnect?: unknown } }
+      | undefined;
+    const bluetoothRemoteGATTCharacteristicCtor = (globalThis as Record<string, unknown>).BluetoothRemoteGATTCharacteristic as
+      | { prototype?: { startNotifications?: unknown } }
+      | undefined;
+
+    if (!bluetooth || typeof bluetooth.requestDevice !== 'function') {
+      missing.push('requestDevice');
+    }
+
+    if (!bluetoothRemoteGATTServerCtor?.prototype || typeof bluetoothRemoteGATTServerCtor.prototype.connect !== 'function') {
+      missing.push('connect');
+    }
+
+    if (!bluetoothRemoteGATTServerCtor?.prototype || typeof bluetoothRemoteGATTServerCtor.prototype.disconnect !== 'function') {
+      missing.push('disconnect');
+    }
+
+    if (
+      !bluetoothRemoteGATTCharacteristicCtor?.prototype
+      || typeof bluetoothRemoteGATTCharacteristicCtor.prototype.startNotifications !== 'function'
+    ) {
+      missing.push('startNotifications');
+    }
+
+    return {
+      supported: missing.length === 0,
+      missing,
+    };
   }
 
   getRememberedDeviceSupport(): RememberedDeviceSupport {
