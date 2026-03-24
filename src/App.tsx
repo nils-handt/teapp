@@ -11,12 +11,28 @@ import { getBrewingScreenPath } from './constants/brewingScreens';
 import { createLogger } from './services/logging';
 import { brewingStore } from './stores/useBrewingStore';
 import { settingsStore, useSettingsStore } from './stores/useSettingsStore';
+import FirstRunTutorial from './components/FirstRunTutorial';
+import { useShallow } from 'zustand/react/shallow';
 
 const logger = createLogger('App');
 
 const App: React.FC = () => {
   const Router = Capacitor.getPlatform() === 'web' ? IonReactHashRouter : IonReactRouter;
-  const lastUsedBrewingScreen = useSettingsStore((state) => state.lastUsedBrewingScreen);
+  const {
+    hasSeenTutorial,
+    isTutorialOpen,
+    lastUsedBrewingScreen,
+    markTutorialSeen,
+    openTutorial,
+    settingsLoaded,
+  } = useSettingsStore(useShallow((state) => ({
+    hasSeenTutorial: state.hasSeenTutorial,
+    isTutorialOpen: state.isTutorialOpen,
+    lastUsedBrewingScreen: state.lastUsedBrewingScreen,
+    markTutorialSeen: state.markTutorialSeen,
+    openTutorial: state.openTutorial,
+    settingsLoaded: state.settingsLoaded,
+  })));
 
   useEffect(() => {
     logger.info('Starting application bootstrap tasks');
@@ -24,6 +40,12 @@ const App: React.FC = () => {
     void settingsStore.getState().loadSettings();
     void brewingStore.getState().restoreActiveSession();
   }, []);
+
+  useEffect(() => {
+    if (settingsLoaded && !hasSeenTutorial && !isTutorialOpen) {
+      openTutorial();
+    }
+  }, [hasSeenTutorial, isTutorialOpen, openTutorial, settingsLoaded]);
 
   useBrewingSync(); // Activate global state sync
 
@@ -37,6 +59,7 @@ const App: React.FC = () => {
           {/* Phase 13 Design Routes */}
           <Route path="/" render={() => <Redirect to={getBrewingScreenPath(lastUsedBrewingScreen)} />} exact={true} />
         </IonRouterOutlet>
+        <FirstRunTutorial isOpen={isTutorialOpen} onDismiss={markTutorialSeen} />
       </Router>
     </IonApp>
   );

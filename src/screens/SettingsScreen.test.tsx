@@ -193,6 +193,7 @@ const renderScreen = (
     settingsStore.setState(initialSettingsStoreValues);
     settingsStore.setState({
         devMode: false,
+        isTutorialOpen: false,
         lastUsedBrewingScreen: 1,
         logLevel: 'info',
         logToFileEnabled: false,
@@ -266,5 +267,13 @@ describe('SettingsScreen', () => {
         rerender(<SettingsScreen />);
 
         expect(screen.queryByRole('button', { name: /Manage Recordings/i })).toBeNull();
+    });
+
+    it('reopens the tutorial from settings', () => {
+        renderScreen();
+
+        fireEvent.click(screen.getByRole('button', { name: /Show Tutorial Again/i }));
+
+        expect(settingsStore.getState().isTutorialOpen).toBe(true);
     });
 });

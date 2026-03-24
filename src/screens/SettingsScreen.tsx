@@ -67,6 +67,7 @@ const SettingsScreen: React.FC = () => {
     weightLoggerEnabled,
     playbackSpeed,
     lastUsedBrewingScreen,
+    openTutorial,
     updateSettings
   } = useSettingsStore(useShallow((state) => ({
     devMode: state.devMode,
@@ -75,6 +76,7 @@ const SettingsScreen: React.FC = () => {
     weightLoggerEnabled: state.weightLoggerEnabled,
     playbackSpeed: state.playbackSpeed,
     lastUsedBrewingScreen: state.lastUsedBrewingScreen,
+    openTutorial: state.openTutorial,
     updateSettings: state.updateSettings,
   })));
 
@@ -214,6 +216,9 @@ const SettingsScreen: React.FC = () => {
                 </IonSelectOption>
               ))}
             </IonSelect>
+          </IonItem>
+          <IonItem button onClick={openTutorial}>
+            <IonLabel>Show Tutorial Again</IonLabel>
           </IonItem>
         </IonList>
 

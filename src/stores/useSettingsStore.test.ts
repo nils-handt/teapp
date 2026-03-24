@@ -42,6 +42,9 @@ describe('useSettingsStore', () => {
     expect(settingsStore.getState().logLevel).toBe(DEFAULT_LOGGER_CONFIG.minLevel);
     expect(settingsStore.getState().logToFileEnabled).toBe(DEFAULT_LOGGER_CONFIG.enableFileLogging);
     expect(settingsStore.getState().lastUsedBrewingScreen).toBe(DEFAULT_BREWING_SCREEN_ID);
+    expect(settingsStore.getState().hasSeenTutorial).toBe(false);
+    expect(settingsStore.getState().settingsLoaded).toBe(false);
+    expect(settingsStore.getState().isTutorialOpen).toBe(false);
   });
 
   it('updates persisted settings without touching the logger when logger settings are absent', () => {
@@ -74,6 +77,7 @@ describe('useSettingsStore', () => {
     vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
       lastUsedBrewingScreen: '5',
       devMode: 'true',
+      hasSeenTutorial: 'true',
       logLevel: 'error',
       logToFileEnabled: 'true',
       weightLoggerEnabled: 'true',
@@ -86,12 +90,48 @@ describe('useSettingsStore', () => {
     expect(settingsStore.getState()).toMatchObject({
       lastUsedBrewingScreen: 5,
       devMode: true,
+      hasSeenTutorial: true,
       logLevel: 'error',
       logToFileEnabled: true,
       weightLoggerEnabled: true,
       playbackSpeed: 3,
       scaleConfig: { tareOnConnect: true },
+      settingsLoaded: true,
     });
     expect(configureLogger).toHaveBeenCalledWith({ minLevel: 'error', enableFileLogging: true });
+  });
+
+  it('defaults tutorial visibility to unseen when the setting is absent and still marks settings as loaded', async () => {
+    vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
+      devMode: 'false',
+    });
+
+    await settingsStore.getState().loadSettings();
+
+    expect(settingsStore.getState().hasSeenTutorial).toBe(false);
+    expect(settingsStore.getState().settingsLoaded).toBe(true);
+    expect(settingsStore.getState().isTutorialOpen).toBe(false);
+  });
+
+  it('does not persist transient tutorial ui state', () => {
+    settingsStore.getState().openTutorial();
+    settingsStore.getState().closeTutorial();
+    settingsStore.getState().finishSettingsLoad();
+
+    expect(settingsRepository.saveSettingsState).not.toHaveBeenCalled();
+    expect(settingsStore.getState()).toMatchObject({
+      settingsLoaded: true,
+      isTutorialOpen: false,
+    });
+  });
+
+  it('marks the tutorial as seen and closes it', () => {
+    settingsStore.setState({ isTutorialOpen: true });
+
+    settingsStore.getState().markTutorialSeen();
+
+    expect(settingsStore.getState().hasSeenTutorial).toBe(true);
+    expect(settingsStore.getState().isTutorialOpen).toBe(false);
+    expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({ hasSeenTutorial: true });
   });
 });

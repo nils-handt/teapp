@@ -26,14 +26,33 @@ export interface SettingsStoreValues {
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
   lastUsedBrewingScreen: BrewingScreenId;
+  hasSeenTutorial: boolean;
+  settingsLoaded: boolean;
+  isTutorialOpen: boolean;
 }
 
 export interface SettingsStoreActions {
-  updateSettings: (settings: Partial<SettingsStoreValues>) => void;
+  updateSettings: (settings: Partial<PersistedSettingsStoreValues>) => void;
   loadSettings: () => Promise<void>;
+  finishSettingsLoad: () => void;
+  openTutorial: () => void;
+  closeTutorial: () => void;
+  markTutorialSeen: () => void;
 }
 
 export type SettingsStore = SettingsStoreValues & SettingsStoreActions;
+
+export type PersistedSettingsStoreValues = Pick<
+  SettingsStoreValues,
+  | 'scaleConfig'
+  | 'devMode'
+  | 'logLevel'
+  | 'logToFileEnabled'
+  | 'weightLoggerEnabled'
+  | 'playbackSpeed'
+  | 'lastUsedBrewingScreen'
+  | 'hasSeenTutorial'
+>;
 
 export const initialSettingsStoreValues: SettingsStoreValues = {
   scaleConfig: {},
@@ -43,6 +62,9 @@ export const initialSettingsStoreValues: SettingsStoreValues = {
   weightLoggerEnabled: false,
   playbackSpeed: 1,
   lastUsedBrewingScreen: DEFAULT_BREWING_SCREEN_ID,
+  hasSeenTutorial: false,
+  settingsLoaded: false,
+  isTutorialOpen: false,
 };
 
 const applyLoggerSettings = (settings: Partial<SettingsStoreValues>): void => {
@@ -75,7 +97,7 @@ export const settingsStore = createStore<SettingsStore>()((set) => ({
   loadSettings: async () => {
     logger.info('Loading persisted settings');
     const allSettings = await settingsRepository.getAllSettings();
-    const loadedSettings: Partial<SettingsStoreValues> = {};
+    const loadedSettings: Partial<PersistedSettingsStoreValues> = {};
 
     if (allSettings['devMode']) {
       loadedSettings.devMode = allSettings['devMode'] === 'true';
@@ -98,6 +120,9 @@ export const settingsStore = createStore<SettingsStore>()((set) => ({
         loadedSettings.lastUsedBrewingScreen = screenId;
       }
     }
+    if (allSettings['hasSeenTutorial']) {
+      loadedSettings.hasSeenTutorial = allSettings['hasSeenTutorial'] === 'true';
+    }
     if (allSettings['scaleConfig']) {
       try {
         loadedSettings.scaleConfig = JSON.parse(allSettings['scaleConfig']);
@@ -108,7 +133,16 @@ export const settingsStore = createStore<SettingsStore>()((set) => ({
 
     applyLoggerSettings(loadedSettings);
     set(loadedSettings);
+    set({ settingsLoaded: true });
     logger.info('Persisted settings loaded', { keys: Object.keys(loadedSettings) });
+  },
+  finishSettingsLoad: () => set({ settingsLoaded: true }),
+  openTutorial: () => set({ isTutorialOpen: true }),
+  closeTutorial: () => set({ isTutorialOpen: false }),
+  markTutorialSeen: () => {
+    set({ hasSeenTutorial: true, isTutorialOpen: false });
+    void settingsRepository.saveSettingsState({ hasSeenTutorial: true });
+    logger.info('Marked tutorial as seen');
   },
 }));
 

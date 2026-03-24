@@ -1,9 +1,13 @@
 import type { PropsWithChildren } from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { brewingStore, initialBrewingStoreState } from './stores/useBrewingStore';
 import { initialSettingsStoreValues, settingsStore } from './stores/useSettingsStore';
+
+const tutorialRenderState = vi.hoisted(() => ({
+    render: vi.fn(),
+}));
 
 // Mock dependencies
 vi.mock('./services/BluetoothScaleService', () => ({
@@ -27,6 +31,13 @@ vi.mock('./repositories/SessionRepository', () => ({
         getAllSessions: vi.fn().mockResolvedValue([]),
         getActiveSession: vi.fn().mockResolvedValue(null),
     }
+}));
+
+vi.mock('./components/FirstRunTutorial', () => ({
+    default: ({ isOpen }: { isOpen: boolean }) => {
+        tutorialRenderState.render(isOpen);
+        return isOpen ? <div>First Run Tutorial Open</div> : null;
+    },
 }));
 
 // Mock Ionic components to avoid issues with web components in JSDOM not being fully supported or needing setup
@@ -70,6 +81,7 @@ describe('App', () => {
     beforeEach(() => {
         settingsStore.setState(initialSettingsStoreValues);
         brewingStore.setState(initialBrewingStoreState);
+        tutorialRenderState.render.mockClear();
     });
 
     it('renders without crashing', async () => {
@@ -93,5 +105,33 @@ describe('App', () => {
 
         expect(restoreSpy).toHaveBeenCalled();
         expect(loadSettingsSpy).toHaveBeenCalled();
+    });
+
+    it('opens the tutorial after settings finish loading for first-time users', async () => {
+        await act(async () => {
+            render(<App />);
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText('First Run Tutorial Open')).toBeDefined();
+        });
+        expect(settingsStore.getState().isTutorialOpen).toBe(true);
+    });
+
+    it('keeps the tutorial closed when it has already been seen', async () => {
+        const loadSettingsSpy = vi.spyOn(settingsStore.getState(), 'loadSettings');
+        loadSettingsSpy.mockImplementation(async () => {
+            settingsStore.setState({ hasSeenTutorial: true, settingsLoaded: true });
+        });
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        await waitFor(() => {
+            expect(loadSettingsSpy).toHaveBeenCalled();
+        });
+        expect(screen.queryByText('First Run Tutorial Open')).toBeNull();
+        expect(settingsStore.getState().isTutorialOpen).toBe(false);
     });
 });
