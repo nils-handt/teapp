@@ -111,6 +111,39 @@ describe('BrewingSessionService', () => {
         expect(brewingSessionService.session$.value?.teaName).toBe('Test Tea');
     });
 
+    it('should reset transient brewing state when starting a new session', () => {
+        brewingSessionService.startSession('First Tea');
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        brewingSessionService.confirmSetupDone();
+        brewingSessionService.manuallyStartInfusion();
+        brewingSessionService.updateCurrentInfusionNote('carry over');
+        vi.advanceTimersByTime(1200);
+
+        expect(brewingSessionService.currentInfusion$.value).toEqual(
+            expect.objectContaining({
+                note: 'carry over',
+            })
+        );
+        expect(brewingSessionService.timer$.value).toBeGreaterThan(0);
+
+        brewingSessionService.startSession('Second Tea');
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.SETUP);
+        expect(brewingSessionService.session$.value).toEqual(
+            expect.objectContaining({
+                teaName: 'Second Tea',
+                infusions: [],
+            })
+        );
+        expect(brewingSessionService.currentInfusion$.value).toBeNull();
+        expect(brewingSessionService.timer$.value).toBe(0);
+        expect(brewingSessionService.firstInfusionDraft$.value).toEqual({
+            note: '',
+            temperature: null,
+        });
+    });
+
     it('should restore a saved session with setup data into READY', () => {
         const session = new BrewingSession();
         session.sessionId = 'restored-ready';

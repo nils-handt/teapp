@@ -21,6 +21,13 @@ type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWei
 const logger = createLogger('BrewingSessionService');
 const EMPTY_INFUSION_METADATA: InfusionMetadataDraft = { note: '', temperature: null };
 
+type SessionResetOptions = {
+    phase: BrewingPhase;
+    session?: BrewingSession | null;
+    setupStepWeights?: number[];
+    resetKeepAwakeService?: boolean;
+};
+
 class BrewingSessionService {
     private static instance: BrewingSessionService;
     private weightSubscription: Subscription | null = null;
@@ -376,6 +383,42 @@ class BrewingSessionService {
         }
     }
 
+    private resetSessionState({
+        phase,
+        session = null,
+        setupStepWeights = [],
+        resetKeepAwakeService = false,
+    }: SessionResetOptions) {
+        this.stopTimer();
+        this.stopWeightSubscription();
+        void keepAwakeService.allowSleep();
+
+        if (resetKeepAwakeService) {
+            keepAwakeService.resetForTest();
+        }
+
+        this.currentWeight = 0;
+        this.lastStableWeight = 0;
+        this.lastStableWasteWater = 0;
+        this.maxWeightInPhase = 0;
+        this.lastLiftTime = 0;
+        this.lowestLiftedWeight = Infinity;
+        this.timerStartTime = 0;
+        this.setupStepWeights = [...setupStepWeights];
+
+        this.timer$.next(0);
+        this.emitCurrentInfusion(null);
+        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
+
+        if (session) {
+            this.emitSession(session);
+        } else {
+            this.session$.next(null);
+        }
+
+        this.setPhase(phase);
+    }
+
     // --- Public Actions ---
 
     public startSession(teaName?: string, notes?: string) {
@@ -395,20 +438,14 @@ class BrewingSessionService {
         session.brewingVesselId = null;
         session.brewingVessel = null;
 
-        this.lowestLiftedWeight = Infinity;
-        this.lastStableWasteWater = 0;
-        this.maxWeightInPhase = 0;
-        this.setupStepWeights = [0];
-        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
-        this.emitCurrentInfusion(null);
-        this.emitSession(session);
-        this.setPhase(BrewingPhase.SETUP);
+        this.resetSessionState({
+            phase: BrewingPhase.SETUP,
+            session,
+            setupStepWeights: [0],
+        });
 
         this.initializeWeightSubscription();
         void keepAwakeService.keepAwake();
-
-        // Reset Setup Values
-        // No longer needed as we use session object directly
     }
 
     public restoreSession(session: BrewingSession) {
@@ -446,24 +483,9 @@ class BrewingSessionService {
 
     public clearSession() {
         logger.info('Clearing brewing session state');
-        this.stopTimer();
-        this.stopWeightSubscription();
-        void keepAwakeService.allowSleep();
-
-        this.currentWeight = 0;
-        this.lastStableWeight = 0;
-        this.lastStableWasteWater = 0;
-        this.maxWeightInPhase = 0;
-        this.lastLiftTime = 0;
-        this.lowestLiftedWeight = Infinity;
-        this.timerStartTime = 0;
-        this.setupStepWeights = [];
-
-        this.timer$.next(0);
-        this.emitCurrentInfusion(null);
-        this.session$.next(null);
-        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
-        this.setPhase(BrewingPhase.IDLE);
+        this.resetSessionState({
+            phase: BrewingPhase.IDLE,
+        });
     }
 
     public confirmSetupDone() {
@@ -1107,25 +1129,10 @@ class BrewingSessionService {
      * clears all subjects and internal state.
      */
     public resetForTest() {
-        this.stopWeightSubscription();
-        this.stopTimer();
-        void keepAwakeService.allowSleep();
-        keepAwakeService.resetForTest();
-
-        this.currentWeight = 0;
-        this.lastStableWeight = 0;
-        this.lastStableWasteWater = 0;
-        this.maxWeightInPhase = 0;
-        this.lastLiftTime = 0;
-        this.lowestLiftedWeight = Infinity;
-        this.timerStartTime = 0;
-        this.setupStepWeights = [];
-
-        this.setPhase(BrewingPhase.ENDED);
-        this.session$.next(null);
-        this.emitCurrentInfusion(null);
-        this.setFirstInfusionDraft(EMPTY_INFUSION_METADATA);
-        this.timer$.next(0);
+        this.resetSessionState({
+            phase: BrewingPhase.ENDED,
+            resetKeepAwakeService: true,
+        });
     }
 }
 
