@@ -5,6 +5,7 @@ import App from './App';
 import { brewingStore, initialBrewingStoreState } from './stores/useBrewingStore';
 import { initialSettingsStoreValues, settingsStore } from './stores/useSettingsStore';
 import { bleAdapter } from './services/bluetooth/adapters/BleAdapter';
+import type { RequiredWebBluetoothSupport } from './services/bluetooth/adapters/BleAdapter';
 import { Capacitor } from '@capacitor/core';
 
 const tutorialRenderState = vi.hoisted(() => ({
@@ -16,7 +17,9 @@ const platformMocks = vi.hoisted(() => ({
 }));
 
 const bleAdapterMocks = vi.hoisted(() => ({
-    getRequiredWebBluetoothSupport: vi.fn(() => ({ supported: true, missing: [] })),
+    getRequiredWebBluetoothSupport: vi.fn(
+        (): RequiredWebBluetoothSupport => ({ supported: true, missing: [] })
+    ),
 }));
 
 // Mock dependencies
