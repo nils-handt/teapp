@@ -78,6 +78,18 @@ export class RealScaleService implements IScaleService {
         await this.initializeNativePreferredDevice(savedDevice);
     }
 
+    /**
+     * Note this does not really work reliably right now
+     * 
+     * Chrome behavior with remembering devices via navigator.bluetooth.getDevices() seems to be the main issue
+     * Devices are shared across all tabs and websites, including incognito windows.
+     * As long as one tab that uses the navigator.bluetooth.requestDevice() API stays open(and probably active), the device will remain available to all tabs after reload.
+     * If only a single tab is open and then reloaded navigator.bluetooth.getDevices() seems to always return an empty array - despite chrome still showing the device as paired in the connect dialog.
+     * See https://googlechrome.github.io/samples/web-bluetooth/watch-advertisements-and-connect.html for an example.
+     * 
+     * @param savedDevice 
+     * @returns 
+     */
     private async initializeWebPreferredDevice(savedDevice: ScaleDevice): Promise<void> {
         const support = bleAdapter.getRememberedDeviceSupport();
         try {
@@ -245,6 +257,7 @@ export class RealScaleService implements IScaleService {
                 lastConnected: new Date().toISOString(),
                 scaleType: device.scaleType || undefined,
             };
+            await settingsRepository.clearScaleDevices();
             await settingsRepository.saveScaleDevice(scaleDevice);
 
         } catch (error) {

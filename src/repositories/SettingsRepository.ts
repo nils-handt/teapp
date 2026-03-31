@@ -38,6 +38,10 @@ class SettingsRepository {
         return this.scaleDeviceRepo.findOne({ where: { deviceId } });
     }
 
+    async clearScaleDevices(): Promise<void> {
+        await this.scaleDeviceRepo.clear();
+    }
+
     async saveScaleDevice(device: ScaleDevice): Promise<void> {
         await this.scaleDeviceRepo.save(device);
 

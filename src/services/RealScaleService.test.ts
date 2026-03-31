@@ -118,6 +118,7 @@ vi.mock('../repositories/SettingsRepository', () => ({
     settingsRepository: {
         getPreferredDeviceId: vi.fn().mockResolvedValue(null),
         getScaleDevice: vi.fn().mockResolvedValue(null),
+        clearScaleDevices: vi.fn().mockResolvedValue(undefined),
         saveScaleDevice: vi.fn().mockResolvedValue(undefined),
     },
 }));
@@ -165,6 +166,7 @@ describe('RealScaleService', () => {
         scaleStore.setState(initialScaleStoreState);
         vi.mocked(settingsRepository.getPreferredDeviceId).mockResolvedValue(null);
         vi.mocked(settingsRepository.getScaleDevice).mockResolvedValue(null);
+        vi.mocked(settingsRepository.clearScaleDevices).mockResolvedValue(undefined);
         vi.mocked(settingsRepository.saveScaleDevice).mockResolvedValue(undefined);
         vi.mocked(bleAdapter.getDevices).mockResolvedValue([]);
         vi.mocked(bleAdapter.getRememberedDeviceSupport).mockReturnValue({
@@ -229,7 +231,11 @@ describe('RealScaleService', () => {
 
         expect(scaleStore.getState().connectionStatus).toBe('connected');
         expect(scaleStore.getState().connectedDevice).toEqual(device);
+        expect(settingsRepository.clearScaleDevices).toHaveBeenCalledTimes(1);
         expect(settingsRepository.saveScaleDevice).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(settingsRepository.clearScaleDevices).mock.invocationCallOrder[0]).toBeLessThan(
+            vi.mocked(settingsRepository.saveScaleDevice).mock.invocationCallOrder[0]
+        );
     });
 
     it('auto-connects on initialize when the preferred device is restored and advertising', async () => {
