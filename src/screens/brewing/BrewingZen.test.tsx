@@ -8,6 +8,14 @@ import { brewingStore, initialBrewingStoreState } from '../../stores/useBrewingS
 import { historyStore, initialHistoryStoreState } from '../../stores/useHistoryStore';
 import { initialScaleStoreState, scaleStore } from '../../stores/useScaleStore';
 
+const gestureState = vi.hoisted(() => ({
+    config: null as null | {
+        onEnd?: (detail: { deltaX: number; deltaY: number }) => void;
+    },
+    destroy: vi.fn(),
+    enable: vi.fn(),
+}));
+
 const {
     connectNewDevice,
     startBrewingSession,
@@ -43,6 +51,7 @@ const {
 type BrewingZenBrewingSeed = {
     activeSession: BrewingSession | null;
     brewingPhase: BrewingPhase;
+    currentInfusion: BrewingSession['infusions'][number] | null;
     editableInfusionMetadata: EditableInfusionMetadata;
     timerValue: number;
 };
@@ -95,6 +104,13 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
 }));
 
 vi.mock('@ionic/react', () => ({
+    createGesture: vi.fn((config) => {
+        gestureState.config = config;
+        return {
+            destroy: gestureState.destroy,
+            enable: gestureState.enable,
+        };
+    }),
     IonAlert: () => null,
     IonButton: ({ children, onClick, disabled }: ButtonProps) => <button onClick={onClick} disabled={disabled}>{children}</button>,
     IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -105,6 +121,21 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('BrewingZen', () => {
+    const createInfusion = (overrides: Partial<BrewingSession['infusions'][number]> = {}) => ({
+        infusionId: 'inf-1',
+        infusionNumber: 1,
+        duration: 25,
+        waterWeight: 100.5,
+        startTime: '2026-03-14T10:01:00.000Z',
+        wetTeaLeavesWeight: 18.2,
+        restDuration: 35,
+        note: '',
+        temperature: null,
+        sessionId: 'session-1',
+        session: undefined as never,
+        ...overrides,
+    });
+
     const seedStores = (
         brewingOverrides: Partial<BrewingZenBrewingSeed> = {},
         scaleOverrides: Partial<BrewingZenScaleSeed> = {},
@@ -131,22 +162,11 @@ describe('BrewingZen', () => {
                 startTime: '2026-03-14T10:00:00.000Z',
                 endTime: '2026-03-14T10:10:00.000Z',
                 infusions: [
-                    {
-                        infusionId: 'inf-1',
-                        infusionNumber: 1,
-                        duration: 25,
-                        waterWeight: 100.5,
-                        startTime: '2026-03-14T10:01:00.000Z',
-                        wetTeaLeavesWeight: 18.2,
-                        restDuration: 35,
-                        note: '',
-                        temperature: null,
-                        sessionId: 'session-1',
-                        session: undefined as never,
-                    },
+                    createInfusion(),
                 ],
             },
             brewingPhase: BrewingPhase.SETUP,
+            currentInfusion: null,
             editableInfusionMetadata: {
                 infusionId: null,
                 note: '',
@@ -171,6 +191,7 @@ describe('BrewingZen', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        gestureState.config = null;
         seedStores();
     });
 
@@ -199,6 +220,10 @@ describe('BrewingZen', () => {
     it('shows the tea placeholder in ready when no tea name exists and hides live weight', () => {
         brewingStore.setState({
             brewingPhase: BrewingPhase.READY,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                infusions: [],
+            },
             editableInfusionMetadata: {
                 infusionId: null,
                 note: '',
@@ -212,6 +237,7 @@ describe('BrewingZen', () => {
         expect(screen.getByRole('button', { name: /tea nameno tea selected/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /vessel nameno vessel selected/i })).toBeDefined();
         expect(screen.queryByText('63.5 g')).toBeNull();
+        expect(screen.queryByTestId('infusion-history-strip')).toBeNull();
     });
 
     it('hides the tea field in ready when a tea name has been selected', () => {
@@ -238,6 +264,7 @@ describe('BrewingZen', () => {
     it('greys out the timer during rest', () => {
         brewingStore.setState({
             brewingPhase: BrewingPhase.REST,
+            currentInfusion: createInfusion(),
             editableInfusionMetadata: {
                 infusionId: 'inf-1',
                 note: '',
@@ -250,6 +277,153 @@ describe('BrewingZen', () => {
 
         const timer = screen.getByText('1:32');
         expect(timer.getAttribute('style')).toContain('color: rgb(154, 163, 153)');
+    });
+
+    it('shows the latest completed infusion in active phases and removes duplicate timer labels', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.READY,
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'draft',
+            },
+        });
+
+        render(<BrewingZen />);
+
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 1 - 0:25');
+        expect(screen.getAllByText('Ready')).toHaveLength(1);
+    });
+
+    it('includes the current resting infusion as the newest strip item during rest', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.REST,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                infusions: [
+                    createInfusion(),
+                ],
+            },
+            currentInfusion: createInfusion({
+                infusionId: 'inf-2',
+                infusionNumber: 2,
+                duration: 45,
+                startTime: '2026-03-14T10:03:00.000Z',
+            }),
+            editableInfusionMetadata: {
+                infusionId: 'inf-2',
+                note: '',
+                temperature: 180,
+                source: 'resting',
+            },
+        });
+
+        render(<BrewingZen />);
+
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 2 - 0:45');
+        expect(screen.getAllByText('Rest')).toHaveLength(1);
+    });
+
+    it('updates strip dot states while swiping through infusion history', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.READY,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                infusions: [
+                    createInfusion(),
+                    createInfusion({
+                        infusionId: 'inf-2',
+                        infusionNumber: 2,
+                        duration: 34,
+                        startTime: '2026-03-14T10:03:00.000Z',
+                    }),
+                    createInfusion({
+                        infusionId: 'inf-3',
+                        infusionNumber: 3,
+                        duration: 52,
+                        startTime: '2026-03-14T10:05:00.000Z',
+                    }),
+                ],
+            },
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'draft',
+            },
+        });
+
+        render(<BrewingZen />);
+
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 3 - 0:52');
+        expect(screen.getByTestId('infusion-history-previous').getAttribute('data-count')).toBe('2');
+        expect(screen.getByTestId('infusion-history-next').getAttribute('data-count')).toBe('0');
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: -120, deltaY: 10 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 2 - 0:34');
+        expect(screen.getByTestId('infusion-history-previous').getAttribute('data-count')).toBe('1');
+        expect(screen.getByTestId('infusion-history-next').getAttribute('data-count')).toBe('1');
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: -120, deltaY: 10 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 1 - 0:25');
+        expect(screen.getByTestId('infusion-history-previous').getAttribute('data-count')).toBe('0');
+        expect(screen.getByTestId('infusion-history-next').getAttribute('data-count')).toBe('2');
+    });
+
+    it('ignores vertical drags and clamps infusion-history swipes at the bounds', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.READY,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                infusions: [
+                    createInfusion(),
+                    createInfusion({
+                        infusionId: 'inf-2',
+                        infusionNumber: 2,
+                        duration: 34,
+                        startTime: '2026-03-14T10:03:00.000Z',
+                    }),
+                ],
+            },
+            editableInfusionMetadata: {
+                infusionId: null,
+                note: '',
+                temperature: null,
+                source: 'draft',
+            },
+        });
+
+        render(<BrewingZen />);
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: -140, deltaY: 160 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 2 - 0:34');
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: -120, deltaY: 10 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 1 - 0:25');
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: -120, deltaY: 10 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 1 - 0:25');
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: 120, deltaY: 10 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 2 - 0:34');
+
+        act(() => {
+            gestureState.config?.onEnd?.({ deltaX: 120, deltaY: 10 });
+        });
+        expect(screen.getByTestId('infusion-history-label').textContent).toBe('Infusion 2 - 0:34');
     });
 
     it('renders a detailed session summary when ended', () => {
@@ -381,10 +555,9 @@ describe('BrewingZen', () => {
                 ...brewingStore.getState().activeSession!,
                 teaName: 'Cloud Mist',
                 infusions: [
-                    {
-                        ...brewingStore.getState().activeSession!.infusions[0],
+                    createInfusion({
                         note: 'sweet',
-                    },
+                    }),
                 ],
             },
         });

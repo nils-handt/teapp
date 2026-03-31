@@ -1,4 +1,5 @@
 import {
+    createGesture,
     IonButton,
     IonContent,
     IonHeader,
@@ -6,7 +7,7 @@ import {
     IonTitle,
     IonToolbar,
 } from '@ionic/react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
@@ -20,6 +21,7 @@ import { useBrewingStore } from '../../stores/useBrewingStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useScaleStore } from '../../stores/useScaleStore';
 import {
+    formatZenSeconds,
     formatZenWeight,
     zenActionRowStyle,
     zenContainerStyle,
@@ -48,8 +50,16 @@ type NoteEditorTarget =
     | { mode: 'saved'; infusionId: string }
     | null;
 
+type InfusionStripItem = {
+    infusionId: string;
+    infusionNumber: number;
+    duration: number;
+};
+
 const QUICK_WEAK_NOTES = ['weak', 'very weak'] as const;
 const QUICK_STRONG_NOTES = ['strong', 'very strong'] as const;
+const SWIPE_THRESHOLD_PX = 50;
+const INFUSION_STRIP_DOT_COLORS = ['#caccc5', '#8d9188'];
 
 const PHASE_COPY: Record<BrewingPhase, { label: string; message: string }> = {
     [BrewingPhase.IDLE]: { label: 'Zen', message: '' },
@@ -69,10 +79,11 @@ const formatTime = (ms: number) => {
 };
 
 const BrewingZen: React.FC = () => {
-    const { activeSession, brewingPhase, editableInfusionMetadata, timerValue } = useBrewingStore(
+    const { activeSession, brewingPhase, currentInfusion, editableInfusionMetadata, timerValue } = useBrewingStore(
         useShallow((state) => ({
             activeSession: state.activeSession,
             brewingPhase: state.brewingPhase,
+            currentInfusion: state.currentInfusion,
             editableInfusionMetadata: state.editableInfusionMetadata,
             timerValue: state.timerValue,
         }))
@@ -96,6 +107,8 @@ const BrewingZen: React.FC = () => {
     const [isTemperatureEditorOpen, setIsTemperatureEditorOpen] = useState(false);
     const [temperatureDraft, setTemperatureDraft] = useState('');
     const [temperatureError, setTemperatureError] = useState('');
+    const [viewedInfusionIndex, setViewedInfusionIndex] = useState(0);
+    const infusionHistoryStripRef = useRef<HTMLDivElement | null>(null);
 
     const phaseCopy = PHASE_COPY[brewingPhase] ?? PHASE_COPY[BrewingPhase.IDLE];
     const hasTeaName = Boolean(activeSession?.teaName?.trim());
@@ -111,6 +124,104 @@ const BrewingZen: React.FC = () => {
         && activeQuickStrongIndex === -1
     );
     const canEditInfusionMetadata = editableInfusionMetadata.source !== 'none';
+    const infusionStripItems: InfusionStripItem[] = (activeSession?.infusions ?? []).map((infusion) => ({
+        infusionId: infusion.infusionId,
+        infusionNumber: infusion.infusionNumber,
+        duration: infusion.duration,
+    }));
+    if (brewingPhase === BrewingPhase.REST && currentInfusion) {
+        const restingInfusionItem = {
+            infusionId: currentInfusion.infusionId,
+            infusionNumber: currentInfusion.infusionNumber,
+            duration: currentInfusion.duration,
+        };
+        const existingInfusionIndex = infusionStripItems.findIndex((item) => item.infusionId === currentInfusion.infusionId);
+
+        if (existingInfusionIndex >= 0) {
+            infusionStripItems[existingInfusionIndex] = restingInfusionItem;
+        } else {
+            infusionStripItems.push(restingInfusionItem);
+        }
+    }
+    const infusionStripSignature = infusionStripItems
+        .map((item) => `${item.infusionId}:${item.infusionNumber}:${item.duration}`)
+        .join('|');
+    const selectedInfusionIndex = Math.min(viewedInfusionIndex, Math.max(infusionStripItems.length - 1, 0));
+    const selectedInfusion = infusionStripItems[selectedInfusionIndex] ?? null;
+    const previousInfusionCount = selectedInfusion ? selectedInfusionIndex : 0;
+    const nextInfusionCount = selectedInfusion ? infusionStripItems.length - selectedInfusionIndex - 1 : 0;
+
+    useEffect(() => {
+        if (infusionStripItems.length === 0) {
+            setViewedInfusionIndex(0);
+            return;
+        }
+
+        setViewedInfusionIndex(infusionStripItems.length - 1);
+    }, [brewingPhase, infusionStripSignature, infusionStripItems.length]);
+
+    useEffect(() => {
+        const element = infusionHistoryStripRef.current;
+        if (!element || infusionStripItems.length <= 1) {
+            return;
+        }
+
+        const gesture = createGesture({
+            el: element,
+            gestureName: 'zen-infusion-history-swipe',
+            threshold: 10,
+            disableScroll: false,
+            onEnd: (detail) => {
+                const absX = Math.abs(detail.deltaX);
+                const absY = Math.abs(detail.deltaY);
+
+                if (absX < SWIPE_THRESHOLD_PX || absX <= absY) {
+                    return;
+                }
+
+                if (detail.deltaX < 0) {
+                    setViewedInfusionIndex((index) => Math.max(index - 1, 0));
+                    return;
+                }
+
+                setViewedInfusionIndex((index) => Math.min(index + 1, infusionStripItems.length - 1));
+            },
+        });
+
+        gesture.enable(true);
+
+        return () => {
+            gesture.destroy();
+        };
+    }, [infusionStripItems.length]);
+
+    const renderInfusionStripDots = (direction: 'previous' | 'next', availableCount: number) => (
+        <span
+            aria-hidden="true"
+            data-testid={`infusion-history-${direction}`}
+            data-count={Math.min(availableCount, 2)}
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: direction === 'previous' ? 'flex-end' : 'flex-start',
+                gap: '6px',
+                minWidth: '24px',
+            }}
+        >
+            {Array.from({ length: Math.min(availableCount, 2) }, (_, index) => (
+                <span
+                    key={`${direction}-${index + 1}`}
+                    data-testid={`infusion-history-${direction}-dot-${index + 1}`}
+                    style={{
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        background: INFUSION_STRIP_DOT_COLORS[index] ?? INFUSION_STRIP_DOT_COLORS[INFUSION_STRIP_DOT_COLORS.length - 1],
+                    }}
+                />
+            ))}
+        </span>
+    );
 
     const openAlert = (field: EditableField) => {
         if (!activeSession) {
@@ -465,14 +576,30 @@ const BrewingZen: React.FC = () => {
                     >
                         {formatTime(timerValue)}
                     </span>
-                    <span style={{ marginTop: '8px', color: ZEN_PALETTE.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}>
-                        {phaseCopy.label}
-                    </span>
                 </div>
-                {phaseCopy.message && (
-                    <p style={{ margin: 0, color: ZEN_PALETTE.muted, lineHeight: 1.6 }}>
-                        {phaseCopy.message}
-                    </p>
+                {selectedInfusion && (
+                    <div
+                        ref={infusionHistoryStripRef}
+                        data-testid="infusion-history-strip"
+                        aria-label={`Infusion ${selectedInfusion.infusionNumber} - ${formatZenSeconds(selectedInfusion.duration)}`}
+                        style={{
+                            marginTop: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            color: ZEN_PALETTE.muted,
+                            fontSize: '0.98rem',
+                            touchAction: 'pan-y',
+                            userSelect: 'none',
+                        }}
+                    >
+                        {renderInfusionStripDots('previous', previousInfusionCount)}
+                        <span data-testid="infusion-history-label">
+                            Infusion {selectedInfusion.infusionNumber} - {formatZenSeconds(selectedInfusion.duration)}
+                        </span>
+                        {renderInfusionStripDots('next', nextInfusionCount)}
+                    </div>
                 )}
             </section>
 
