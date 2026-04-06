@@ -103,28 +103,21 @@ const BrewingFlow: React.FC = () => {
 
     return (
         <IonPage>
-            <IonHeader className="ion-no-border">
+            <IonHeader className="[--border-width:0]">
                 <IonToolbar color="transparent">
-                    <IonTitle style={{ color: '#fff' }}>Flow</IonTitle>
+                    <IonTitle className="text-white">Flow</IonTitle>
                     <DesignSwitcher />
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen scrollY={false}>
 
-                <canvas ref={canvasRef} style={{ width: '100%', height: '100%', background: 'linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%)' }} />
-                <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                    <h1 style={{ fontSize: '4rem', margin: 0 }}>{(timerValue / 1000).toFixed(1)}</h1>
-                    <p style={{ fontSize: '1.2rem', color: '#666' }}>{currentWeight.toFixed(1)}g</p>
+                <canvas ref={canvasRef} className="h-full w-full bg-[image:var(--zen-flow-background)]" />
+                <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                    <h1 className="m-0 text-[4rem]">{(timerValue / 1000).toFixed(1)}</h1>
+                    <p className="text-[1.2rem] text-[#666]">{currentWeight.toFixed(1)}g</p>
                 </div>
 
-                <div style={{
-                    position: 'absolute',
-                    bottom: '50px',
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '20px'
-                }}>
+                <div className="absolute bottom-[50px] flex w-full justify-center gap-5">
                     {brewingPhase === BrewingPhase.IDLE || brewingPhase === BrewingPhase.ENDED ? (
                         <IonFabButton color="light" onClick={() => startBrewingSession('Flow Tea')}>
                             <IonIcon icon={play} />

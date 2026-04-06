@@ -1,6 +1,5 @@
 import {
     createGesture,
-    IonButton,
     IonContent,
     IonHeader,
     IonPage,
@@ -8,10 +7,12 @@ import {
     IonToolbar,
 } from '@ionic/react';
 import React, { useEffect, useRef, useState } from 'react';
+import AppButton from '../../components/ui/AppButton';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
 import TeaNameEditorModal from '../../components/TeaNameEditorModal';
+import ModalFrame from '../../components/ui/ModalFrame';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { bluetoothScaleService } from '../../services/BluetoothScaleService';
 import { brewingSessionService } from '../../services/brewing/BrewingSessionService';
@@ -21,17 +22,32 @@ import { useBrewingStore } from '../../stores/useBrewingStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useScaleStore } from '../../stores/useScaleStore';
 import {
+    cn,
+    zenActionRowClass,
+    zenActiveTimerClass,
+    zenActiveTimerToneClassMap,
+    zenActiveTimerWellClass,
+    zenDotRailClass,
+    zenFieldBaseClass,
+    zenFieldLabelClass,
+    zenFieldStateClassMap,
+    zenFieldToneClassMap,
+    zenHeroButtonClass,
+    zenInfusionControlBaseClass,
+    zenInfusionControlStateClassMap,
+    zenInfusionControlToneClassMap,
+    zenInfusionHistoryClass,
+    zenInputClass,
+    zenModalOverlayClass,
+    zenPageShellClass,
+    zenPanelClass,
+    zenPanelStrongClass,
+    zenSectionEyebrowClass,
+    zenStackClass,
+} from '../../styles/zen';
+import {
     formatZenSeconds,
     formatZenWeight,
-    zenActionRowStyle,
-    zenContainerStyle,
-    zenDangerButtonStyle,
-    zenHeroButtonStyle,
-    zenPanelStyle,
-    zenPrimaryButtonStyle,
-    zenSecondaryPanelStyle,
-    zenStackStyle,
-    ZEN_PALETTE,
 } from './zenBrewingShared';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
@@ -200,22 +216,14 @@ const BrewingZen: React.FC = () => {
             aria-hidden="true"
             data-testid={`infusion-history-${direction}`}
             data-count={Math.min(availableCount, 2)}
-            style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: direction === 'previous' ? 'flex-end' : 'flex-start',
-                gap: '6px',
-                minWidth: '24px',
-            }}
+            className={cn(zenDotRailClass, direction === 'previous' ? 'justify-end' : 'justify-start')}
         >
             {Array.from({ length: Math.min(availableCount, 2) }, (_, index) => (
                 <span
                     key={`${direction}-${index + 1}`}
                     data-testid={`infusion-history-${direction}-dot-${index + 1}`}
+                    className="h-2.5 w-2.5 rounded-full"
                     style={{
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
                         background: INFUSION_STRIP_DOT_COLORS[index] ?? INFUSION_STRIP_DOT_COLORS[INFUSION_STRIP_DOT_COLORS.length - 1],
                     }}
                 />
@@ -369,33 +377,25 @@ const BrewingZen: React.FC = () => {
         buttonLabel: string,
         value: string,
         onClick: () => void,
-        options?: { active?: boolean; customColor?: string }
+        options?: { active?: boolean }
     ) => (
         <button
             type="button"
             aria-label={buttonLabel}
             onClick={onClick}
             disabled={!canEditInfusionMetadata}
-            style={{
-                flex: 1,
-                minHeight: '44px',
-                borderRadius: '14px',
-                border: `1px solid ${options?.active ? '#1f1f1f' : ZEN_PALETTE.border}`,
-                background: options?.active ? ZEN_PALETTE.background : 'transparent',
-                color: options?.active ? '#000000' : ZEN_PALETTE.muted,
-                fontSize: '1rem',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                cursor: canEditInfusionMetadata ? 'pointer' : 'not-allowed',
-                opacity: canEditInfusionMetadata ? 1 : 0.5,
-            }}
+            className={cn(
+                zenInfusionControlBaseClass,
+                options?.active ? zenInfusionControlToneClassMap.active : zenInfusionControlToneClassMap.inactive,
+                canEditInfusionMetadata ? zenInfusionControlStateClassMap.enabled : zenInfusionControlStateClassMap.disabled,
+            )}
         >
             {value}
         </button>
     );
 
     const renderInfusionControls = () => (
-        <section style={{ ...zenPanelStyle, padding: '16px', display: 'flex', gap: '10px' }}>
+        <section className={cn(zenPanelClass, 'flex gap-[10px] p-4')}>
             {renderInfusionControlButton(
                 'Weak note',
                 activeQuickWeakIndex === 1 ? '--' : '-',
@@ -462,39 +462,26 @@ const BrewingZen: React.FC = () => {
                 }
             }}
             disabled={options?.disabled}
-            style={{
-                width: '100%',
-                padding: '16px 18px',
-                borderRadius: '18px',
-                border: `1px solid ${ZEN_PALETTE.border}`,
-                background:
-                    (field === 'teaName' && !hasTeaName) || (field === 'brewingVesselName' && !hasBrewingVesselName && hasBrewingVesselWeights)
-                        ? ZEN_PALETTE.accentSoft
-                        : 'rgba(255, 255, 255, 0.52)',
-                color: ZEN_PALETTE.text,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: '1rem',
-                cursor: options?.disabled ? 'not-allowed' : 'pointer',
-                opacity: options?.disabled ? 0.6 : 1,
-            }}
+            className={cn(
+                zenFieldBaseClass,
+                (field === 'teaName' && !hasTeaName) || (field === 'brewingVesselName' && !hasBrewingVesselName && hasBrewingVesselWeights)
+                    ? zenFieldToneClassMap.highlighted
+                    : zenFieldToneClassMap.default,
+                options?.disabled ? zenFieldStateClassMap.disabled : zenFieldStateClassMap.enabled,
+            )}
         >
-            <span style={{ color: ZEN_PALETTE.muted, letterSpacing: '0.03em' }}>{label}</span>
+            <span className={zenFieldLabelClass}>{label}</span>
             <span>{value}</span>
         </button>
     );
 
     const renderDisconnectedState = () => (
-        <div style={{ ...zenStackStyle, justifyContent: 'center', minHeight: 'calc(100vh - 120px)' }}>
+        <div className={cn(zenStackClass, 'min-h-[calc(100vh-120px)] justify-center')}>
             <button
                 type="button"
                 onClick={() => bluetoothScaleService.connectNewDevice()}
                 disabled={connectionStatus === 'connecting'}
-                style={{
-                    ...zenHeroButtonStyle,
-                    cursor: connectionStatus === 'connecting' ? 'default' : 'pointer',
-                }}
+                className={cn(zenHeroButtonClass, connectionStatus === 'connecting' ? 'cursor-default' : 'cursor-pointer')}
             >
                 CONNECT TO SCALE
             </button>
@@ -502,18 +489,18 @@ const BrewingZen: React.FC = () => {
     );
 
     const renderSetupView = () => (
-        <div style={zenStackStyle}>
-            <section style={zenSecondaryPanelStyle}>
-                <p style={{ margin: 0, color: ZEN_PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
+        <div className={zenStackClass}>
+            <section className={zenPanelStrongClass}>
+                <p className={zenSectionEyebrowClass}>
                     {phaseCopy.label}
                 </p>
-                <div style={{ fontSize: '3.4rem', lineHeight: 1, fontWeight: 300, marginTop: '8px' }}>
+                <div className="mt-2 text-[3.4rem] leading-none font-light text-zen-text">
                     {formatZenWeight(currentWeight)}
                 </div>
             </section>
 
-            <section style={zenPanelStyle}>
-                <div style={{ display: 'grid', gap: '12px' }}>
+            <section className={zenPanelClass}>
+                <div className="grid gap-3">
                     {renderFieldButton('Vessel', formatZenWeight(activeSession?.vesselWeight), 'vesselWeight')}
                     {renderFieldButton('Lid', formatZenWeight(activeSession?.lidWeight), 'lidWeight')}
                     {renderFieldButton('Tray', formatZenWeight(activeSession?.trayWeight), 'trayWeight')}
@@ -523,56 +510,39 @@ const BrewingZen: React.FC = () => {
                 </div>
             </section>
 
-            <section style={zenActionRowStyle}>
-                <IonButton
+            <section className={zenActionRowClass}>
+                <AppButton
                     expand="block"
-                    shape="round"
                     onClick={() => handleEndSession()}
-                    style={zenDangerButtonStyle}
+                    variant="danger"
                 >
                     End Session
-                </IonButton>
-                <IonButton
+                </AppButton>
+                <AppButton
                     expand="block"
-                    shape="round"
                     onClick={() => brewingSessionService.confirmSetupDone()}
-                    style={zenPrimaryButtonStyle}
                 >
                     Confirm Setup
-                </IonButton>
+                </AppButton>
             </section>
         </div>
     );
 
     const renderActiveView = (options?: { greyTimer?: boolean }) => (
-        <div style={zenStackStyle}>
+        <div className={zenStackClass}>
             {renderInfusionControls()}
-            <section style={{ ...zenSecondaryPanelStyle, textAlign: 'center' }}>
-                <p style={{ margin: 0, color: ZEN_PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
+            <section className={cn(zenPanelStrongClass, 'text-center')}>
+                <p className={zenSectionEyebrowClass}>
                     {phaseCopy.label}
                 </p>
-                <div
-                    style={{
-                        margin: '14px auto 10px',
-                        width: 'min(320px, 78vw)',
-                        aspectRatio: '1 / 1',
-                        borderRadius: '50%',
-                        border: `1px solid ${ZEN_PALETTE.border}`,
-                        background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(230,238,226,0.9))',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
-                    }}
-                >
+                <div className={zenActiveTimerWellClass}>
                     <span
-                        style={{
-                            fontSize: '3.4rem',
-                            fontWeight: 300,
-                            color: options?.greyTimer ? ZEN_PALETTE.restTimer : ZEN_PALETTE.text,
-                            transition: 'color 200ms ease',
-                        }}
+                        data-testid="primary-timer"
+                        data-tone={options?.greyTimer ? 'resting' : 'default'}
+                        className={cn(
+                            zenActiveTimerClass,
+                            options?.greyTimer ? zenActiveTimerToneClassMap.resting : zenActiveTimerToneClassMap.default,
+                        )}
                     >
                         {formatTime(timerValue)}
                     </span>
@@ -582,17 +552,7 @@ const BrewingZen: React.FC = () => {
                         ref={infusionHistoryStripRef}
                         data-testid="infusion-history-strip"
                         aria-label={`Infusion ${selectedInfusion.infusionNumber} - ${formatZenSeconds(selectedInfusion.duration)}`}
-                        style={{
-                            marginTop: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '10px',
-                            color: ZEN_PALETTE.muted,
-                            fontSize: '0.98rem',
-                            touchAction: 'pan-y',
-                            userSelect: 'none',
-                        }}
+                        className={zenInfusionHistoryClass}
                     >
                         {renderInfusionStripDots('previous', previousInfusionCount)}
                         <span data-testid="infusion-history-label">
@@ -604,42 +564,37 @@ const BrewingZen: React.FC = () => {
             </section>
 
             {(!hasTeaName || !hasBrewingVesselName) && (
-                <section style={zenPanelStyle}>
-                    <div style={{ display: 'grid', gap: '12px' }}>
+                <section className={zenPanelClass}>
+                    <div className="grid gap-3">
                         {!hasTeaName && renderFieldButton('Tea name', 'no tea selected', 'teaName')}
                         {!hasBrewingVesselName && renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                     </div>
                 </section>
             )}
 
-            <section style={zenActionRowStyle}>
-                <IonButton
+            <section className={zenActionRowClass}>
+                <AppButton
                     expand="block"
-                    shape="round"
                     onClick={() => handleEndSession()}
-                    style={zenDangerButtonStyle}
+                    variant="danger"
                 >
                     End Session
-                </IonButton>
+                </AppButton>
                 {(brewingPhase === BrewingPhase.INFUSION || brewingPhase === BrewingPhase.INFUSION_VESSEL_LIFTED) && (
-                    <IonButton
+                    <AppButton
                         expand="block"
-                        shape="round"
                         onClick={() => brewingSessionService.manuallyStopInfusion()}
-                        style={zenPrimaryButtonStyle}
                     >
                         End Infusion
-                    </IonButton>
+                    </AppButton>
                 )}
                 {(brewingPhase === BrewingPhase.READY || brewingPhase === BrewingPhase.REST) && (
-                    <IonButton
+                    <AppButton
                         expand="block"
-                        shape="round"
                         onClick={() => brewingSessionService.manuallyStartInfusion()}
-                        style={zenPrimaryButtonStyle}
                     >
                         Start Infusion
-                    </IonButton>
+                    </AppButton>
                 )}
             </section>
         </div>
@@ -654,24 +609,22 @@ const BrewingZen: React.FC = () => {
             brewingVesselActionDisabled={!hasBrewingVesselWeights}
             onInfusionPress={openSavedInfusionNoteEditor}
             footer={(
-                <IonButton
+                <AppButton
                     expand="block"
-                    shape="round"
                     onClick={() => startBrewingSession()}
-                    style={zenPrimaryButtonStyle}
                 >
                     Start New Session
-                </IonButton>
+                </AppButton>
             )}
         />
     );
 
     const renderIdleView = () => (
-        <div style={zenStackStyle}>
+        <div className={zenStackClass}>
             <button
                 type="button"
                 onClick={() => startBrewingSession()}
-                style={zenHeroButtonStyle}
+                className={zenHeroButtonClass}
             >
                 START SESSION
             </button>
@@ -702,14 +655,14 @@ const BrewingZen: React.FC = () => {
 
     return (
         <IonPage>
-            <IonHeader className="ion-no-border">
+            <IonHeader className="[--border-width:0]">
                 <IonToolbar>
                     <IonTitle>Zen</IonTitle>
                     <DesignSwitcher />
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>
-                <div style={zenContainerStyle}>
+                <div className={zenPageShellClass}>
                     {renderPhaseContent()}
                 </div>
 
@@ -732,130 +685,66 @@ const BrewingZen: React.FC = () => {
                 />
 
                 {alertState && alertState.field !== 'teaName' && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            background: 'rgba(20, 28, 22, 0.24)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '20px',
-                            zIndex: 1000,
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 'min(420px, 100%)',
-                                borderRadius: '24px',
-                                background: '#fffdf8',
-                                border: `1px solid ${ZEN_PALETTE.border}`,
-                                boxShadow: '0 18px 36px rgba(40, 52, 40, 0.18)',
-                                padding: '22px',
-                            }}
-                        >
-                            <h3 style={{ margin: '0 0 14px', fontSize: '1.1rem', fontWeight: 500 }}>{alertState.header}</h3>
-                            <input
-                                autoFocus
-                                type={alertState.inputType}
-                                value={draftValue}
-                                onChange={(event) => setDraftValue(event.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px 16px',
-                                    borderRadius: '16px',
-                                    border: `1px solid ${ZEN_PALETTE.border}`,
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    marginBottom: '16px',
-                                }}
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                                <IonButton
-                                    shape="round"
-                                    onClick={closeEditor}
-                                    style={{ '--background': '#ece8df', '--color': '#000000' }}
-                                >
+                    <ModalFrame
+                        isOpen={true}
+                        title={alertState.header}
+                        actions={(
+                            <>
+                                <AppButton variant="soft" onClick={closeEditor}>
                                     Cancel
-                                </IonButton>
-                                <IonButton
-                                    shape="round"
-                                    onClick={handleAlertSave}
-                                    style={zenPrimaryButtonStyle}
-                                >
+                                </AppButton>
+                                <AppButton onClick={handleAlertSave}>
                                     Save
-                                </IonButton>
-                            </div>
-                        </div>
-                    </div>
+                                </AppButton>
+                            </>
+                        )}
+                    >
+                        <input
+                            autoFocus
+                            type={alertState.inputType}
+                            value={draftValue}
+                            onChange={(event) => setDraftValue(event.target.value)}
+                            className={`${zenInputClass} mb-4`}
+                        />
+                    </ModalFrame>
                 )}
                 {isTemperatureEditorOpen && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            background: 'rgba(20, 28, 22, 0.24)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '20px',
-                            zIndex: 1000,
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 'min(420px, 100%)',
-                                borderRadius: '24px',
-                                background: '#fffdf8',
-                                border: `1px solid ${ZEN_PALETTE.border}`,
-                                boxShadow: '0 18px 36px rgba(40, 52, 40, 0.18)',
-                                padding: '22px',
-                            }}
-                        >
-                            <h3 style={{ margin: '0 0 14px', fontSize: '1.1rem', fontWeight: 500 }}>Infusion Temperature</h3>
-                            <input
-                                autoFocus
-                                type="number"
-                                value={temperatureDraft}
-                                onChange={(event) => {
-                                    setTemperatureDraft(event.target.value);
-                                    if (temperatureError) {
-                                        setTemperatureError('');
-                                    }
-                                }}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px 16px',
-                                    borderRadius: '16px',
-                                    border: `1px solid ${temperatureError ? '#c14a3f' : ZEN_PALETTE.border}`,
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    marginBottom: '10px',
-                                }}
-                            />
-                            {temperatureError && (
-                                <p style={{ margin: '0 0 16px', color: '#c14a3f', fontSize: '0.92rem' }}>
-                                    {temperatureError}
-                                </p>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                                <IonButton
-                                    shape="round"
-                                    onClick={closeTemperatureEditor}
-                                    style={{ '--background': '#ece8df', '--color': '#000000' }}
-                                >
+                    <ModalFrame
+                        isOpen={true}
+                        title="Infusion Temperature"
+                        overlayClassName={zenModalOverlayClass}
+                        actions={(
+                            <>
+                                <AppButton variant="soft" onClick={closeTemperatureEditor}>
                                     Cancel
-                                </IonButton>
-                                <IonButton
-                                    shape="round"
-                                    onClick={handleTemperatureSave}
-                                    style={zenPrimaryButtonStyle}
-                                >
+                                </AppButton>
+                                <AppButton onClick={handleTemperatureSave}>
                                     Save
-                                </IonButton>
-                            </div>
-                        </div>
-                    </div>
+                                </AppButton>
+                            </>
+                        )}
+                    >
+                        <input
+                            autoFocus
+                            type="number"
+                            value={temperatureDraft}
+                            onChange={(event) => {
+                                setTemperatureDraft(event.target.value);
+                                if (temperatureError) {
+                                    setTemperatureError('');
+                                }
+                            }}
+                            className={cn(
+                                zenInputClass,
+                                temperatureError ? 'mb-[10px] border-zen-danger' : 'mb-[10px]',
+                            )}
+                        />
+                        {temperatureError && (
+                            <p className="mb-4 text-[0.92rem] text-zen-danger">
+                                {temperatureError}
+                            </p>
+                        )}
+                    </ModalFrame>
                 )}
                 {recordingAlert}
             </IonContent>

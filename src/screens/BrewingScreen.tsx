@@ -52,37 +52,25 @@ const BrewingScreen: React.FC = () => {
           </IonToolbar>
         </IonHeader>
 
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '80%'
-        }}>
+        <div className="flex h-[80%] flex-col items-center justify-center">
           <h2>Current Weight</h2>
-          <div style={{ fontSize: '4rem', fontWeight: 'bold', margin: '20px 0' }}>
+          <div className="my-5 text-[4rem] font-bold">
             {currentWeight.toFixed(1)} g
           </div>
 
-          <div style={{
-            marginTop: '20px',
-            padding: '10px 20px',
-            borderRadius: '20px',
-            backgroundColor: connectionStatus === 'connected' ? '#e6f7e6' : '#fff0f0',
-            color: connectionStatus === 'connected' ? 'green' : 'red'
-          }}>
+          <div className={`mt-5 rounded-[20px] px-5 py-2.5 ${connectionStatus === 'connected' ? 'bg-[#e6f7e6] text-green-700' : 'bg-[#fff0f0] text-red-600'}`}>
             Status: {connectionStatus}
           </div>
 
           {connectionStatus !== 'connected' && (
-            <IonButton routerLink="/tabs/settings" fill="outline" style={{ marginTop: '30px' }}>
+            <IonButton routerLink="/tabs/settings" fill="outline" className="mt-[30px]">
               Connect Scale
             </IonButton>
           )}
         </div>
 
         {weightLoggerEnabled && (
-          <div style={{ bottom: '20px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <div className="flex w-full justify-center">
             <IonButton
               color={isRecording ? 'danger' : 'medium'}
               onClick={handleToggleRecording}

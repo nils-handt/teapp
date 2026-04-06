@@ -5,13 +5,24 @@ import {
     formatZenSeconds,
     formatZenTemperature,
     formatZenWeight,
-    zenActionRowStyle,
-    zenMetricGridCardStyle,
-    zenPanelStyle,
-    zenSecondaryPanelStyle,
-    zenStackStyle,
-    ZEN_PALETTE,
 } from '../screens/brewing/zenBrewingShared';
+import {
+    cn,
+    zenActionRowClass,
+    zenFieldBaseClass,
+    zenFieldLabelClass,
+    zenFieldStateClassMap,
+    zenFieldToneClassMap,
+    zenMetricCardClass,
+    zenPanelClass,
+    zenPanelStrongClass,
+    zenStackClass,
+    zenSummaryListClass,
+    zenSummaryListItemClass,
+    zenSummarySectionHeadingClass,
+    zenSummarySectionTitleClass,
+    zenSummaryStatLabelClass,
+} from '../styles/zen';
 
 type SummaryFieldProps = {
     label: string;
@@ -36,26 +47,19 @@ type SessionSummaryViewProps = {
 const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, onClick, disabled, highlighted }) => {
     const content = (
         <>
-            <span style={{ color: ZEN_PALETTE.muted, letterSpacing: '0.03em' }}>{label}</span>
+            <span className={zenFieldLabelClass}>{label}</span>
             <span>{value}</span>
         </>
     );
 
-    const baseStyle: React.CSSProperties = {
-        width: '100%',
-        padding: '16px 18px',
-        borderRadius: '18px',
-        border: `1px solid ${ZEN_PALETTE.border}`,
-        background: highlighted ? ZEN_PALETTE.accentSoft : 'rgba(255, 255, 255, 0.52)',
-        color: ZEN_PALETTE.text,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '1rem',
-    };
+    const className = cn(
+        zenFieldBaseClass,
+        highlighted ? zenFieldToneClassMap.highlighted : zenFieldToneClassMap.default,
+        disabled ? zenFieldStateClassMap.disabled : zenFieldStateClassMap.enabled,
+    );
 
     if (!onClick) {
-        return <div style={baseStyle}>{content}</div>;
+        return <div className={cn(className, 'cursor-default')}>{content}</div>;
     }
 
     return (
@@ -63,11 +67,7 @@ const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, onClick, disa
             type="button"
             onClick={onClick}
             disabled={disabled}
-            style={{
-                ...baseStyle,
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.6 : 1,
-            }}
+            className={className}
         >
             {content}
         </button>
@@ -102,21 +102,21 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     ];
 
     return (
-        <div style={zenStackStyle}>
-            <section style={zenSecondaryPanelStyle}>
-                <p style={{ margin: 0, color: ZEN_PALETTE.muted, textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: '0.76rem' }}>
+        <div className={zenStackClass}>
+            <section className={zenPanelStrongClass}>
+                <p className="m-0 text-[0.76rem] uppercase tracking-[0.16em] text-zen-muted">
                     {title}
                 </p>
-                <h2 style={{ margin: '10px 0 8px', fontSize: '1.9rem', fontWeight: 400 }}>
+                <h2 className="mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text">
                     {session.teaName?.trim() || 'no tea selected'}
                 </h2>
             </section>
 
-            <section style={zenPanelStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>Setup</h3>
+            <section className={zenPanelClass}>
+                <div className={zenSummarySectionHeadingClass}>
+                    <h3 className={zenSummarySectionTitleClass}>Setup</h3>
                 </div>
-                <div style={{ marginBottom: '12px' }}>
+                <div className="mb-3">
                     <SummaryField
                         label="Tea name"
                         value={session.teaName?.trim() || 'no tea selected'}
@@ -124,7 +124,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                         highlighted={Boolean(teaNameAction) && !hasTeaName}
                     />
                 </div>
-                <div style={{ marginBottom: '12px' }}>
+                <div className="mb-3">
                     <SummaryField
                         label="Vessel name"
                         value={brewingVesselLabel}
@@ -133,55 +133,45 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                         highlighted={Boolean(brewingVesselAction) && !hasBrewingVesselName && hasBrewingVesselWeights}
                     />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                <div className="grid grid-cols-2 gap-3">
                     {setupItems.map((item) => (
-                        <div key={item.label} style={zenMetricGridCardStyle}>
-                            <div style={{ color: ZEN_PALETTE.muted, fontSize: '0.82rem', marginBottom: '6px' }}>{item.label}</div>
+                        <div key={item.label} className={zenMetricCardClass}>
+                            <div className={zenSummaryStatLabelClass}>{item.label}</div>
                             <div>{item.value}</div>
                         </div>
                     ))}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     {timingItems.map((item) => (
-                        <div key={item.label} style={zenMetricGridCardStyle}>
-                            <div style={{ color: ZEN_PALETTE.muted, fontSize: '0.82rem', marginBottom: '6px' }}>{item.label}</div>
+                        <div key={item.label} className={zenMetricCardClass}>
+                            <div className={zenSummaryStatLabelClass}>{item.label}</div>
                             <div>{item.value}</div>
                         </div>
                     ))}
                 </div>
             </section>
 
-            <section style={zenPanelStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>Infusions</h3>
-                    <span style={{ color: ZEN_PALETTE.muted, fontSize: '0.9rem' }}>{session.infusions?.length ?? 0} total</span>
+            <section className={zenPanelClass}>
+                <div className={zenSummarySectionHeadingClass}>
+                    <h3 className={zenSummarySectionTitleClass}>Infusions</h3>
+                    <span className="text-[0.9rem] text-zen-muted">{session.infusions?.length ?? 0} total</span>
                 </div>
 
                 {(session.infusions?.length ?? 0) > 0 ? (
-                    <div style={{ display: 'grid', gap: '10px' }}>
+                    <div className={zenSummaryListClass}>
                         {session.infusions.map((infusion) => (
                             <button
                                 key={infusion.infusionId}
                                 type="button"
                                 onClick={() => onInfusionPress?.(infusion.infusionId, infusion.note ?? '')}
                                 disabled={!onInfusionPress}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px 16px',
-                                    borderRadius: '18px',
-                                    border: `1px solid ${ZEN_PALETTE.border}`,
-                                    background: 'rgba(255,255,255,0.58)',
-                                    textAlign: 'left',
-                                    color: ZEN_PALETTE.text,
-                                    cursor: onInfusionPress ? 'pointer' : 'default',
-                                    opacity: 1,
-                                }}
+                                className={cn(zenSummaryListItemClass, onInfusionPress ? 'cursor-pointer' : 'cursor-default')}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <div className="mb-2 flex justify-between gap-3">
                                     <strong>Infusion {infusion.infusionNumber}</strong>
-                                    <span style={{ color: ZEN_PALETTE.muted }}>{formatZenSeconds(infusion.duration)}</span>
+                                    <span className="text-zen-muted">{formatZenSeconds(infusion.duration)}</span>
                                 </div>
-                                <div style={{ color: ZEN_PALETTE.muted, display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.92rem' }}>
+                                <div className="flex flex-wrap gap-4 text-[0.92rem] text-zen-muted">
                                     <span>Water {formatZenWeight(infusion.waterWeight)}</span>
                                     <span>Wet leaves {formatZenWeight(infusion.wetTeaLeavesWeight)}</span>
                                     <span>Rest {formatZenSeconds(infusion.restDuration)}</span>
@@ -190,7 +180,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                                     )}
                                 </div>
                                 {infusion.note?.trim() && (
-                                    <div style={{ marginTop: '10px', color: ZEN_PALETTE.text, fontSize: '0.95rem' }}>
+                                    <div className="mt-[10px] text-[0.95rem] text-zen-text">
                                         {infusion.note}
                                     </div>
                                 )}
@@ -198,22 +188,22 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                         ))}
                     </div>
                 ) : (
-                    <p style={{ margin: 0, color: ZEN_PALETTE.muted }}>No infusions were recorded for this session.</p>
+                    <p className="m-0 text-zen-muted">No infusions were recorded for this session.</p>
                 )}
             </section>
 
             {showNotes && (
-                <section style={zenPanelStyle}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>Notes</h3>
+                <section className={zenPanelClass}>
+                    <div className={zenSummarySectionHeadingClass}>
+                        <h3 className={zenSummarySectionTitleClass}>Notes</h3>
                     </div>
-                    <p style={{ margin: 0, color: session.notes?.trim() ? ZEN_PALETTE.text : ZEN_PALETTE.muted }}>
+                    <p className={cn('m-0', session.notes?.trim() ? 'text-zen-text' : 'text-zen-muted')}>
                         {session.notes?.trim() || 'No notes'}
                     </p>
                 </section>
             )}
 
-            {footer ? <section style={zenActionRowStyle}>{footer}</section> : null}
+            {footer ? <section className={zenActionRowClass}>{footer}</section> : null}
         </div>
     );
 };

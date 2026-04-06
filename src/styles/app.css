@@ -1,0 +1,164 @@
+@layer theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-zen-text: #243126;
+  --color-zen-muted: #68756a;
+  --color-zen-border: rgba(93, 113, 90, 0.16);
+  --color-zen-accent-soft: rgba(95, 124, 97, 0.12);
+  --color-zen-panel: rgba(255, 252, 246, 0.86);
+  --color-zen-panel-strong: rgba(246, 250, 242, 0.95);
+  --color-zen-suggestion: rgba(255, 255, 255, 0.72);
+  --color-zen-overlay: rgba(20, 28, 22, 0.24);
+  --color-zen-overlay-strong: rgba(17, 24, 21, 0.55);
+  --color-zen-rest: #9aa399;
+  --color-zen-button-soft: #ece8df;
+  --color-zen-danger: #c14a3f;
+  --color-zen-danger-soft: #fad3ce;
+  --color-lab-screen: #333333;
+  --color-lab-text: #00ff00;
+  --shadow-zen-panel: 0 16px 36px rgba(69, 83, 66, 0.08);
+  --shadow-zen-modal: 0 18px 36px rgba(40, 52, 40, 0.18);
+  --shadow-zen-tutorial: 0 24px 70px rgba(20, 28, 22, 0.22);
+  --font-lab: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+:root {
+  --zen-background: linear-gradient(180deg, #f7f3eb 0%, #eef3ea 100%);
+  --zen-danger-gradient: linear-gradient(180deg, #fad3ce 0%, #f4c4bc 100%);
+  --zen-tutorial-background: linear-gradient(180deg, #fffdf7 0%, #f3efe2 100%);
+  --zen-flow-background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+}
+
+ion-button[data-zen-variant="primary"] {
+  --background: var(--zen-background);
+  --color: #000000;
+}
+
+ion-button[data-zen-variant="danger"] {
+  --background: var(--zen-danger-gradient);
+  --color: #000000;
+}
+
+ion-button[data-zen-variant="soft"] {
+  --background: var(--color-zen-button-soft);
+  --color: #000000;
+}
+
+.zen-hero-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-zen-border);
+  border-radius: 28px;
+  padding: 40px 24px;
+  background-color: var(--color-zen-panel-strong);
+  background-image: var(--zen-background);
+  box-shadow: 0 16px 36px rgba(69, 83, 66, 0.08);
+  backdrop-filter: blur(10px);
+  color: #000000;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.zen-field-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 18px;
+  padding: 16px 18px;
+  color: var(--color-zen-text);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.zen-infusion-control-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  min-height: 44px;
+  flex: 1 1 0%;
+  align-items: center;
+  justify-content: center;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 14px;
+  padding: 0 12px;
+  font-size: 1rem;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.zen-summary-list-item {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-zen-border);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background-color: rgba(255, 255, 255, 0.6);
+  color: var(--color-zen-text);
+  text-align: left;
+}
+
+.zen-tutorial-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0.625rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.zen-tutorial-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.zen-tutorial-button--secondary {
+  border-color: rgba(58, 75, 59, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: #243127;
+}
+
+.zen-tutorial-button--primary {
+  border-color: #314534;
+  background: #314534;
+  color: #f8f5ec;
+}
+
+@media (hover: hover) {
+  .zen-tutorial-button--secondary:hover {
+    background: #ffffff;
+  }
+
+  .zen-tutorial-button--primary:hover {
+    background: #29392b;
+  }
+}

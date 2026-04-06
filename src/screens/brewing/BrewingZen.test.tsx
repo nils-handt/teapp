@@ -200,7 +200,7 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
-        expect(screen.getByRole('button', { name: /connect to scale/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /connect to scale/i }).className).toContain('zen-hero-button');
         expect(screen.queryByText('End Session')).toBeNull();
     });
 
@@ -208,7 +208,7 @@ describe('BrewingZen', () => {
         render(<BrewingZen />);
 
         expect(screen.getByText('63.5 g')).toBeDefined();
-        expect(screen.getByRole('button', { name: /^Vessel95\.2 g$/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /^Vessel95\.2 g$/i }).className).toContain('zen-field-button');
         expect(screen.getByRole('button', { name: /Lid/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Tray/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Tea6.4 g/i })).toBeDefined();
@@ -276,7 +276,7 @@ describe('BrewingZen', () => {
         render(<BrewingZen />);
 
         const timer = screen.getByText('1:32');
-        expect(timer.getAttribute('style')).toContain('color: rgb(154, 163, 153)');
+        expect(timer.getAttribute('data-tone')).toBe('resting');
     });
 
     it('shows the latest completed infusion in active phases and removes duplicate timer labels', () => {

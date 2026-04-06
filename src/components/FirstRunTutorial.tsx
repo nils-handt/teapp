@@ -1,5 +1,19 @@
 import { createGesture } from '@ionic/react';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  cn,
+  zenTutorialActionsClass,
+  zenTutorialFooterClass,
+  zenTutorialHeaderClass,
+  zenTutorialIndicatorRowClass,
+  zenTutorialNavClass,
+  zenTutorialOverlayClass,
+  zenTutorialPageBodyClass,
+  zenTutorialPanelClass,
+  zenTutorialPrimaryButtonClass,
+  zenTutorialSecondaryButtonClass,
+  zenTutorialViewportClass,
+} from '../styles/zen';
 
 type TutorialPage = {
   eyebrow: string;
@@ -59,65 +73,6 @@ const TUTORIAL_PAGES: TutorialPage[] = [
   },
 ];
 
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 5000,
-  background: 'rgba(17, 24, 21, 0.55)',
-  backdropFilter: 'blur(8px)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '16px',
-};
-
-const panelStyle: CSSProperties = {
-  width: 'min(560px, 100%)',
-  maxHeight: 'min(92vh, 760px)',
-  background: 'linear-gradient(180deg, #fffdf7 0%, #f3efe2 100%)',
-  borderRadius: '28px',
-  border: '1px solid rgba(74, 88, 72, 0.18)',
-  boxShadow: '0 24px 70px rgba(20, 28, 22, 0.22)',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
-
-const headerStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '12px',
-  padding: '20px 20px 12px',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  border: '1px solid rgba(58, 75, 59, 0.18)',
-  background: 'rgba(255, 255, 255, 0.72)',
-  color: '#243127',
-  borderRadius: '999px',
-  padding: '10px 16px',
-  fontSize: '0.95rem',
-  cursor: 'pointer',
-};
-
-const primaryButtonStyle: CSSProperties = {
-  ...secondaryButtonStyle,
-  background: '#314534',
-  color: '#f8f5ec',
-  borderColor: '#314534',
-};
-
-const disabledButtonStyle: CSSProperties = {
-  opacity: 0.45,
-  cursor: 'not-allowed',
-};
-
-const viewportStyle: CSSProperties = {
-  overflow: 'hidden',
-  padding: '0 20px',
-};
-
 const trackStyle = (pageIndex: number, pageWidth: number): CSSProperties => ({
   display: 'flex',
   gap: `${PAGE_GAP_PX}px`,
@@ -132,32 +87,7 @@ const pageStyle = (pageWidth: number): CSSProperties => ({
   padding: '8px 0 8px',
 });
 
-const pageBodyStyle: CSSProperties = {
-  maxHeight: 'min(52vh, 440px)',
-  overflowY: 'auto',
-  paddingRight: '6px',
-};
-
-const footerStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '16px',
-  padding: '16px 20px 20px',
-};
-
-const navStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '12px',
-};
-
-const actionsStyle: CSSProperties = {
-  display: 'flex',
-  gap: '10px',
-  justifyContent: 'flex-end',
-};
-
+// eslint-disable-next-line react/prop-types
 const FirstRunTutorial: React.FC<FirstRunTutorialProps> = ({ isOpen, onDismiss }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageWidth, setPageWidth] = useState(320);
@@ -260,64 +190,62 @@ const FirstRunTutorial: React.FC<FirstRunTutorialProps> = ({ isOpen, onDismiss }
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="first-run-tutorial-title" style={overlayStyle}>
-      <div style={panelStyle}>
-        <div style={headerStyle}>
+    <div role="dialog" aria-modal="true" aria-labelledby="first-run-tutorial-title" className={zenTutorialOverlayClass}>
+      <div className={zenTutorialPanelClass}>
+        <div className={zenTutorialHeaderClass}>
           <div>
-            <div style={{ fontSize: '0.8rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#607162' }}>
+            <div className="text-[0.8rem] uppercase tracking-[0.14em] text-[#607162]">
               First brew walkthrough
             </div>
           </div>
-          <button type="button" onClick={onDismiss} style={secondaryButtonStyle}>
+          <button type="button" onClick={onDismiss} className={zenTutorialSecondaryButtonClass}>
             Skip
           </button>
         </div>
 
-        <div ref={viewportRef} style={viewportStyle}>
+        <div ref={viewportRef} className={zenTutorialViewportClass}>
           <div data-testid="tutorial-track" style={trackStyle(currentPage, pageWidth)}>
             {TUTORIAL_PAGES.map((page, index) => (
               <section
                 key={page.title}
                 aria-hidden={index !== currentPage}
+                data-active={index === currentPage ? 'true' : 'false'}
                 style={{
                   ...pageStyle(pageWidth),
                   opacity: index === currentPage ? 1 : 0.72,
                 }}
               >
-                <div style={pageBodyStyle}>
-                  <div style={{ color: index === currentPage ? '#607162' : '#9aa39a', fontSize: '0.84rem', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                <div className={zenTutorialPageBodyClass}>
+                  <div className={cn(
+                    'text-[0.84rem] uppercase tracking-[0.18em]',
+                    index === currentPage ? 'text-[#607162]' : 'text-[#9aa39a]',
+                  )}>
                     {page.eyebrow}
                   </div>
                   <h2
                     id={index === currentPage ? 'first-run-tutorial-title' : undefined}
-                    style={{
-                      margin: '10px 0 12px',
-                      fontSize: '1.85rem',
-                      lineHeight: 1.1,
-                      color: index === currentPage ? '#223026' : '#96a094',
-                    }}
+                    data-active={index === currentPage ? 'true' : 'false'}
+                    className={cn(
+                      'mt-[10px] mb-3 text-[1.85rem] leading-[1.1]',
+                      index === currentPage ? 'text-[#223026]' : 'text-[#96a094]',
+                    )}
                   >
                     {page.title}
                   </h2>
                   <p
-                    style={{
-                      margin: 0,
-                      color: index === currentPage ? '#314534' : '#8d968b',
-                      lineHeight: 1.6,
-                      fontSize: '1rem',
-                      whiteSpace: 'pre-line',
-                    }}
+                    className={cn(
+                      'm-0 whitespace-pre-line text-base leading-[1.6]',
+                      index === currentPage ? 'text-[#314534]' : 'text-[#8d968b]',
+                    )}
                   >
                     {page.description}
                   </p>
                   {page.bullets && (
                     <ul
-                      style={{
-                        margin: '18px 0 0',
-                        paddingLeft: '20px',
-                        color: index === currentPage ? '#314534' : '#8d968b',
-                        lineHeight: 1.7,
-                      }}
+                      className={cn(
+                        'mt-[18px] mb-0 list-disc pl-5 leading-[1.7]',
+                        index === currentPage ? 'text-[#314534]' : 'text-[#8d968b]',
+                      )}
                     >
                       {page.bullets.map((bullet) => (
                         <li key={bullet}>{bullet}</li>
@@ -330,48 +258,42 @@ const FirstRunTutorial: React.FC<FirstRunTutorialProps> = ({ isOpen, onDismiss }
           </div>
         </div>
 
-        <div style={footerStyle}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+        <div className={zenTutorialFooterClass}>
+          <div className={zenTutorialIndicatorRowClass}>
             {TUTORIAL_PAGES.map((page, index) => (
               <span
                 key={page.title}
                 aria-label={`Page ${index + 1}`}
-                style={{
-                  width: index === currentPage ? '24px' : '8px',
-                  height: '8px',
-                  borderRadius: '999px',
-                  background: index === currentPage ? '#314534' : 'rgba(49, 69, 52, 0.22)',
-                  transition: 'all 180ms ease',
-                }}
+                className={cn(
+                  'h-2 rounded-full transition-all duration-200',
+                  index === currentPage ? 'w-6 bg-[#314534]' : 'w-2 bg-[rgba(49,69,52,0.22)]',
+                )}
               />
             ))}
           </div>
 
-          <div style={navStyle}>
+          <div className={zenTutorialNavClass}>
             <button
               type="button"
               onClick={() => setCurrentPage((page) => Math.max(page - 1, 0))}
               disabled={isFirstPage}
-              style={{
-                ...secondaryButtonStyle,
-                ...(isFirstPage ? disabledButtonStyle : {}),
-              }}
+              className={zenTutorialSecondaryButtonClass}
             >
               Back
             </button>
 
-            <div style={actionsStyle}>
+            <div className={zenTutorialActionsClass}>
               {!isLastPage && (
                 <button
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.min(page + 1, TUTORIAL_PAGES.length - 1))}
-                  style={primaryButtonStyle}
+                  className={zenTutorialPrimaryButtonClass}
                 >
                   Next
                 </button>
               )}
               {isLastPage && (
-                <button type="button" onClick={onDismiss} style={primaryButtonStyle}>
+                <button type="button" onClick={onDismiss} className={zenTutorialPrimaryButtonClass}>
                   Done
                 </button>
               )}

@@ -36,23 +36,24 @@ const BrewingCard: React.FC = () => {
                     <DesignSwitcher />
                 </IonToolbar>
             </IonHeader>
-            <IonContent className="ion-padding" style={{ '--background': '#f4f5f8' }}>
+            <IonContent className="[--background:#f4f5f8]">
+                <div className="p-4">
 
                 {/* Main Status Card */}
                 <IonCard>
                     <IonCardHeader>
-                        <IonCardTitle style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <IonCardTitle className="flex items-center justify-between gap-3">
                             <span>{brewingPhase}</span>
                             <IonBadge color={brewingPhase === BrewingPhase.INFUSION ? 'primary' : 'medium'}>
                                 {activeSession?.teaName || 'Ready'}
                             </IonBadge>
                         </IonCardTitle>
                     </IonCardHeader>
-                    <IonCardContent style={{ textAlign: 'center', padding: '30px' }}>
-                        <div style={{ fontSize: '4rem', fontWeight: 'bold', color: '#333' }}>
+                    <IonCardContent className="p-[30px] text-center">
+                        <div className="text-[4rem] font-bold text-[#333]">
                             {formatTime(timerValue)}
                         </div>
-                        <div style={{ fontSize: '1.2rem', color: '#666', marginTop: '10px' }}>
+                        <div className="mt-2.5 text-[1.2rem] text-[#666]">
                             Weight: {currentWeight.toFixed(1)} g
                         </div>
                     </IonCardContent>
@@ -87,9 +88,9 @@ const BrewingCard: React.FC = () => {
                 <IonGrid>
                     <IonRow>
                         <IonCol size="6">
-                            <IonCard style={{ margin: 0, height: '100%' }}>
+                            <IonCard className="m-0 h-full">
                                 <IonCardContent>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div className="flex items-center gap-2.5">
                                         <IonIcon icon={leafOutline} color="success" />
                                         <span>Tea</span>
                                     </div>
@@ -98,9 +99,9 @@ const BrewingCard: React.FC = () => {
                             </IonCard>
                         </IonCol>
                         <IonCol size="6">
-                            <IonCard style={{ margin: 0, height: '100%' }}>
+                            <IonCard className="m-0 h-full">
                                 <IonCardContent>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div className="flex items-center gap-2.5">
                                         <IonIcon icon={waterOutline} color="tertiary" />
                                         <span>Water</span>
                                     </div>
@@ -109,17 +110,17 @@ const BrewingCard: React.FC = () => {
                             </IonCard>
                         </IonCol>
                     </IonRow>
-                    <IonRow style={{ marginTop: '10px' }}>
+                    <IonRow className="mt-2.5">
                         <IonCol size="12">
-                            <IonCard style={{ margin: 0 }}>
+                            <IonCard className="m-0">
                                 <IonCardContent>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                    <div className="mb-2.5 flex items-center gap-2.5">
                                         <IonIcon icon={timeOutline} />
                                         <span>Recent Infusions</span>
                                     </div>
-                                    <IonGrid className="ion-no-padding">
+                                    <IonGrid className="p-0">
                                         {activeSession?.infusions?.slice().reverse().slice(0, 3).map((inf) => (
-                                            <IonRow key={inf.infusionNumber} style={{ borderBottom: '1px solid #eee', padding: '5px 0' }}>
+                                            <IonRow key={inf.infusionNumber} className="border-b border-[#eee] py-[5px]">
                                                 <IonCol>#{inf.infusionNumber}</IonCol>
                                                 <IonCol>{inf.duration}s</IonCol>
                                                 <IonCol>{inf.waterWeight}g</IonCol>
@@ -132,7 +133,8 @@ const BrewingCard: React.FC = () => {
                     </IonRow>
                 </IonGrid>
 
-                <div style={{ height: '20px' }}></div>
+                <div className="h-5" />
+                </div>
                 {recordingAlert}
             </IonContent>
         </IonPage>

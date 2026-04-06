@@ -37,12 +37,13 @@ const BrewingLab: React.FC = () => {
         <IonPage>
             <IonHeader>
                 <IonToolbar color="dark">
-                    <IonTitle style={{ fontFamily: 'monospace' }}>LAB::MODE</IonTitle>
+                    <IonTitle className="font-lab">LAB::MODE</IonTitle>
                     <DesignSwitcher />
                 </IonToolbar>
             </IonHeader>
-            <IonContent className="ion-padding" style={{ fontFamily: 'monospace' }}>
-                <div style={{ padding: '10px', background: '#333', color: '#0f0', marginBottom: '20px', borderRadius: '4px' }}>
+            <IonContent>
+                <div className="p-5 font-lab">
+                <div className="mb-5 rounded bg-lab-screen p-2.5 text-lab-text">
                     STATUS: {brewingPhase}
                 </div>
 
@@ -50,7 +51,7 @@ const BrewingLab: React.FC = () => {
                     <IonRow>
                         {metrics.map((m) => (
                             <IonCol size="6" key={m.label}>
-                                <IonCard style={{ margin: '5px' }}>
+                                <IonCard className="m-[5px]">
                                     <IonCardHeader>
                                         <IonCardSubtitle>{m.label}</IonCardSubtitle>
                                         <IonCardTitle>{m.value}</IonCardTitle>
@@ -61,9 +62,9 @@ const BrewingLab: React.FC = () => {
                     </IonRow>
                 </IonGrid>
 
-                <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '10px' }}>
+                <div className="mt-5 border border-[#ccc] p-2.5">
                     <h4>Session Logs</h4>
-                    <pre style={{ fontSize: '0.8rem', overflowX: 'auto' }}>
+                    <pre className="overflow-x-auto text-[0.8rem]">
                         {JSON.stringify(activeSession?.infusions?.map(i => {
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
                             const { session, ...rest } = i as any;
@@ -72,7 +73,7 @@ const BrewingLab: React.FC = () => {
                     </pre>
                 </div>
 
-                <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+                <div className="mt-5 flex gap-2.5">
                     <IonButton expand="block" color="dark" onClick={() => startBrewingSession('Lab Test')}>
                         INIT SEQ
                     </IonButton>
@@ -84,6 +85,7 @@ const BrewingLab: React.FC = () => {
                             CONFIRM SETUP
                         </IonButton>
                     )}
+                </div>
                 </div>
                 {recordingAlert}
             </IonContent>

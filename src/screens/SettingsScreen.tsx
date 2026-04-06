@@ -231,7 +231,7 @@ const SettingsScreen: React.FC = () => {
             <IonLabel>
               <h2>Status</h2>
               <p>{connectionStatus}</p>
-              {isMockMode && <p style={{ color: 'orange' }}>Mock Mode Active</p>}
+              {isMockMode && <p className="text-orange-500">Mock Mode Active</p>}
             </IonLabel>
             {connectionStatus === 'connected' && (
               <IonButton slot="end" color="danger" onClick={() => bluetoothScaleService.disconnect()}>
@@ -303,16 +303,16 @@ const SettingsScreen: React.FC = () => {
                 <IonCard>
                   <IonCardContent>
                     <IonLabel><h2>Mock Scale Controls</h2></IonLabel>
-                    <div style={{ marginTop: '10px' }}>
+                    <div className="mt-2.5">
                       <p>Load Recording (.json)</p>
                       <input type="file" accept=".json" onChange={handleFileUpload} />
                     </div>
-                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+                    <div className="mt-[15px] flex gap-2.5">
                       <IonButton size="small" onClick={() => bluetoothScaleService.mock.startReplay()}>Play</IonButton>
                       <IonButton size="small" color="warning" onClick={() => bluetoothScaleService.mock.pauseReplay()}>Pause</IonButton>
                       <IonButton size="small" color="medium" onClick={() => bluetoothScaleService.mock.stopReplay()}>Stop</IonButton>
                     </div>
-                    <div style={{ marginTop: '15px' }}>
+                    <div className="mt-[15px]">
                       <IonLabel>Playback Speed</IonLabel>
                       <IonSelect
                         value={playbackSpeed}
@@ -359,7 +359,7 @@ const SettingsScreen: React.FC = () => {
               type="file"
               accept=".json"
               id="restore-file-input"
-              style={{ display: 'none' }}
+              className="hidden"
               onChange={handleRestoreFileUpload}
             />
           </IonItem>

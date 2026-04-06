@@ -8,6 +8,7 @@ import { checkmarkCircle } from 'ionicons/icons';
 import { useShallow } from 'zustand/react/shallow';
 import { useBrewingStore } from '../../stores/useBrewingStore';
 import { useScaleStore } from '../../stores/useScaleStore';
+import { cn } from '../../styles/zen';
 
 const BrewingFocus: React.FC = () => {
     const { brewingPhase, timerValue } = useBrewingStore(useShallow((state) => ({
@@ -45,71 +46,54 @@ const BrewingFocus: React.FC = () => {
                     <DesignSwitcher />
                 </IonToolbar>
             </IonHeader>
-            <IonContent className="ion-padding" ref={contentRef} color="light">
-                <div style={{ paddingBottom: '100px' }}>
+            <IonContent ref={contentRef} color="light">
+                <div className="px-4 pt-4 pb-[100px]">
                     {steps.map((step, index) => {
                         const isActive = step.id === brewingPhase;
                         const isPast = steps.findIndex(s => s.id === brewingPhase) > index;
 
                         return (
-                            <div key={step.id} style={{
-                                display: 'flex',
-                                marginBottom: '20px',
-                                opacity: isActive ? 1 : (isPast ? 0.5 : 0.3),
-                                transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                                transition: 'opacity 0.3s ease, transform 0.3s ease'
-                            }}>
-                                <div style={{
-                                    width: '40px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    marginRight: '15px'
-                                }}>
-                                    <div style={{
-                                        width: '30px',
-                                        height: '30px',
-                                        borderRadius: '50%',
-                                        background: isActive ? '#007aff' : (isPast ? '#4cd964' : '#ccc'),
-                                        color: '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 'bold'
-                                    }}>
+                            <div
+                                key={step.id}
+                                className={cn(
+                                    'mb-5 flex transition duration-300',
+                                    isActive ? 'scale-105 opacity-100' : isPast ? 'opacity-50' : 'opacity-30',
+                                )}
+                            >
+                                <div className="mr-[15px] flex w-10 flex-col items-center">
+                                    <div
+                                        className={cn(
+                                            'flex h-[30px] w-[30px] items-center justify-center rounded-full font-bold text-white',
+                                            isActive ? 'bg-[#007aff]' : isPast ? 'bg-[#4cd964]' : 'bg-[#ccc]',
+                                        )}
+                                    >
                                         {isPast ? <IonIcon icon={checkmarkCircle} /> : (index + 1)}
                                     </div>
                                     {index < steps.length - 1 && (
-                                        <div style={{
-                                            width: '2px',
-                                            flex: 1,
-                                            background: '#ddd',
-                                            marginTop: '5px'
-                                        }} />
+                                        <div className="mt-[5px] w-0.5 flex-1 bg-[#ddd]" />
                                     )}
                                 </div>
 
-                                <div style={{
-                                    flex: 1,
-                                    background: isActive ? '#fff' : 'transparent',
-                                    padding: isActive ? '15px' : '5px 0',
-                                    borderRadius: '10px',
-                                    boxShadow: isActive ? '0 4px 10px rgba(0,0,0,0.1)' : 'none'
-                                }}>
-                                    <h3 style={{ margin: 0, color: isActive ? '#000' : '#666', fontWeight: isActive ? 'bold' : 'normal' }}>
+                                <div
+                                    className={cn(
+                                        'flex-1 rounded-[10px]',
+                                        isActive ? 'bg-white p-[15px] shadow-[0_4px_10px_rgba(0,0,0,0.1)]' : 'bg-transparent py-[5px]',
+                                    )}
+                                >
+                                    <h3 className={cn('m-0', isActive ? 'font-bold text-black' : 'font-normal text-[#666]')}>
                                         {step.label}
                                     </h3>
-                                    <p style={{ margin: '5px 0 0', color: '#888', fontSize: '0.9rem' }}>{step.desc}</p>
+                                    <p className="mt-[5px] mb-0 text-[0.9rem] text-[#888]">{step.desc}</p>
 
                                     {isActive && (
-                                        <div style={{ marginTop: '15px' }}>
+                                        <div className="mt-[15px]">
                                             {brewingPhase === BrewingPhase.INFUSION || brewingPhase === BrewingPhase.REST ? (
-                                                <div style={{ fontSize: '2rem', color: '#007aff' }}>
+                                                <div className="text-[2rem] text-[#007aff]">
                                                     {(timerValue / 1000).toFixed(1)}s
                                                 </div>
                                             ) : null}
 
-                                            <div style={{ marginTop: '5px', fontWeight: 'bold' }}>
+                                            <div className="mt-[5px] font-bold">
                                                 Weight: {currentWeight.toFixed(1)}g
                                             </div>
                                         </div>
@@ -121,17 +105,7 @@ const BrewingFocus: React.FC = () => {
                 </div>
             </IonContent>
 
-            <div style={{
-                position: 'fixed',
-                bottom: '0',
-                left: '0',
-                right: '0',
-                background: '#fff',
-                padding: '10px 20px',
-                boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
-                display: 'flex',
-                justifyContent: 'space-around'
-            }}>
+            <div className="fixed right-0 bottom-0 left-0 flex justify-around bg-white px-5 py-2.5 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                 <IonButton fill="clear" onClick={() => startBrewingSession('Focus Tea')}>Start</IonButton>
                 {brewingPhase === BrewingPhase.SETUP && (
                     <IonButton fill="clear" color="warning" onClick={() => brewingSessionService.confirmSetupDone()}>Confirm Setup</IonButton>

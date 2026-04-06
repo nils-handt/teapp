@@ -24,6 +24,7 @@ import { calculateSessionStats } from '../utils/SessionStatistics';
 import { filterSessionsByTeaName, getTeaNameSuggestions } from '../utils/teaNameSearch';
 import { useShallow } from 'zustand/react/shallow';
 import { useHistoryStore } from '../stores/useHistoryStore';
+import SuggestionList from '../components/ui/SuggestionList';
 
 const HistoryScreen: React.FC = () => {
   const { sessionList, loadHistory, deleteSession, knownTeaNames, loadKnownTeaNames } = useHistoryStore(
@@ -118,30 +119,12 @@ const HistoryScreen: React.FC = () => {
 
         <IonList>
           {suggestions.length > 0 && (
-            <div className="ion-padding-horizontal ion-padding-top">
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {suggestions.map((teaName) => (
-                  <button
-                    key={teaName}
-                    type="button"
-                    onClick={() => setSearchText(teaName)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: '14px',
-                      border: '1px solid rgba(93, 113, 90, 0.16)',
-                      background: 'rgba(255, 255, 255, 0.72)',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {teaName}
-                  </button>
-                ))}
-              </div>
+            <div className="px-4 pt-4">
+              <SuggestionList items={suggestions} onSelect={setSearchText} />
             </div>
           )}
           {filteredSessions.length === 0 ? (
-            <div className="ion-padding ion-text-center">
+            <div className="p-5 text-center">
               <IonLabel color="medium">No brewing sessions found.</IonLabel>
             </div>
           ) : (
@@ -152,11 +135,11 @@ const HistoryScreen: React.FC = () => {
                     <h2>{session.teaName}</h2>
                     <p>{formatDate(session.startTime)}</p>
                   </IonLabel>
-                  <div slot="end" className="ion-text-right">
-                    <IonNote color="primary" style={{ display: 'block' }}>
+                  <div slot="end" className="text-right">
+                    <IonNote color="primary" className="block">
                       {session.infusions?.length || 0} Infusions
                     </IonNote>
-                    <IonNote color="medium" style={{ fontSize: '0.8em' }}>
+                    <IonNote color="medium" className="text-[0.8em]">
                       {formatDuration(getSessionDuration(session))}
                     </IonNote>
                   </div>

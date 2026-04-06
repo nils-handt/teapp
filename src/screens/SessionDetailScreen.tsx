@@ -20,6 +20,7 @@ import TeaNameEditorModal from '../components/TeaNameEditorModal';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { useShallow } from 'zustand/react/shallow';
 import { useHistoryStore } from '../stores/useHistoryStore';
+import { zenPageShellClass } from '../styles/zen';
 
 const TOAST_DURATION = 2000;
 
@@ -150,8 +151,8 @@ const SessionDetailScreen: React.FC = () => {
                         <IonTitle>Session Details</IonTitle>
                     </IonToolbar>
                 </IonHeader>
-                <IonContent className="ion-padding">
-                    Loading...
+                <IonContent>
+                    <div className="p-5">Loading...</div>
                 </IonContent>
             </IonPage>
         );
@@ -180,7 +181,7 @@ const SessionDetailScreen: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>
-                <div style={{ minHeight: '100%', padding: '24px 20px 40px', background: '#ffffff' }}>
+                <div className={zenPageShellClass}>
                     <SessionSummaryView
                         session={selectedSession}
                         brewingVesselLabel={brewingVesselLabel}

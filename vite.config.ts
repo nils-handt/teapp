@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -111,7 +112,9 @@ export default defineConfig(({ mode }) => {
   const isTestMode = mode === 'test'
 
   return {
-    plugins: isTestMode ? [sandboxTypeScriptTransform(), copySqliteAssets()] : [react(), copySqliteAssets()],
+    plugins: isTestMode
+      ? [sandboxTypeScriptTransform(), tailwindcss(), copySqliteAssets()]
+      : [react(), tailwindcss(), copySqliteAssets()],
     esbuild: isTestMode ? false : undefined,
     resolve: {
       alias: {

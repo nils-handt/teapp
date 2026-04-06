@@ -31,9 +31,11 @@ describe('FirstRunTutorial', () => {
   it('renders the tutorial content and navigates with buttons', () => {
     render(<FirstRunTutorial isOpen={true} onDismiss={vi.fn()} />);
 
+    expect(screen.getByRole('button', { name: 'Skip' }).className).toContain('zen-tutorial-button--secondary');
+    expect(screen.getByRole('button', { name: 'Next' }).className).toContain('zen-tutorial-button--primary');
     expect(getCurrentTitle()).toBe('Brew tea with scale-based timing and tracking');
     expect(screen.getByText(/First connect a Bluetooth scale in the Brewing tab/)).toBeDefined();
-    expect(screen.getByText('Build your setup on the scale').getAttribute('style')).toContain('color: rgb(150, 160, 148)');
+    expect(screen.getByText('Build your setup on the scale').getAttribute('data-active')).toBe('false');
     expect(screen.getByRole('button', { name: 'Back' }).hasAttribute('disabled')).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
@@ -51,6 +53,15 @@ describe('FirstRunTutorial', () => {
     expect(getCurrentTitle()).toBe('Known limitations');
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Done' })).toBeDefined();
+  });
+
+  it('renders bullet pages with list markers', () => {
+    render(<FirstRunTutorial isOpen={true} onDismiss={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    const list = screen.getByRole('list');
+    expect(list.className).toContain('list-disc');
   });
 
   it('dismisses on Skip and Done', () => {

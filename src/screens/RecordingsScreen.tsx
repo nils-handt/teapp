@@ -85,7 +85,7 @@ const RecordingsScreen: React.FC = () => {
                 <IonList>
                     {savedRecordings.length === 0 ? (
                         <IonItem>
-                            <IonLabel className="ion-text-center p-4">
+                            <IonLabel className="block p-4 text-center">
                                 No recordings found.
                                 <p>Enable Weight Logger in Settings and record a session in Brewing screen.</p>
                             </IonLabel>
