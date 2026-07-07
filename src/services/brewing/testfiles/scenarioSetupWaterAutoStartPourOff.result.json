@@ -1,0 +1,15 @@
+{
+  "teaName": "Scenario Tea",
+  "vesselWeight": 178.8,
+  "lidWeight": 43.3,
+  "dryTeaLeavesWeight": 1.8,
+  "currentWasteWater": 0.5,
+  "status": "completed",
+  "infusions": [
+    {
+      "waterWeight": 121.6,
+      "duration": 64,
+      "wetTeaLeavesWeight": 8.4
+    }
+  ]
+}

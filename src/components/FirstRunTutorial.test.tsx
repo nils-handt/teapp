@@ -41,6 +41,8 @@ describe('FirstRunTutorial', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 
     expect(getCurrentTitle()).toBe('Build your setup on the scale');
+    expect(screen.queryByText('Optionally add a brewing tray')).toBeNull();
+    expect(screen.getByText('Waste water can be added only during the brewing phase')).toBeDefined();
   });
 
   it('shows Done instead of Next on the last page', () => {

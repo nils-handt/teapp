@@ -69,7 +69,6 @@ describe('HistoryScreen', () => {
         session.endTime = '';
         session.vesselWeight = 0;
         session.lidWeight = 0;
-        session.trayWeight = 0;
         session.dryTeaLeavesWeight = 0;
         session.currentWasteWater = 0;
         session.notes = '';

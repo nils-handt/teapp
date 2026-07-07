@@ -57,7 +57,6 @@ describe('SessionDetailScreen', () => {
         session.endTime = '2026-03-14T10:10:00.000Z';
         session.vesselWeight = 95.2;
         session.lidWeight = 14.1;
-        session.trayWeight = 0;
         session.dryTeaLeavesWeight = 6.4;
         session.currentWasteWater = 0;
         session.status = 'completed';
@@ -103,6 +102,11 @@ describe('SessionDetailScreen', () => {
 
     it('uses the shared tea name editor to update the session tea name', async () => {
         render(<SessionDetailScreen />);
+
+        const summaryHeadingClass = screen.getByText('Session Summary').className;
+        expect(screen.getByRole('heading', { name: 'Setup' }).className).toBe(summaryHeadingClass);
+        expect(screen.getByRole('heading', { name: 'Infusions' }).className).toBe(summaryHeadingClass);
+        expect(screen.getByRole('heading', { name: 'Notes' }).className).toBe(summaryHeadingClass);
 
         fireEvent.click(screen.getByRole('button', { name: /Tea nameMorning Sencha/i }));
         expect(loadKnownTeaNames).toHaveBeenCalled();

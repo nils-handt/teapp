@@ -153,7 +153,6 @@ describe('BrewingSessionService', () => {
         session.infusions = [];
         session.vesselWeight = 95;
         session.lidWeight = 12;
-        session.trayWeight = 0;
         session.dryTeaLeavesWeight = 6;
         session.currentWasteWater = 0;
 
@@ -173,7 +172,6 @@ describe('BrewingSessionService', () => {
         session.teaName = 'Recovered Tea';
         session.vesselWeight = 95;
         session.lidWeight = 12;
-        session.trayWeight = 0;
         session.dryTeaLeavesWeight = 6;
         session.currentWasteWater = 4;
 
@@ -216,6 +214,77 @@ describe('BrewingSessionService', () => {
         expect(brewingSessionService.state$.value).toBe(BrewingPhase.READY);
         expect(brewingSessionService.session$.value?.vesselWeight).toBe(80);
         expect(brewingSessionService.session$.value?.lidWeight).toBe(20);
+    });
+
+    it('should include small delayed dry tea additions in setup', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        bluetoothScaleService.weight$.next(120);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(106);
+        vi.advanceTimersByTime(5000);
+        bluetoothScaleService.weight$.next(106.5);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.session$.value).toEqual(
+            expect.objectContaining({
+                vesselWeight: 100,
+                lidWeight: 20,
+                dryTeaLeavesWeight: 6.5,
+            })
+        );
+    });
+
+    it('should update dry tea downward when leaves are removed during setup', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        bluetoothScaleService.weight$.next(120);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(106.5);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(106.1);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.session$.value?.dryTeaLeavesWeight).toBe(6.1);
+    });
+
+    it('should treat an increasing setup weight over 30g of leaves as water and start infusion', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        bluetoothScaleService.weight$.next(120);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(106.5);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(120);
+        bluetoothScaleService.weight$.next(140);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION);
+        expect(brewingSessionService.currentInfusion$.value?.infusionNumber).toBe(1);
+        expect(brewingSessionService.session$.value?.dryTeaLeavesWeight).toBe(6.5);
+    });
+
+    it('should treat a stable setup weight over 30g of leaves as water and start infusion', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        bluetoothScaleService.weight$.next(120);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(100);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(106.5);
+        vi.advanceTimersByTime(1000);
+        bluetoothScaleService.weight$.next(140);
+        vi.advanceTimersByTime(1000);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION);
+        expect(brewingSessionService.currentInfusion$.value?.infusionNumber).toBe(1);
+        expect(brewingSessionService.session$.value?.dryTeaLeavesWeight).toBe(6.5);
     });
 
     it('should manually update tea name during an active session', () => {
@@ -382,14 +451,12 @@ describe('BrewingSessionService', () => {
 
         brewingSessionService.updateSetupValue('vesselWeight', 92.34);
         brewingSessionService.updateSetupValue('lidWeight', 18.76);
-        brewingSessionService.updateSetupValue('trayWeight', 120.12);
         brewingSessionService.updateSetupValue('dryTeaLeavesWeight', 7.49);
 
         expect(brewingSessionService.session$.value).toEqual(
             expect.objectContaining({
                 vesselWeight: 92.3,
                 lidWeight: 18.8,
-                trayWeight: 120.1,
                 dryTeaLeavesWeight: 7.5,
             })
         );

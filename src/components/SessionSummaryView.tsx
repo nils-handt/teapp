@@ -16,11 +16,11 @@ import {
     zenMetricCardClass,
     zenPanelClass,
     zenPanelStrongClass,
+    zenSectionEyebrowClass,
     zenStackClass,
     zenSummaryListClass,
     zenSummaryListItemClass,
     zenSummarySectionHeadingClass,
-    zenSummarySectionTitleClass,
     zenSummaryStatLabelClass,
 } from '../styles/zen';
 
@@ -92,7 +92,6 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     const setupItems = [
         { label: 'Vessel', value: formatZenWeight(session.vesselWeight) },
         { label: 'Lid', value: formatZenWeight(session.lidWeight) },
-        { label: 'Tray', value: formatZenWeight(session.trayWeight) },
         { label: 'Tea', value: formatZenWeight(session.dryTeaLeavesWeight) },
     ];
 
@@ -104,7 +103,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     return (
         <div className={zenStackClass}>
             <section className={zenPanelStrongClass}>
-                <p className="m-0 text-[0.76rem] uppercase tracking-[0.16em] text-zen-muted">
+                <p className={zenSectionEyebrowClass}>
                     {title}
                 </p>
                 <h2 className="mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text">
@@ -114,7 +113,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
 
             <section className={zenPanelClass}>
                 <div className={zenSummarySectionHeadingClass}>
-                    <h3 className={zenSummarySectionTitleClass}>Setup</h3>
+                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Setup</p>
                 </div>
                 <div className="mb-3">
                     <SummaryField
@@ -153,7 +152,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
 
             <section className={zenPanelClass}>
                 <div className={zenSummarySectionHeadingClass}>
-                    <h3 className={zenSummarySectionTitleClass}>Infusions</h3>
+                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Infusions</p>
                     <span className="text-[0.9rem] text-zen-muted">{session.infusions?.length ?? 0} total</span>
                 </div>
 
@@ -195,7 +194,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
             {showNotes && (
                 <section className={zenPanelClass}>
                     <div className={zenSummarySectionHeadingClass}>
-                        <h3 className={zenSummarySectionTitleClass}>Notes</h3>
+                        <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Notes</p>
                     </div>
                     <p className={cn('m-0', session.notes?.trim() ? 'text-zen-text' : 'text-zen-muted')}>
                         {session.notes?.trim() || 'No notes'}

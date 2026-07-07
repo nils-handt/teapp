@@ -38,14 +38,13 @@ const TUTORIAL_PAGES: TutorialPage[] = [
     eyebrow: 'Welcome',
     title: 'Brew tea with scale-based timing and tracking',
     description:
-      'Teapp watches the scale during setup and brewing so a tea timer can react to what you do on the tray.\n\nFirst connect a Bluetooth scale in the Brewing tab, then tap Start Session to begin a new tea session.',
+      'Teapp watches the scale during setup and brewing so a tea timer can react to what you do while brewing.\n\nFirst connect a Bluetooth scale in the Brewing tab, then tap Start Session to begin a new tea session.',
   },
   {
     eyebrow: 'Setup',
     title: 'Build your setup on the scale',
     description: 'During setup, place each part on the scale in order and confirm when everything looks right.',
     bullets: [
-      'Optionally add a brewing tray',
       'Add the brewing vessel',
       'Remove the vessel lid',
       'Add the tea leaves',
@@ -68,7 +67,7 @@ const TUTORIAL_PAGES: TutorialPage[] = [
     description: 'A few sidenotes before you get started',
     bullets: [
       'Only Bokoo scales are verified to work well',
-      'Waste water can be added to the tea tray only during the brewing phase',
+      'Waste water can be added only during the brewing phase',
     ],
   },
 ];

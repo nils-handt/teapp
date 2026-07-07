@@ -50,7 +50,7 @@ import {
     formatZenWeight,
 } from './zenBrewingShared';
 
-type SetupField = 'vesselWeight' | 'lidWeight' | 'trayWeight' | 'dryTeaLeavesWeight';
+type SetupField = 'vesselWeight' | 'lidWeight' | 'dryTeaLeavesWeight';
 type EditableField = SetupField | 'teaName' | 'brewingVesselName';
 
 type AlertState =
@@ -251,11 +251,6 @@ const BrewingZen: React.FC = () => {
                 header: 'Lid',
                 inputType: 'number',
                 value: String(activeSession?.lidWeight ?? 0),
-            },
-            trayWeight: {
-                header: 'Tray',
-                inputType: 'number',
-                value: String(activeSession?.trayWeight ?? 0),
             },
             dryTeaLeavesWeight: {
                 header: 'Tea',
@@ -503,7 +498,6 @@ const BrewingZen: React.FC = () => {
                 <div className="grid gap-3">
                     {renderFieldButton('Vessel', formatZenWeight(activeSession?.vesselWeight), 'vesselWeight')}
                     {renderFieldButton('Lid', formatZenWeight(activeSession?.lidWeight), 'lidWeight')}
-                    {renderFieldButton('Tray', formatZenWeight(activeSession?.trayWeight), 'trayWeight')}
                     {renderFieldButton('Tea', formatZenWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
                     {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
                     {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}

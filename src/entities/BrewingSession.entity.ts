@@ -23,9 +23,6 @@ export class BrewingSession {
     lidWeight!: number;
 
     @Column('float', { nullable: true })
-    trayWeight!: number;
-
-    @Column('float', { nullable: true })
     dryTeaLeavesWeight!: number;
 
     @Column('float', { nullable: true })

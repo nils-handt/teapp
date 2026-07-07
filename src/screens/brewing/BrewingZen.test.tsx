@@ -152,7 +152,6 @@ describe('BrewingZen', () => {
                 brewingVessel: null,
                 vesselWeight: 95.2,
                 lidWeight: 14.1,
-                trayWeight: 0,
                 dryTeaLeavesWeight: 6.4,
                 currentWasteWater: 0,
                 notes: '',
@@ -210,7 +209,7 @@ describe('BrewingZen', () => {
         expect(screen.getByText('63.5 g')).toBeDefined();
         expect(screen.getByRole('button', { name: /^Vessel95\.2 g$/i }).className).toContain('zen-field-button');
         expect(screen.getByRole('button', { name: /Lid/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Tray/i })).toBeDefined();
+        expect(screen.queryByRole('button', { name: /Tray/i })).toBeNull();
         expect(screen.getByRole('button', { name: /Tea6.4 g/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /tea name/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /vessel name/i })).toBeDefined();
