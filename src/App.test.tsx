@@ -88,7 +88,9 @@ vi.mock('@ionic/react', async () => {
         isOpen,
         header,
         message,
+        buttons,
     }: {
+        buttons?: Array<{ handler?: () => void; text: string }> | string[];
         isOpen?: boolean;
         header?: string;
         message?: string;
@@ -96,6 +98,11 @@ vi.mock('@ionic/react', async () => {
         <div role="alertdialog">
             {header && <div>{header}</div>}
             {message && <div>{message}</div>}
+            {Array.isArray(buttons) && buttons.map((button) => {
+                const text = typeof button === 'string' ? button : button.text;
+                const handler = typeof button === 'string' ? undefined : button.handler;
+                return <button key={text} onClick={handler}>{text}</button>;
+            })}
         </div>
     ) : null);
 
@@ -255,5 +262,18 @@ describe('App', () => {
 
         expect(screen.getByText('Offline ready')).toBeDefined();
         expect(screen.getByText(/Teapp is ready to work offline/i)).toBeDefined();
+    });
+
+    it('prioritizes the offline-ready prompt when offline and update events are both pending', async () => {
+        pwaUpdateMocks.state.hasOfflineReadyMessage = true;
+        pwaUpdateMocks.state.hasUpdateAvailable = true;
+        pwaUpdateMocks.state.status = 'offline-ready';
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        expect(screen.getByText('Offline ready')).toBeDefined();
+        expect(screen.queryByText('Update available')).toBeNull();
     });
 });
