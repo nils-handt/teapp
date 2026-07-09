@@ -1,6 +1,7 @@
 import {
     createGesture,
     IonContent,
+    IonAlert,
     IonHeader,
     IonPage,
     IonTitle,
@@ -111,11 +112,12 @@ const BrewingZen: React.FC = () => {
         connectionStatus: state.connectionStatus,
         currentWeight: state.currentWeight,
     })));
-    const { knownTeas, loadKnownTeas, saveTea } = useHistoryStore(
+    const { knownTeas, loadKnownTeas, saveTea, deleteSession } = useHistoryStore(
         useShallow((state) => ({
             knownTeas: state.knownTeas,
             loadKnownTeas: state.loadKnownTeas,
             saveTea: state.saveTea,
+            deleteSession: state.deleteSession,
         }))
     );
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
@@ -127,6 +129,7 @@ const BrewingZen: React.FC = () => {
     const [temperatureDraft, setTemperatureDraft] = useState('');
     const [temperatureError, setTemperatureError] = useState('');
     const [viewedInfusionIndex, setViewedInfusionIndex] = useState(0);
+    const [showDeleteSessionAlert, setShowDeleteSessionAlert] = useState(false);
     const infusionHistoryStripRef = useRef<HTMLDivElement | null>(null);
 
     const phaseCopy = PHASE_COPY[brewingPhase] ?? PHASE_COPY[BrewingPhase.IDLE];
@@ -306,6 +309,16 @@ const BrewingZen: React.FC = () => {
 
         setNoteEditorTarget({ mode: 'session' });
         setNoteDraft(activeSession.notes ?? '');
+    };
+
+    const handleDeleteSession = async () => {
+        if (!activeSession) {
+            return;
+        }
+
+        await deleteSession(activeSession.sessionId);
+        brewingSessionService.clearSession();
+        setShowDeleteSessionAlert(false);
     };
 
     const closeNoteEditor = () => {
@@ -625,12 +638,21 @@ const BrewingZen: React.FC = () => {
             onInfusionPress={openSavedInfusionNoteEditor}
             notesAction={openSessionNotesEditor}
             footer={(
-                <AppButton
-                    expand="block"
-                    onClick={() => startBrewingSession()}
-                >
-                    Start New Session
-                </AppButton>
+                <>
+                    <AppButton
+                        expand="block"
+                        onClick={() => startBrewingSession()}
+                    >
+                        Start New Session
+                    </AppButton>
+                    <AppButton
+                        expand="block"
+                        variant="danger"
+                        onClick={() => setShowDeleteSessionAlert(true)}
+                    >
+                        Delete Session
+                    </AppButton>
+                </>
             )}
         />
     );
@@ -697,6 +719,23 @@ const BrewingZen: React.FC = () => {
                     onChange={setNoteDraft}
                     onCancel={closeNoteEditor}
                     onSave={handleNoteSave}
+                />
+                <IonAlert
+                    isOpen={showDeleteSessionAlert}
+                    onDidDismiss={() => setShowDeleteSessionAlert(false)}
+                    header="Delete Session"
+                    message="Are you sure you want to delete this session? This cannot be undone."
+                    buttons={[
+                        {
+                            text: 'Cancel',
+                            role: 'cancel',
+                        },
+                        {
+                            text: 'Delete',
+                            role: 'destructive',
+                            handler: handleDeleteSession,
+                        },
+                    ]}
                 />
 
                 {alertState && alertState.field !== 'teaName' && (

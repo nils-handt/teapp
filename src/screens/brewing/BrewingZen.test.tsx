@@ -31,8 +31,10 @@ const {
     updateEditableInfusionTemperature,
     updateSavedInfusionNote,
     updateSessionNotes,
+    clearSession,
     loadKnownTeas,
     saveTea,
+    deleteSession,
 } = vi.hoisted(() => ({
     connectNewDevice: vi.fn(),
     startBrewingSession: vi.fn(),
@@ -47,8 +49,10 @@ const {
     updateEditableInfusionTemperature: vi.fn(),
     updateSavedInfusionNote: vi.fn(),
     updateSessionNotes: vi.fn(),
+    clearSession: vi.fn(),
     loadKnownTeas: vi.fn().mockResolvedValue(undefined),
     saveTea: vi.fn(),
+    deleteSession: vi.fn().mockResolvedValue(undefined),
 }));
 
 type BrewingZenBrewingSeed = {
@@ -65,6 +69,7 @@ type BrewingZenScaleSeed = {
 };
 
 type BrewingZenHistorySeed = {
+    deleteSession: (sessionId: string) => Promise<void>;
     knownTeas: Tea[];
     loadKnownTeas: (force?: boolean) => Promise<void>;
     saveTea: (tea: Tea) => Promise<Tea>;
@@ -74,6 +79,12 @@ type ButtonProps = PropsWithChildren<{
     disabled?: boolean;
     onClick?: MouseEventHandler<HTMLButtonElement>;
 }>;
+
+type AlertProps = {
+    buttons?: Array<{ handler?: () => void | Promise<void>; text: string }>;
+    header?: string;
+    isOpen?: boolean;
+};
 vi.mock('../../components/DesignSwitcher', () => ({
     default: () => <div>Design Switcher</div>,
 }));
@@ -104,6 +115,7 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
         updateEditableInfusionTemperature,
         updateSavedInfusionNote,
         updateSessionNotes,
+        clearSession,
         updateTea: vi.fn(),
     },
 }));
@@ -116,7 +128,13 @@ vi.mock('@ionic/react', () => ({
             enable: gestureState.enable,
         };
     }),
-    IonAlert: () => null,
+    IonAlert: ({ buttons, header, isOpen }: AlertProps) => header === 'Delete Session' ? (
+        <div data-testid="delete-session-alert" data-open={isOpen}>
+            {isOpen && buttons?.map((button) => (
+                <button key={button.text} onClick={() => button.handler?.()}>{button.text}</button>
+            ))}
+        </div>
+    ) : null,
     IonButton: ({ children, onClick, disabled }: ButtonProps) => <button onClick={onClick} disabled={disabled}>{children}</button>,
     IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -205,6 +223,7 @@ describe('BrewingZen', () => {
             knownTeas: [createTea('tea-1', 'ORT 2015 Gao Jia Shan'), createTea('tea-2', 'Morning Sencha')],
             loadKnownTeas,
             saveTea,
+            deleteSession,
             ...historyOverrides,
         });
     };
@@ -607,6 +626,22 @@ describe('BrewingZen', () => {
         fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
 
         expect(updateSessionNotes).toHaveBeenCalledWith('rounder after cooling');
+    });
+
+    it('deletes a completed session after confirmation', async () => {
+        brewingStore.setState({ brewingPhase: BrewingPhase.ENDED });
+
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Session' }));
+        expect(screen.getByTestId('delete-session-alert').getAttribute('data-open')).toBe('true');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+        await waitFor(() => {
+            expect(deleteSession).toHaveBeenCalledWith('session-1');
+            expect(clearSession).toHaveBeenCalled();
+        });
     });
 
     it('uses the shared tea editor suggestions when saving a tea name', async () => {
