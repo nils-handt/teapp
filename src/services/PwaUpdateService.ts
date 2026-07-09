@@ -41,10 +41,11 @@ class PwaUpdateController {
 
   public notifyUpdateAvailable(updateServiceWorker: UpdateServiceWorker): void {
     this.updateServiceWorker = updateServiceWorker;
+    const hasOfflineReadyMessage = this.snapshot.hasOfflineReadyMessage;
     this.setSnapshot({
-      hasOfflineReadyMessage: false,
+      hasOfflineReadyMessage,
       hasUpdateAvailable: true,
-      status: 'update-available',
+      status: hasOfflineReadyMessage ? 'offline-ready' : 'update-available',
     });
   }
 

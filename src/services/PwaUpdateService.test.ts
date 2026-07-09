@@ -39,4 +39,18 @@ describe('PwaUpdateService', () => {
       status: 'offline-ready',
     });
   });
+
+  it('keeps the offline-ready prompt pending when an update is discovered immediately afterward', () => {
+    const updateServiceWorker = vi.fn().mockResolvedValue(undefined);
+    const controller = createPwaUpdateController();
+
+    controller.notifyOfflineReady();
+    controller.notifyUpdateAvailable(updateServiceWorker);
+
+    expect(controller.getSnapshot()).toMatchObject({
+      hasOfflineReadyMessage: true,
+      hasUpdateAvailable: true,
+      status: 'offline-ready',
+    });
+  });
 });
