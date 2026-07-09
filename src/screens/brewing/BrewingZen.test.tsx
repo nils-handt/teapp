@@ -30,6 +30,7 @@ const {
     updateEditableInfusionNote,
     updateEditableInfusionTemperature,
     updateSavedInfusionNote,
+    updateSessionNotes,
     loadKnownTeas,
     saveTea,
 } = vi.hoisted(() => ({
@@ -45,6 +46,7 @@ const {
     updateEditableInfusionNote: vi.fn(),
     updateEditableInfusionTemperature: vi.fn(),
     updateSavedInfusionNote: vi.fn(),
+    updateSessionNotes: vi.fn(),
     loadKnownTeas: vi.fn().mockResolvedValue(undefined),
     saveTea: vi.fn(),
 }));
@@ -101,6 +103,7 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
         updateEditableInfusionNote,
         updateEditableInfusionTemperature,
         updateSavedInfusionNote,
+        updateSessionNotes,
         updateTea: vi.fn(),
     },
 }));
@@ -586,6 +589,24 @@ describe('BrewingZen', () => {
         fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
 
         expect(updateSavedInfusionNote).toHaveBeenCalledWith('inf-1', 'fruitier than before');
+    });
+
+    it('edits session notes from the ended summary field', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.ENDED,
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                notes: 'first steep',
+            },
+        });
+
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: /Notesfirst steep/i }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'rounder after cooling' } });
+        fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+
+        expect(updateSessionNotes).toHaveBeenCalledWith('rounder after cooling');
     });
 
     it('uses the shared tea editor suggestions when saving a tea name', async () => {

@@ -322,6 +322,17 @@ class BrewingSessionService {
         this.updateSavedInfusion(infusionId, { note: note.trim() });
     }
 
+    public updateSessionNotes(note: string) {
+        const session = this.session$.value;
+        if (!session) {
+            return;
+        }
+
+        session.notes = note.trim();
+        this.emitSession(session);
+        void sessionRepository.saveSession(session);
+    }
+
     private initializeWeightSubscription() {
         if (this.weightSubscription) {
             this.weightSubscription.unsubscribe();

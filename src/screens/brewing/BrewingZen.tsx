@@ -66,6 +66,7 @@ type AlertState =
 type NoteEditorTarget =
     | { mode: 'editable' }
     | { mode: 'saved'; infusionId: string }
+    | { mode: 'session' }
     | null;
 
 type InfusionStripItem = {
@@ -298,6 +299,15 @@ const BrewingZen: React.FC = () => {
         setNoteDraft(currentNote);
     };
 
+    const openSessionNotesEditor = () => {
+        if (!activeSession) {
+            return;
+        }
+
+        setNoteEditorTarget({ mode: 'session' });
+        setNoteDraft(activeSession.notes ?? '');
+    };
+
     const closeNoteEditor = () => {
         setNoteEditorTarget(null);
         setNoteDraft('');
@@ -312,6 +322,10 @@ const BrewingZen: React.FC = () => {
 
         if (noteEditorTarget?.mode === 'saved') {
             brewingSessionService.updateSavedInfusionNote(noteEditorTarget.infusionId, trimmedNote);
+        }
+
+        if (noteEditorTarget?.mode === 'session') {
+            brewingSessionService.updateSessionNotes(trimmedNote);
         }
 
         closeNoteEditor();
@@ -609,6 +623,7 @@ const BrewingZen: React.FC = () => {
             brewingVesselAction={() => openAlert('brewingVesselName')}
             brewingVesselActionDisabled={!hasBrewingVesselWeights}
             onInfusionPress={openSavedInfusionNoteEditor}
+            notesAction={openSessionNotesEditor}
             footer={(
                 <AppButton
                     expand="block"
@@ -677,7 +692,7 @@ const BrewingZen: React.FC = () => {
                 />
                 <InfusionNoteEditorModal
                     isOpen={Boolean(noteEditorTarget)}
-                    title="Edit Infusion Note"
+                    title={noteEditorTarget?.mode === 'session' ? 'Edit Notes' : 'Edit Infusion Note'}
                     value={noteDraft}
                     onChange={setNoteDraft}
                     onCancel={closeNoteEditor}

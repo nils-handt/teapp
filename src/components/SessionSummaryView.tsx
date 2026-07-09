@@ -41,7 +41,7 @@ type SessionSummaryViewProps = {
     brewingVesselAction?: () => void;
     brewingVesselActionDisabled?: boolean;
     onInfusionPress?: (infusionId: string, currentNote: string) => void;
-    showNotes?: boolean;
+    notesAction?: () => void;
     footer?: React.ReactNode;
 };
 
@@ -83,7 +83,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     brewingVesselAction,
     brewingVesselActionDisabled = false,
     onInfusionPress,
-    showNotes = false,
+    notesAction,
     footer,
 }) => {
     const teaLabel = formatTeaLabel(session.tea) || session.teaName?.trim() || '';
@@ -193,16 +193,16 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 )}
             </section>
 
-            {showNotes && (
-                <section className={zenPanelClass}>
-                    <div className={zenSummarySectionHeadingClass}>
-                        <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Notes</p>
-                    </div>
-                    <p className={cn('m-0', session.notes?.trim() ? 'text-zen-text' : 'text-zen-muted')}>
-                        {session.notes?.trim() || 'No notes'}
-                    </p>
-                </section>
-            )}
+            <section className={zenPanelClass}>
+                <div className={zenSummarySectionHeadingClass}>
+                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Notes</p>
+                </div>
+                <SummaryField
+                    label="Notes"
+                    value={session.notes?.trim() || 'No notes'}
+                    onClick={notesAction}
+                />
+            </section>
 
             {footer ? <section className={zenActionRowClass}>{footer}</section> : null}
         </div>

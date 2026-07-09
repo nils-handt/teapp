@@ -29,6 +29,11 @@ type ButtonProps = PropsWithChildren<{
     onClick?: MouseEventHandler<HTMLButtonElement>;
 }>;
 
+type AlertProps = {
+    header?: string;
+    isOpen?: boolean;
+};
+
 vi.mock('react-router-dom', () => ({
     useHistory: () => ({ goBack }),
     useParams: () => ({ sessionId: 'session-1' }),
@@ -44,7 +49,12 @@ vi.mock('@ionic/react', () => ({
     IonBackButton: () => null,
     IonButton: ({ children, onClick }: ButtonProps) => <button onClick={onClick}>{children}</button>,
     IonIcon: () => null,
-    IonAlert: () => null,
+    IonAlert: ({ header, isOpen }: AlertProps) => (
+        <div
+            data-testid={header === 'Delete Session' ? 'delete-session-alert' : 'session-alert'}
+            data-open={isOpen}
+        />
+    ),
     useIonToast: () => [presentToast],
 }));
 
@@ -158,5 +168,27 @@ describe('SessionDetailScreen', () => {
                 infusions: [expect.objectContaining({ infusionId: 'inf-1', note: 'honey finish' })],
             }));
         });
+    });
+
+    it('edits session notes by pressing the Notes field', async () => {
+        render(<SessionDetailScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: /NotesBright and sweet/i }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'honey and grass' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({
+                notes: 'honey and grass',
+            }));
+        });
+    });
+
+    it('opens the delete confirmation from the bottom action', () => {
+        render(<SessionDetailScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete session' }));
+
+        expect(screen.getByTestId('delete-session-alert').getAttribute('data-open')).toBe('true');
     });
 });

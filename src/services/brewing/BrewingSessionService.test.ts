@@ -298,6 +298,19 @@ describe('BrewingSessionService', () => {
         );
     });
 
+    it('should update and persist session notes', () => {
+        brewingSessionService.startSession('Test Tea');
+
+        brewingSessionService.updateSessionNotes('  floral and sweet  ');
+
+        expect(brewingSessionService.session$.value).toEqual(expect.objectContaining({
+            notes: 'floral and sweet',
+        }));
+        expect(sessionRepository.saveSession).toHaveBeenCalledWith(expect.objectContaining({
+            notes: 'floral and sweet',
+        }));
+    });
+
     it('should copy the first infusion draft note and temperature into infusion 1', () => {
         brewingSessionService.startSession('Draft Tea');
         brewingSessionService.confirmSetupDone();

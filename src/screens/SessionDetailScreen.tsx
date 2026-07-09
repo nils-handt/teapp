@@ -7,13 +7,11 @@ import {
     IonToolbar,
     IonButtons,
     IonBackButton,
-    IonButton,
-    IonIcon,
     IonAlert,
     useIonToast
 } from '@ionic/react';
-import { trash, pencil } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
+import AppButton from '../components/ui/AppButton';
 import InfusionNoteEditorModal from '../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../components/SessionSummaryView';
 import TeaEditorModal from '../components/TeaEditorModal';
@@ -47,8 +45,9 @@ const SessionDetailScreen: React.FC = () => {
         saveTea: state.saveTea,
     })));
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-    const [showNotesAlert, setShowNotesAlert] = useState(false);
     const [showTeaNameEditor, setShowTeaNameEditor] = useState(false);
+    const [showSessionNoteEditor, setShowSessionNoteEditor] = useState(false);
+    const [sessionNoteDraft, setSessionNoteDraft] = useState('');
     const [infusionNoteDraft, setInfusionNoteDraft] = useState('');
     const [editingInfusionId, setEditingInfusionId] = useState<string | null>(null);
     const [present] = useIonToast();
@@ -90,18 +89,6 @@ const SessionDetailScreen: React.FC = () => {
         }
     };
 
-    const handleNotesSave = async (data: { notes?: string }) => {
-        if (selectedSession && data) {
-            const updatedSession = { ...selectedSession, notes: data.notes ?? '' };
-            await updateSession(updatedSession);
-            present({
-                message: 'Session updated',
-                duration: TOAST_DURATION,
-                color: 'success'
-            });
-        }
-    };
-
     const openTeaNameEditor = () => {
         if (!selectedSession) {
             return;
@@ -109,6 +96,34 @@ const SessionDetailScreen: React.FC = () => {
 
         setShowTeaNameEditor(true);
         void loadKnownTeas();
+    };
+
+    const openSessionNotesEditor = () => {
+        if (!selectedSession) {
+            return;
+        }
+
+        setSessionNoteDraft(selectedSession.notes ?? '');
+        setShowSessionNoteEditor(true);
+    };
+
+    const closeSessionNotesEditor = () => {
+        setShowSessionNoteEditor(false);
+        setSessionNoteDraft('');
+    };
+
+    const handleSessionNotesSave = async () => {
+        if (!selectedSession) {
+            return;
+        }
+
+        await updateSession({ ...selectedSession, notes: sessionNoteDraft.trim() });
+        closeSessionNotesEditor();
+        present({
+            message: 'Session updated',
+            duration: TOAST_DURATION,
+            color: 'success'
+        });
     };
 
     const openInfusionNoteEditor = (infusionId: string, currentNote: string) => {
@@ -174,14 +189,6 @@ const SessionDetailScreen: React.FC = () => {
                         <IonBackButton defaultHref="/tabs/history" />
                     </IonButtons>
                     <IonTitle>{formatTeaLabel(selectedSession.tea) || selectedSession.teaName}</IonTitle>
-                    <IonButtons slot="end">
-                        <IonButton onClick={() => setShowNotesAlert(true)}>
-                            <IonIcon slot="icon-only" icon={pencil} />
-                        </IonButton>
-                        <IonButton onClick={() => setShowDeleteAlert(true)}>
-                            <IonIcon slot="icon-only" icon={trash} color="danger" />
-                        </IonButton>
-                    </IonButtons>
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>
@@ -191,7 +198,16 @@ const SessionDetailScreen: React.FC = () => {
                         brewingVesselLabel={brewingVesselLabel}
                         teaNameAction={openTeaNameEditor}
                         onInfusionPress={openInfusionNoteEditor}
-                        showNotes
+                        notesAction={openSessionNotesEditor}
+                        footer={(
+                            <AppButton
+                                expand="block"
+                                variant="danger"
+                                onClick={() => setShowDeleteAlert(true)}
+                            >
+                                Delete session
+                            </AppButton>
+                        )}
                     />
                 </div>
 
@@ -213,29 +229,6 @@ const SessionDetailScreen: React.FC = () => {
                     ]}
                 />
 
-                <IonAlert
-                    isOpen={showNotesAlert}
-                    onDidDismiss={() => setShowNotesAlert(false)}
-                    header="Edit Notes"
-                    inputs={[
-                        {
-                            name: 'notes',
-                            type: 'textarea',
-                            placeholder: 'Notes',
-                            value: selectedSession.notes
-                        }
-                    ]}
-                    buttons={[
-                        {
-                            text: 'Cancel',
-                            role: 'cancel',
-                        },
-                        {
-                            text: 'Save',
-                            handler: handleNotesSave
-                        }
-                    ]}
-                />
                 <TeaEditorModal
                     isOpen={showTeaNameEditor}
                     title="Tea"
@@ -243,6 +236,14 @@ const SessionDetailScreen: React.FC = () => {
                     teas={knownTeas}
                     onCancel={() => setShowTeaNameEditor(false)}
                     onSave={handleTeaSave}
+                />
+                <InfusionNoteEditorModal
+                    isOpen={showSessionNoteEditor}
+                    title="Edit Notes"
+                    value={sessionNoteDraft}
+                    onChange={setSessionNoteDraft}
+                    onCancel={closeSessionNotesEditor}
+                    onSave={handleSessionNotesSave}
                 />
                 <InfusionNoteEditorModal
                     isOpen={Boolean(editingInfusionId)}
