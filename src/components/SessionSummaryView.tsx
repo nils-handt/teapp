@@ -154,6 +154,22 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
 
             <section className={zenPanelClass}>
                 <div className={zenSummarySectionHeadingClass}>
+                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Information</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={notesAction}
+                    disabled={!notesAction}
+                    className={cn(zenSummaryListItemClass, notesAction ? 'cursor-pointer' : 'cursor-default')}
+                >
+                    <div className={session.notes?.trim() ? 'text-zen-text' : 'text-zen-muted'}>
+                        {session.notes?.trim() || 'No notes'}
+                    </div>
+                </button>
+            </section>
+
+            <section className={zenPanelClass}>
+                <div className={zenSummarySectionHeadingClass}>
                     <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Infusions</p>
                     <span className="text-[0.9rem] text-zen-muted">{session.infusions?.length ?? 0} total</span>
                 </div>
@@ -191,17 +207,6 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 ) : (
                     <p className="m-0 text-zen-muted">No infusions were recorded for this session.</p>
                 )}
-            </section>
-
-            <section className={zenPanelClass}>
-                <div className={zenSummarySectionHeadingClass}>
-                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Notes</p>
-                </div>
-                <SummaryField
-                    label="Notes"
-                    value={session.notes?.trim() || 'No notes'}
-                    onClick={notesAction}
-                />
             </section>
 
             {footer ? <section className={zenActionRowClass}>{footer}</section> : null}

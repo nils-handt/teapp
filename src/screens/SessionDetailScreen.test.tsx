@@ -135,8 +135,8 @@ describe('SessionDetailScreen', () => {
 
         const summaryHeadingClass = screen.getByText('Session Summary').className;
         expect(screen.getByRole('heading', { name: 'Setup' }).className).toBe(summaryHeadingClass);
+        expect(screen.getByRole('heading', { name: 'Information' }).className).toBe(summaryHeadingClass);
         expect(screen.getByRole('heading', { name: 'Infusions' }).className).toBe(summaryHeadingClass);
-        expect(screen.getByRole('heading', { name: 'Notes' }).className).toBe(summaryHeadingClass);
 
         fireEvent.click(screen.getByRole('button', { name: /Tea nameMorning Sencha/i }));
         expect(loadKnownTeas).toHaveBeenCalled();
@@ -170,10 +170,22 @@ describe('SessionDetailScreen', () => {
         });
     });
 
-    it('edits session notes by pressing the Notes field', async () => {
+    it('displays session notes in an infusion-style box before Infusions', () => {
         render(<SessionDetailScreen />);
 
-        fireEvent.click(screen.getByRole('button', { name: /NotesBright and sweet/i }));
+        const informationHeading = screen.getByRole('heading', { name: 'Information' });
+        const infusionsHeading = screen.getByRole('heading', { name: 'Infusions' });
+        const informationBox = screen.getByRole('button', { name: 'Bright and sweet' });
+        const infusionBox = screen.getByRole('button', { name: /Infusion 1/i });
+
+        expect(informationHeading.compareDocumentPosition(infusionsHeading) & 4).toBe(4);
+        expect(informationBox.className).toBe(infusionBox.className);
+    });
+
+    it('edits session notes by pressing the Information field', async () => {
+        render(<SessionDetailScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Bright and sweet' }));
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'honey and grass' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
