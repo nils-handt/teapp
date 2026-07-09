@@ -35,7 +35,8 @@
     "types": [
       "vitest/globals",
       "node",
-      "vite/client"
+      "vite/client",
+      "vite-plugin-pwa/client"
     ]
   },
   "include": [

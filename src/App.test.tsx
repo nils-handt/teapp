@@ -22,6 +22,17 @@ const bleAdapterMocks = vi.hoisted(() => ({
     ),
 }));
 
+const pwaUpdateMocks = vi.hoisted(() => ({
+    state: {
+        applyUpdate: vi.fn().mockResolvedValue(true),
+        dismissOfflineReady: vi.fn(),
+        dismissUpdate: vi.fn(),
+        hasOfflineReadyMessage: false,
+        hasUpdateAvailable: false,
+        status: 'idle',
+    },
+}));
+
 // Mock dependencies
 vi.mock('./services/BluetoothScaleService', () => ({
     bluetoothScaleService: {
@@ -31,6 +42,10 @@ vi.mock('./services/BluetoothScaleService', () => ({
 
 vi.mock('./hooks/useBrewingSync', () => ({
     useBrewingSync: vi.fn(),
+}));
+
+vi.mock('./hooks/usePwaUpdate', () => ({
+    usePwaUpdate: () => pwaUpdateMocks.state,
 }));
 
 vi.mock('./repositories/SettingsRepository', () => ({
@@ -122,6 +137,12 @@ describe('App', () => {
         bleAdapterMocks.getRequiredWebBluetoothSupport.mockReturnValue({ supported: true, missing: [] });
         settingsStore.setState(initialSettingsStoreValues);
         brewingStore.setState(initialBrewingStoreState);
+        pwaUpdateMocks.state.applyUpdate.mockResolvedValue(true);
+        pwaUpdateMocks.state.dismissOfflineReady.mockClear();
+        pwaUpdateMocks.state.dismissUpdate.mockClear();
+        pwaUpdateMocks.state.hasOfflineReadyMessage = false;
+        pwaUpdateMocks.state.hasUpdateAvailable = false;
+        pwaUpdateMocks.state.status = 'idle';
         tutorialRenderState.render.mockClear();
         vi.clearAllMocks();
     });
@@ -222,5 +243,17 @@ describe('App', () => {
         expect(screen.queryByText('Browser compatibility warning')).toBeNull();
         expect(vi.mocked(Capacitor.getPlatform)).toHaveBeenCalled();
         expect(vi.mocked(bleAdapter.getRequiredWebBluetoothSupport)).not.toHaveBeenCalled();
+    });
+
+    it('shows an offline-ready PWA prompt when the service worker finishes precaching', async () => {
+        pwaUpdateMocks.state.hasOfflineReadyMessage = true;
+        pwaUpdateMocks.state.status = 'offline-ready';
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        expect(screen.getByText('Offline ready')).toBeDefined();
+        expect(screen.getByText(/Teapp is ready to work offline/i)).toBeDefined();
     });
 });

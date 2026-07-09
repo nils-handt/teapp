@@ -40,7 +40,16 @@ yarn-error.log*
 .vscode
 .gemini
 
-public
+public/*
+!public/
+!public/apple-touch-icon.png
+!public/favicon-64x64.png
+!public/pwa-192x192.png
+!public/pwa-512x512.png
+!public/pwa-maskable-192x192.png
+!public/pwa-maskable-512x512.png
+!public/robots.txt
+!public/teapp-icon.svg
 
 # specific test files
 src/services/brewing/testfiles/*.result.debug.json

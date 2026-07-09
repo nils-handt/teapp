@@ -38,6 +38,11 @@ const testState = vi.hoisted(() => {
         push: vi.fn(),
         setMockMode,
         shareFile: vi.fn(),
+        pwaInstall: {
+            canPrompt: false,
+            promptInstall: vi.fn().mockResolvedValue(false),
+            status: 'unsupported' as 'unsupported' | 'available' | 'installing' | 'installed' | 'dismissed',
+        },
         updateSettings: vi.fn(),
     };
 });
@@ -117,6 +122,10 @@ vi.mock('../services/BackupService', () => ({
 
 vi.mock('../utils/fileUtils', () => ({
     shareFile: testState.shareFile,
+}));
+
+vi.mock('../hooks/usePwaInstall', () => ({
+    usePwaInstall: () => testState.pwaInstall,
 }));
 
 vi.mock('../constants/brewingScreens', () => ({
@@ -213,6 +222,9 @@ describe('SettingsScreen', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         testState.bluetoothScaleService.isMockMode = false;
+        testState.pwaInstall.canPrompt = false;
+        testState.pwaInstall.promptInstall.mockResolvedValue(false);
+        testState.pwaInstall.status = 'unsupported';
         settingsStore.setState(initialSettingsStoreValues);
         scaleStore.setState(initialScaleStoreState);
         testState.updateSettings.mockImplementation(() => undefined);
@@ -275,5 +287,19 @@ describe('SettingsScreen', () => {
         fireEvent.click(screen.getByRole('button', { name: /Show Tutorial Again/i }));
 
         expect(settingsStore.getState().isTutorialOpen).toBe(true);
+    });
+
+    it('prompts for PWA installation when Chrome exposes the install event', async () => {
+        testState.pwaInstall.canPrompt = true;
+        testState.pwaInstall.status = 'available';
+        testState.pwaInstall.promptInstall.mockResolvedValue(true);
+
+        renderScreen();
+
+        fireEvent.click(screen.getByRole('button', { name: /Install Teapp/i }));
+
+        await waitFor(() => {
+            expect(testState.pwaInstall.promptInstall).toHaveBeenCalledTimes(1);
+        });
     });
 });

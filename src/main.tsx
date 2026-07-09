@@ -8,6 +8,7 @@ import { CapacitorSQLite } from '@capacitor-community/sqlite';
 import { defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader';
 import { AppDataSource, sqliteConnection } from './database/dataSource';
 import { createLogger } from './services/logging';
+import { initializePwaInstallController } from './services/PwaInstallService';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -32,6 +33,11 @@ const initApp = async () => {
   logger.info('Initializing application', { platform });
 
   if (platform === 'web') {
+    initializePwaInstallController();
+    if (import.meta.env.MODE === 'pwa') {
+      void import('./pwa');
+    }
+
     logger.info('Initializing SQLite web store');
     jeepSqlite(window);
 

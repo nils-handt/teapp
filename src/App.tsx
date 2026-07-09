@@ -14,12 +14,14 @@ import { settingsStore, useSettingsStore } from './stores/useSettingsStore';
 import FirstRunTutorial from './components/FirstRunTutorial';
 import { useShallow } from 'zustand/react/shallow';
 import { bleAdapter } from './services/bluetooth/adapters/BleAdapter';
+import { usePwaUpdate } from './hooks/usePwaUpdate';
 
 const logger = createLogger('App');
 
 const App: React.FC = () => {
   const Router = Capacitor.getPlatform() === 'web' ? IonReactHashRouter : IonReactRouter;
   const [showBrowserCompatibilityWarning, setShowBrowserCompatibilityWarning] = useState(false);
+  const pwaUpdate = usePwaUpdate();
   const {
     hasSeenTutorial,
     isTutorialOpen,
@@ -62,6 +64,34 @@ const App: React.FC = () => {
 
   useBrewingSync(); // Activate global state sync
 
+  const isPwaPromptOpen = pwaUpdate.hasOfflineReadyMessage || pwaUpdate.hasUpdateAvailable;
+  const pwaPromptHeader = pwaUpdate.hasOfflineReadyMessage ? 'Offline ready' : 'Update available';
+  const pwaPromptMessage = pwaUpdate.status === 'update-deferred'
+    ? 'A Teapp update is ready, but reload is deferred until the active brewing session is finished.'
+    : pwaUpdate.hasOfflineReadyMessage
+      ? 'Teapp is ready to work offline after this first load.'
+      : 'A new Teapp version is available. Update now if you are not actively brewing.';
+  const pwaPromptButtons = pwaUpdate.hasOfflineReadyMessage
+    ? [{
+      text: 'OK',
+      handler: pwaUpdate.dismissOfflineReady,
+    }]
+    : [
+      {
+        text: 'Later',
+        role: 'cancel',
+        handler: pwaUpdate.dismissUpdate,
+      },
+      {
+        text: 'Update',
+        handler: () => {
+          void pwaUpdate.applyUpdate({
+            hasActiveBrewingSession: brewingStore.getState().activeSession !== null,
+          });
+        },
+      },
+    ];
+
   return (
     <IonApp>
       <Router>
@@ -78,6 +108,12 @@ const App: React.FC = () => {
           header="Browser compatibility warning"
           message="Bluetooth functionality may be limited in this browser because required Bluetooth features are missing. Chromium-based browsers generally work well."
           buttons={['OK']}
+        />
+        <IonAlert
+          isOpen={isPwaPromptOpen}
+          header={pwaPromptHeader}
+          message={pwaPromptMessage}
+          buttons={pwaPromptButtons}
         />
         <FirstRunTutorial isOpen={isTutorialOpen} onDismiss={markTutorialSeen} />
       </Router>

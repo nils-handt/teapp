@@ -2,6 +2,7 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -110,11 +111,72 @@ const copySqliteAssets = (): Plugin => {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isTestMode = mode === 'test'
+  const isPwaMode = mode === 'pwa'
+  const basePlugins = isTestMode
+    ? [sandboxTypeScriptTransform(), tailwindcss(), copySqliteAssets()]
+    : [react(), tailwindcss(), copySqliteAssets()]
 
   return {
-    plugins: isTestMode
-      ? [sandboxTypeScriptTransform(), tailwindcss(), copySqliteAssets()]
-      : [react(), tailwindcss(), copySqliteAssets()],
+    plugins: [
+      ...basePlugins,
+      ...(isPwaMode
+        ? [
+          VitePWA({
+            registerType: 'prompt',
+            includeAssets: [
+              'apple-touch-icon.png',
+              'favicon-64x64.png',
+              'robots.txt',
+              'teapp-icon.svg',
+            ],
+            manifest: {
+              id: '/teapp/',
+              name: 'Teapp - Tea Brewing Tracker',
+              short_name: 'Teapp',
+              description: 'Track gongfu tea brewing sessions with Bluetooth scale support.',
+              start_url: '/teapp/',
+              scope: '/teapp/',
+              display: 'standalone',
+              orientation: 'portrait',
+              background_color: '#F6E7C8',
+              theme_color: '#164E43',
+              categories: ['food', 'lifestyle', 'utilities'],
+              icons: [
+                {
+                  src: 'pwa-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                  purpose: 'any',
+                },
+                {
+                  src: 'pwa-512x512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'any',
+                },
+                {
+                  src: 'pwa-maskable-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                  purpose: 'maskable',
+                },
+                {
+                  src: 'pwa-maskable-512x512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'maskable',
+                },
+              ],
+            },
+            workbox: {
+              globPatterns: ['**/*.{html,js,css,png,svg,wasm,woff2}'],
+              navigateFallback: '/teapp/index.html',
+              navigateFallbackDenylist: [/^\/teapp\/assets\//],
+            },
+          }),
+        ]
+        : []),
+    ],
     esbuild: isTestMode ? false : undefined,
     resolve: {
       alias: {
@@ -129,7 +191,7 @@ export default defineConfig(({ mode }) => {
         'Cross-Origin-Embedder-Policy': 'require-corp',
       }
     },
-    base: './',
+    base: isPwaMode ? '/teapp/' : './',
     build: {
       sourcemap: true,
     },

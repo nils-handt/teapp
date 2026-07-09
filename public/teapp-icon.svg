@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Teapp icon</title>
+  <desc id="desc">A tea cup on a scale with steam above it.</desc>
+  <rect x="40" y="40" width="432" height="432" rx="92" fill="#164E43"/>
+  <path d="M159 246h194a26 26 0 0 1 26 26v74a55 55 0 0 1-55 55H188a55 55 0 0 1-55-55v-74a26 26 0 0 1 26-26Z" fill="#F6E7C8"/>
+  <ellipse cx="256" cy="278" rx="93" ry="24" fill="#D59A38"/>
+  <path d="M376 281c57-9 57 83 4 74" fill="none" stroke="#F6E7C8" stroke-width="24" stroke-linecap="round"/>
+  <path d="M196 436h120M256 401v35M214 458h84" fill="none" stroke="#F6E7C8" stroke-width="22" stroke-linecap="round"/>
+  <path d="M201 184c-45-54 57-62 21-111M300 185c-44-54 58-62 21-111" fill="none" stroke="#8ED6C9" stroke-width="16" stroke-linecap="round"/>
+  <path d="M190 330h132" fill="none" stroke="#164E43" stroke-width="20" stroke-linecap="round"/>
+</svg>

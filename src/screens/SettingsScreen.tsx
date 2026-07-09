@@ -27,6 +27,7 @@ import { createLogger, isLogLevel, LOG_LEVELS } from '../services/logging';
 import { useShallow } from 'zustand/react/shallow';
 import { useScaleStore } from '../stores/useScaleStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 const logger = createLogger('SettingsScreen');
 
@@ -83,6 +84,7 @@ const SettingsScreen: React.FC = () => {
   const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [restoreData, setRestoreData] = useState<BackupData | null>(null);
+  const pwaInstall = usePwaInstall();
 
   const handleConnectNew = async () => {
     await bluetoothScaleService.connectNewDevice();
@@ -142,6 +144,14 @@ const SettingsScreen: React.FC = () => {
       logger.error('Backup failed', error);
       setToastMessage('Backup failed');
     }
+  };
+
+  const handleInstallPwa = async () => {
+    const installed = await pwaInstall.promptInstall();
+    setToastMessage(installed
+      ? 'Install accepted'
+      : 'Install prompt dismissed. You can still install Teapp from your browser menu.'
+    );
   };
 
   const handleRestoreFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,6 +231,28 @@ const SettingsScreen: React.FC = () => {
             <IonLabel>Show Tutorial Again</IonLabel>
           </IonItem>
         </IonList>
+
+        {pwaInstall.status !== 'installed' && (
+          <IonList>
+            <IonListHeader>
+              <IonLabel>App Installation</IonLabel>
+            </IonListHeader>
+            <IonItem
+              button={pwaInstall.canPrompt}
+              detail={pwaInstall.canPrompt}
+              onClick={pwaInstall.canPrompt ? handleInstallPwa : undefined}
+            >
+              <IonLabel>
+                <h2>Install Teapp</h2>
+                {pwaInstall.canPrompt ? (
+                  <p>Add Teapp to your home screen for a standalone app experience.</p>
+                ) : (
+                  <p>Use your browser menu to install Teapp when installation is available.</p>
+                )}
+              </IonLabel>
+            </IonItem>
+          </IonList>
+        )}
 
         <IonList>
           <IonListHeader>
