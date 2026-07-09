@@ -16,11 +16,13 @@ import { trash, pencil } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
 import InfusionNoteEditorModal from '../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../components/SessionSummaryView';
-import TeaNameEditorModal from '../components/TeaNameEditorModal';
+import TeaEditorModal from '../components/TeaEditorModal';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { useShallow } from 'zustand/react/shallow';
 import { useHistoryStore } from '../stores/useHistoryStore';
 import { zenPageShellClass } from '../styles/zen';
+import { Tea } from '../entities/Tea.entity';
+import { formatTeaLabel } from '../utils/teaSearch';
 
 const TOAST_DURATION = 2000;
 
@@ -32,22 +34,21 @@ const SessionDetailScreen: React.FC = () => {
         selectSession,
         deleteSession,
         updateSession,
-        knownTeaNames,
-        loadKnownTeaNames,
-        upsertKnownTeaName,
+        knownTeas,
+        loadKnownTeas,
+        saveTea,
     } = useHistoryStore(useShallow((state) => ({
         selectedSession: state.selectedSession,
         selectSession: state.selectSession,
         deleteSession: state.deleteSession,
         updateSession: state.updateSession,
-        knownTeaNames: state.knownTeaNames,
-        loadKnownTeaNames: state.loadKnownTeaNames,
-        upsertKnownTeaName: state.upsertKnownTeaName,
+        knownTeas: state.knownTeas,
+        loadKnownTeas: state.loadKnownTeas,
+        saveTea: state.saveTea,
     })));
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [showNotesAlert, setShowNotesAlert] = useState(false);
     const [showTeaNameEditor, setShowTeaNameEditor] = useState(false);
-    const [teaNameDraft, setTeaNameDraft] = useState('');
     const [infusionNoteDraft, setInfusionNoteDraft] = useState('');
     const [editingInfusionId, setEditingInfusionId] = useState<string | null>(null);
     const [present] = useIonToast();
@@ -70,12 +71,16 @@ const SessionDetailScreen: React.FC = () => {
         }
     };
 
-    const handleTeaNameSave = async () => {
+    const handleTeaSave = async (tea: Tea) => {
         if (selectedSession) {
-            const trimmedTeaName = teaNameDraft.trim();
-            const updatedSession = { ...selectedSession, teaName: trimmedTeaName };
+            const savedTea = await saveTea(tea);
+            const updatedSession = {
+                ...selectedSession,
+                tea: savedTea,
+                teaId: savedTea.teaId,
+                teaName: formatTeaLabel(savedTea),
+            };
             await updateSession(updatedSession);
-            upsertKnownTeaName(trimmedTeaName);
             setShowTeaNameEditor(false);
             present({
                 message: 'Session updated',
@@ -102,9 +107,8 @@ const SessionDetailScreen: React.FC = () => {
             return;
         }
 
-        setTeaNameDraft(selectedSession.teaName ?? '');
         setShowTeaNameEditor(true);
-        void loadKnownTeaNames();
+        void loadKnownTeas();
     };
 
     const openInfusionNoteEditor = (infusionId: string, currentNote: string) => {
@@ -169,7 +173,7 @@ const SessionDetailScreen: React.FC = () => {
                     <IonButtons slot="start">
                         <IonBackButton defaultHref="/tabs/history" />
                     </IonButtons>
-                    <IonTitle>{selectedSession.teaName}</IonTitle>
+                    <IonTitle>{formatTeaLabel(selectedSession.tea) || selectedSession.teaName}</IonTitle>
                     <IonButtons slot="end">
                         <IonButton onClick={() => setShowNotesAlert(true)}>
                             <IonIcon slot="icon-only" icon={pencil} />
@@ -232,14 +236,13 @@ const SessionDetailScreen: React.FC = () => {
                         }
                     ]}
                 />
-                <TeaNameEditorModal
+                <TeaEditorModal
                     isOpen={showTeaNameEditor}
-                    title="Tea Name"
-                    value={teaNameDraft}
-                    knownTeaNames={knownTeaNames}
-                    onChange={setTeaNameDraft}
+                    title="Tea"
+                    selectedTea={selectedSession.tea}
+                    teas={knownTeas}
                     onCancel={() => setShowTeaNameEditor(false)}
-                    onSave={handleTeaNameSave}
+                    onSave={handleTeaSave}
                 />
                 <InfusionNoteEditorModal
                     isOpen={Boolean(editingInfusionId)}

@@ -8,6 +8,7 @@ import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { useShallow } from 'zustand/react/shallow';
 import { useBrewingStore } from '../../stores/useBrewingStore';
 import { useScaleStore } from '../../stores/useScaleStore';
+import { formatTeaLabel } from '../../utils/teaSearch';
 
 const BrewingCard: React.FC = () => {
     const { brewingPhase, timerValue, activeSession, currentInfusion } = useBrewingStore(
@@ -45,7 +46,7 @@ const BrewingCard: React.FC = () => {
                         <IonCardTitle className="flex items-center justify-between gap-3">
                             <span>{brewingPhase}</span>
                             <IonBadge color={brewingPhase === BrewingPhase.INFUSION ? 'primary' : 'medium'}>
-                                {activeSession?.teaName || 'Ready'}
+                                {formatTeaLabel(activeSession?.tea) || activeSession?.teaName || 'Ready'}
                             </IonBadge>
                         </IonCardTitle>
                     </IonCardHeader>

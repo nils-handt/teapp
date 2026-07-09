@@ -6,6 +6,8 @@ import { brewingVesselRepository } from '../../repositories/BrewingVesselReposit
 import { BrewingSession } from '../../entities/BrewingSession.entity';
 import { BrewingVessel } from '../../entities/BrewingVessel.entity';
 import { Infusion } from '../../entities/Infusion.entity';
+import { Tea } from '../../entities/Tea.entity';
+import { formatTeaLabel } from '../../utils/teaSearch';
 
 import {
     BrewingPhase,
@@ -94,6 +96,21 @@ class BrewingSessionService {
             infusions: [...(session.infusions || [])],
         });
         this.refreshEditableInfusionMetadata();
+    }
+
+    private assignTea(session: BrewingSession, tea: Tea | null): boolean {
+        const nextTeaId = tea?.teaId ?? null;
+        const currentTeaId = session.tea?.teaId ?? session.teaId ?? null;
+        const hasChanged = currentTeaId !== nextTeaId || formatTeaLabel(session.tea) !== formatTeaLabel(tea);
+
+        if (!hasChanged) {
+            return false;
+        }
+
+        session.tea = tea;
+        session.teaId = nextTeaId;
+        session.teaName = formatTeaLabel(tea);
+        return true;
     }
 
     private emitCurrentInfusion(infusion: Infusion | null) {
@@ -425,11 +442,16 @@ class BrewingSessionService {
 
     // --- Public Actions ---
 
-    public startSession(teaName?: string, notes?: string) {
-        logger.info('Starting brewing session', { teaName: teaName ?? '', hasNotes: Boolean(notes) });
+    public startSession(tea?: Tea | string, notes?: string) {
+        logger.info('Starting brewing session', {
+            teaName: typeof tea === 'string' ? tea : formatTeaLabel(tea),
+            hasNotes: Boolean(notes),
+        });
         const session = new BrewingSession();
         session.sessionId = crypto.randomUUID(); // Requires secure context or polyfill. If failing, move to uuid lib.
-        session.teaName = teaName || '';
+        session.teaName = typeof tea === 'string' ? tea : formatTeaLabel(tea);
+        session.teaId = typeof tea === 'string' ? null : tea?.teaId ?? null;
+        session.tea = typeof tea === 'string' ? null : tea ?? null;
         session.startTime = new Date().toISOString();
         session.status = 'active';
         session.notes = notes || '';
@@ -564,6 +586,31 @@ class BrewingSessionService {
         }
 
         session.teaName = name.trim();
+        session.teaId = null;
+        session.tea = null;
+        this.emitSession(session);
+        void sessionRepository.saveSession(session);
+    }
+
+    public updateTea(tea: Tea | null) {
+        const session = this.session$.value;
+        const allowedPhases = new Set<BrewingPhase>([
+            BrewingPhase.SETUP,
+            BrewingPhase.READY,
+            BrewingPhase.INFUSION,
+            BrewingPhase.INFUSION_VESSEL_LIFTED,
+            BrewingPhase.REST,
+            BrewingPhase.ENDED,
+        ]);
+
+        if (!session || !allowedPhases.has(this.state$.value)) {
+            return;
+        }
+
+        if (!this.assignTea(session, tea)) {
+            return;
+        }
+
         this.emitSession(session);
         void sessionRepository.saveSession(session);
     }

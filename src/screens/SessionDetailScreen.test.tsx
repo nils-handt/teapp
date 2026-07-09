@@ -5,23 +5,24 @@ import SessionDetailScreen from './SessionDetailScreen';
 import type { BrewingSession } from '../entities/BrewingSession.entity';
 import { BrewingSession as BrewingSessionEntity } from '../entities/BrewingSession.entity';
 import { historyStore, initialHistoryStoreState } from '../stores/useHistoryStore';
+import { Tea } from '../entities/Tea.entity';
 
 const goBack = vi.fn();
 const selectSession = vi.fn().mockResolvedValue(undefined);
 const deleteSession = vi.fn().mockResolvedValue(undefined);
 const updateSession = vi.fn().mockResolvedValue(undefined);
-const loadKnownTeaNames = vi.fn().mockResolvedValue(undefined);
-const upsertKnownTeaName = vi.fn();
+const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
+const saveTea = vi.fn();
 const presentToast = vi.fn();
 
 type SessionDetailStoreSeed = {
     deleteSession: (sessionId: string) => Promise<void>;
-    knownTeaNames: string[];
-    loadKnownTeaNames: (force?: boolean) => Promise<void>;
+    knownTeas: Tea[];
+    loadKnownTeas: (force?: boolean) => Promise<void>;
     selectSession: (sessionId: string) => Promise<void>;
     selectedSession: BrewingSession | null;
     updateSession: (session: BrewingSession) => Promise<void>;
-    upsertKnownTeaName: (teaName: string) => void;
+    saveTea: (tea: Tea) => Promise<Tea>;
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -48,10 +49,26 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('SessionDetailScreen', () => {
+    const createTea = (teaId: string, name: string): Tea => Object.assign(new Tea(), {
+        teaId,
+        name,
+        brand: null,
+        type: null,
+        subtype: null,
+        region: null,
+        subregion: null,
+        year: null,
+        season: null,
+        sessions: [],
+    });
+
     const createSession = (): BrewingSession => {
+        const tea = createTea('tea-1', 'Morning Sencha');
         const session = new BrewingSessionEntity();
         session.sessionId = 'session-1';
-        session.teaName = 'Morning Sencha';
+        session.teaName = tea.name;
+        session.teaId = tea.teaId;
+        session.tea = tea;
         session.notes = 'Bright and sweet';
         session.startTime = '2026-03-14T10:00:00.000Z';
         session.endTime = '2026-03-14T10:10:00.000Z';
@@ -82,15 +99,18 @@ describe('SessionDetailScreen', () => {
     };
 
     const seedHistoryStore = (overrides: Partial<SessionDetailStoreSeed> = {}) => {
+        const ortTea = createTea('tea-2', 'ORT 2015 Gao Jia Shan');
+        const senchaTea = createTea('tea-1', 'Morning Sencha');
+        saveTea.mockImplementation(async (tea: Tea) => tea);
         historyStore.setState(initialHistoryStoreState);
         historyStore.setState({
             selectedSession: createSession(),
-            knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
+            knownTeas: [ortTea, senchaTea],
             selectSession,
             deleteSession,
             updateSession,
-            loadKnownTeaNames,
-            upsertKnownTeaName,
+            loadKnownTeas,
+            saveTea,
             ...overrides,
         });
     };
@@ -109,15 +129,18 @@ describe('SessionDetailScreen', () => {
         expect(screen.getByRole('heading', { name: 'Notes' }).className).toBe(summaryHeadingClass);
 
         fireEvent.click(screen.getByRole('button', { name: /Tea nameMorning Sencha/i }));
-        expect(loadKnownTeaNames).toHaveBeenCalled();
+        expect(loadKnownTeas).toHaveBeenCalled();
 
-        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ort' } });
-        fireEvent.click(screen.getByRole('button', { name: 'ORT 2015 Gao Jia Shan' }));
+        fireEvent.change(screen.getByLabelText('Search existing teas'), { target: { value: 'ort' } });
+        fireEvent.click(screen.getByRole('option', { name: 'ORT 2015 Gao Jia Shan' }));
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
-            expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({ teaName: 'ORT 2015 Gao Jia Shan' }));
-            expect(upsertKnownTeaName).toHaveBeenCalledWith('ORT 2015 Gao Jia Shan');
+            expect(saveTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'ORT 2015 Gao Jia Shan' }));
+            expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({
+                teaId: 'tea-2',
+                teaName: 'ORT 2015 Gao Jia Shan',
+            }));
         });
     });
 

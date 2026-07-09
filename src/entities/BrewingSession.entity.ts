@@ -1,14 +1,18 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Infusion } from './Infusion.entity.ts';
 import { BrewingVessel } from './BrewingVessel.entity';
+import { Tea } from './Tea.entity';
 
 @Entity('brewing_sessions')
 export class BrewingSession {
     @PrimaryGeneratedColumn('uuid')
     sessionId!: string;
 
-    @Column('text')
+    @Column('text', { nullable: true })
     teaName!: string;
+
+    @Column('text', { nullable: true })
+    teaId!: string | null;
 
     @Column('text')
     startTime!: string; // ISO date string
@@ -43,6 +47,10 @@ export class BrewingSession {
     @ManyToOne(() => BrewingVessel, (brewingVessel) => brewingVessel.sessions, { nullable: true })
     @JoinColumn({ name: 'brewingVesselId', referencedColumnName: 'vesselId' })
     brewingVessel!: BrewingVessel | null;
+
+    @ManyToOne(() => Tea, (tea) => tea.sessions, { nullable: true })
+    @JoinColumn({ name: 'teaId', referencedColumnName: 'teaId' })
+    tea!: Tea | null;
 
     @OneToMany(() => Infusion, (infusion) => infusion.session, { cascade: true })
     infusions!: Infusion[];

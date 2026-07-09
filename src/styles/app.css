@@ -116,6 +116,10 @@ ion-button[data-zen-variant="soft"] {
   text-align: left;
 }
 
+.tea-mode-tab {
+  padding: 13px 12px;
+}
+
 .zen-tutorial-button {
   appearance: none;
   -webkit-appearance: none;

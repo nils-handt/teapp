@@ -5,21 +5,26 @@ import HistoryScreen from './HistoryScreen';
 import type { BrewingSession } from '../entities/BrewingSession.entity';
 import { BrewingSession as BrewingSessionEntity } from '../entities/BrewingSession.entity';
 import { historyStore, initialHistoryStoreState } from '../stores/useHistoryStore';
+import { Tea } from '../entities/Tea.entity';
 
 const loadHistory = vi.fn().mockResolvedValue(undefined);
-const loadKnownTeaNames = vi.fn().mockResolvedValue(undefined);
+const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
 const deleteSession = vi.fn().mockResolvedValue(undefined);
 
 type HistoryScreenStoreSeed = {
     deleteSession: (sessionId: string) => Promise<void>;
-    knownTeaNames: string[];
+    knownTeas: Tea[];
     loadHistory: () => Promise<void>;
-    loadKnownTeaNames: (force?: boolean) => Promise<void>;
+    loadKnownTeas: (force?: boolean) => Promise<void>;
     sessionList: BrewingSession[];
 };
 
 type ButtonProps = PropsWithChildren<{
     onClick?: MouseEventHandler<HTMLButtonElement>;
+}>;
+
+type DivProps = PropsWithChildren<{
+    onClick?: MouseEventHandler<HTMLDivElement>;
 }>;
 
 type SearchbarInputEvent = {
@@ -40,7 +45,7 @@ vi.mock('@ionic/react', () => ({
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonList: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonList: ({ children, onClick }: DivProps) => <div data-testid="history-list" onClick={onClick}>{children}</div>,
     IonItem: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonLabel: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonNote: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -61,10 +66,25 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('HistoryScreen', () => {
-    const createSession = (sessionId: string, teaName: string, startTime: string): BrewingSession => {
+    const createTea = (teaId: string, name: string): Tea => Object.assign(new Tea(), {
+        teaId,
+        name,
+        brand: null,
+        type: null,
+        subtype: null,
+        region: null,
+        subregion: null,
+        year: null,
+        season: null,
+        sessions: [],
+    });
+
+    const createSession = (sessionId: string, tea: Tea, startTime: string): BrewingSession => {
         const session = new BrewingSessionEntity();
         session.sessionId = sessionId;
-        session.teaName = teaName;
+        session.teaName = tea.name;
+        session.teaId = tea.teaId;
+        session.tea = tea;
         session.startTime = startTime;
         session.endTime = '';
         session.vesselWeight = 0;
@@ -81,15 +101,18 @@ describe('HistoryScreen', () => {
     };
 
     const seedHistoryStore = (overrides: Partial<HistoryScreenStoreSeed> = {}) => {
+        const ortTea = createTea('tea-1', 'ORT 2015 Gao Jia Shan');
+        const senchaTea = createTea('tea-2', 'Morning Sencha');
+
         historyStore.setState(initialHistoryStoreState);
         historyStore.setState({
             sessionList: [
-                createSession('1', 'ORT 2015 Gao Jia Shan', '2026-03-14T10:00:00.000Z'),
-                createSession('2', 'Morning Sencha', '2026-03-15T10:00:00.000Z'),
+                createSession('1', ortTea, '2026-03-14T10:00:00.000Z'),
+                createSession('2', senchaTea, '2026-03-15T10:00:00.000Z'),
             ],
-            knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
+            knownTeas: [ortTea, senchaTea],
             loadHistory,
-            loadKnownTeaNames,
+            loadKnownTeas,
             deleteSession,
             ...overrides,
         });
@@ -104,13 +127,13 @@ describe('HistoryScreen', () => {
         render(<HistoryScreen />);
 
         expect(loadHistory).toHaveBeenCalled();
-        expect(loadKnownTeaNames).toHaveBeenCalled();
+        expect(loadKnownTeas).toHaveBeenCalled();
     });
 
     it('filters sessions using fuzzy tea name matches', () => {
         render(<HistoryScreen />);
 
-        fireEvent.change(screen.getByLabelText('Search by tea name'), { target: { value: 'gao shan' } });
+        fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'gao shan' } });
 
         expect(screen.getAllByText('ORT 2015 Gao Jia Shan')).toHaveLength(2);
         expect(screen.queryByText('Morning Sencha')).toBeNull();
@@ -119,9 +142,45 @@ describe('HistoryScreen', () => {
     it('lets users apply a suggestion to the search field', () => {
         render(<HistoryScreen />);
 
-        fireEvent.change(screen.getByLabelText('Search by tea name'), { target: { value: 'ort' } });
+        fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'ort' } });
         fireEvent.click(screen.getByRole('button', { name: 'ORT 2015 Gao Jia Shan' }));
 
-        expect((screen.getByLabelText('Search by tea name') as HTMLInputElement).value).toBe('ORT 2015 Gao Jia Shan');
+        expect((screen.getByLabelText('Search teas') as HTMLInputElement).value).toBe('ORT 2015 Gao Jia Shan');
+    });
+
+    it('expands filters from the search area and collapses them from the disclosure arrow', () => {
+        render(<HistoryScreen />);
+
+        expect(screen.queryByLabelText('Filter Name')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Show history filters' }).getAttribute('aria-expanded')).toBe('false');
+
+        fireEvent.click(screen.getByLabelText('Search teas'));
+
+        expect(screen.getByLabelText('Filter Name')).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Hide history filters' }).getAttribute('aria-expanded')).toBe('true');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Hide history filters' }));
+
+        expect(screen.queryByLabelText('Filter Name')).toBeNull();
+    });
+
+    it('collapses expanded filters when the history list is clicked', () => {
+        render(<HistoryScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
+        expect(screen.getByLabelText('Filter Year')).toBeDefined();
+
+        fireEvent.click(screen.getByTestId('history-list'));
+
+        expect(screen.queryByLabelText('Filter Year')).toBeNull();
+    });
+
+    it('does not expand filters when a fuzzy tea suggestion is selected', () => {
+        render(<HistoryScreen />);
+
+        fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'ort' } });
+        fireEvent.click(screen.getByRole('button', { name: 'ORT 2015 Gao Jia Shan' }));
+
+        expect(screen.queryByLabelText('Filter Name')).toBeNull();
     });
 });

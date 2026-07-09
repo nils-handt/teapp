@@ -2,6 +2,8 @@ import { AppDataSource } from '../database/dataSource';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Like } from 'typeorm';
 
+const SESSION_RELATIONS = ['infusions', 'brewingVessel', 'tea'];
+
 export const sessionRepository = AppDataSource.getRepository(BrewingSession).extend({
     async saveSession(session: BrewingSession): Promise<BrewingSession> {
         return this.save(session);
@@ -13,7 +15,7 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
             order: {
                 startTime: 'DESC',
             },
-            relations: ['infusions', 'brewingVessel'],
+            relations: SESSION_RELATIONS,
         });
     },
 
@@ -22,14 +24,14 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
             order: {
                 startTime: 'DESC',
             },
-            relations: ['infusions', 'brewingVessel'],
+            relations: SESSION_RELATIONS,
         });
     },
 
     async getSessionById(sessionId: string): Promise<BrewingSession | null> {
         return this.findOne({
             where: { sessionId },
-            relations: ['infusions', 'brewingVessel'],
+            relations: SESSION_RELATIONS,
         });
     },
 
@@ -39,7 +41,7 @@ export const sessionRepository = AppDataSource.getRepository(BrewingSession).ext
             order: {
                 startTime: 'DESC',
             },
-            relations: ['infusions', 'brewingVessel'],
+            relations: SESSION_RELATIONS,
         });
     },
 

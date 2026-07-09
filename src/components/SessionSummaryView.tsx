@@ -23,6 +23,7 @@ import {
     zenSummarySectionHeadingClass,
     zenSummaryStatLabelClass,
 } from '../styles/zen';
+import { formatTeaLabel } from '../utils/teaSearch';
 
 type SummaryFieldProps = {
     label: string;
@@ -85,7 +86,8 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     showNotes = false,
     footer,
 }) => {
-    const hasTeaName = Boolean(session.teaName?.trim());
+    const teaLabel = formatTeaLabel(session.tea) || session.teaName?.trim() || '';
+    const hasTeaName = Boolean(teaLabel);
     const hasBrewingVesselWeights = Boolean((session.vesselWeight ?? 0) > 0 && (session.lidWeight ?? 0) > 0);
     const hasBrewingVesselName = Boolean(session.brewingVessel?.name?.trim());
 
@@ -107,7 +109,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                     {title}
                 </p>
                 <h2 className="mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text">
-                    {session.teaName?.trim() || 'no tea selected'}
+                    {teaLabel || 'no tea selected'}
                 </h2>
             </section>
 
@@ -118,7 +120,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 <div className="mb-3">
                     <SummaryField
                         label="Tea name"
-                        value={session.teaName?.trim() || 'no tea selected'}
+                        value={teaLabel || 'no tea selected'}
                         onClick={teaNameAction}
                         highlighted={Boolean(teaNameAction) && !hasTeaName}
                     />

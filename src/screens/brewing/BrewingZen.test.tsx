@@ -1,9 +1,10 @@
 import type { MouseEventHandler, PropsWithChildren } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
 import { BrewingPhase, type EditableInfusionMetadata } from '../../services/interfaces/brewing.types';
 import type { BrewingSession } from '../../entities/BrewingSession.entity';
+import { Tea } from '../../entities/Tea.entity';
 import { brewingStore, initialBrewingStoreState } from '../../stores/useBrewingStore';
 import { historyStore, initialHistoryStoreState } from '../../stores/useHistoryStore';
 import { initialScaleStoreState, scaleStore } from '../../stores/useScaleStore';
@@ -29,8 +30,8 @@ const {
     updateEditableInfusionNote,
     updateEditableInfusionTemperature,
     updateSavedInfusionNote,
-    loadKnownTeaNames,
-    upsertKnownTeaName,
+    loadKnownTeas,
+    saveTea,
 } = vi.hoisted(() => ({
     connectNewDevice: vi.fn(),
     startBrewingSession: vi.fn(),
@@ -44,8 +45,8 @@ const {
     updateEditableInfusionNote: vi.fn(),
     updateEditableInfusionTemperature: vi.fn(),
     updateSavedInfusionNote: vi.fn(),
-    loadKnownTeaNames: vi.fn().mockResolvedValue(undefined),
-    upsertKnownTeaName: vi.fn(),
+    loadKnownTeas: vi.fn().mockResolvedValue(undefined),
+    saveTea: vi.fn(),
 }));
 
 type BrewingZenBrewingSeed = {
@@ -62,9 +63,9 @@ type BrewingZenScaleSeed = {
 };
 
 type BrewingZenHistorySeed = {
-    knownTeaNames: string[];
-    loadKnownTeaNames: (force?: boolean) => Promise<void>;
-    upsertKnownTeaName: (teaName: string) => void;
+    knownTeas: Tea[];
+    loadKnownTeas: (force?: boolean) => Promise<void>;
+    saveTea: (tea: Tea) => Promise<Tea>;
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -100,6 +101,7 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
         updateEditableInfusionNote,
         updateEditableInfusionTemperature,
         updateSavedInfusionNote,
+        updateTea: vi.fn(),
     },
 }));
 
@@ -121,6 +123,19 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('BrewingZen', () => {
+    const createTea = (teaId: string, name: string): Tea => Object.assign(new Tea(), {
+        teaId,
+        name,
+        brand: null,
+        type: null,
+        subtype: null,
+        region: null,
+        subregion: null,
+        year: null,
+        season: null,
+        sessions: [],
+    });
+
     const createInfusion = (overrides: Partial<BrewingSession['infusions'][number]> = {}) => ({
         infusionId: 'inf-1',
         infusionNumber: 1,
@@ -144,11 +159,14 @@ describe('BrewingZen', () => {
         brewingStore.setState(initialBrewingStoreState);
         scaleStore.setState(initialScaleStoreState);
         historyStore.setState(initialHistoryStoreState);
+        saveTea.mockImplementation(async (tea: Tea) => tea);
 
         brewingStore.setState({
             activeSession: {
                 sessionId: 'session-1',
                 teaName: '',
+                teaId: null,
+                tea: null,
                 brewingVessel: null,
                 vesselWeight: 95.2,
                 lidWeight: 14.1,
@@ -181,9 +199,9 @@ describe('BrewingZen', () => {
             ...scaleOverrides,
         });
         historyStore.setState({
-            knownTeaNames: ['ORT 2015 Gao Jia Shan', 'Morning Sencha'],
-            loadKnownTeaNames,
-            upsertKnownTeaName,
+            knownTeas: [createTea('tea-1', 'ORT 2015 Gao Jia Shan'), createTea('tea-2', 'Morning Sencha')],
+            loadKnownTeas,
+            saveTea,
             ...historyOverrides,
         });
     };
@@ -211,7 +229,7 @@ describe('BrewingZen', () => {
         expect(screen.getByRole('button', { name: /Lid/i })).toBeDefined();
         expect(screen.queryByRole('button', { name: /Tray/i })).toBeNull();
         expect(screen.getByRole('button', { name: /Tea6.4 g/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /tea name/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Teano tea selected/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /vessel name/i })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Confirm Setup' })).toBeDefined();
     });
@@ -233,7 +251,7 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
-        expect(screen.getByRole('button', { name: /tea nameno tea selected/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Teano tea selected/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /vessel nameno vessel selected/i })).toBeDefined();
         expect(screen.queryByText('63.5 g')).toBeNull();
         expect(screen.queryByTestId('infusion-history-strip')).toBeNull();
@@ -570,17 +588,19 @@ describe('BrewingZen', () => {
         expect(updateSavedInfusionNote).toHaveBeenCalledWith('inf-1', 'fruitier than before');
     });
 
-    it('uses the shared tea editor suggestions when saving a tea name', () => {
+    it('uses the shared tea editor suggestions when saving a tea name', async () => {
         render(<BrewingZen />);
 
-        fireEvent.click(screen.getByRole('button', { name: /tea nameno tea selected/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Teano tea selected/i }));
 
-        expect(loadKnownTeaNames).toHaveBeenCalled();
+        expect(loadKnownTeas).toHaveBeenCalled();
 
-        fireEvent.click(screen.getByRole('button', { name: 'ORT 2015 Gao Jia Shan' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Show Search existing teas suggestions' }));
+        fireEvent.click(screen.getByRole('option', { name: 'ORT 2015 Gao Jia Shan' }));
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-        expect(updateTeaName).toHaveBeenCalledWith('ORT 2015 Gao Jia Shan');
-        expect(upsertKnownTeaName).toHaveBeenCalledWith('ORT 2015 Gao Jia Shan');
+        await waitFor(() => {
+            expect(saveTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'ORT 2015 Gao Jia Shan' }));
+        });
     });
 });

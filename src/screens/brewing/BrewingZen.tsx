@@ -11,7 +11,7 @@ import AppButton from '../../components/ui/AppButton';
 import DesignSwitcher from '../../components/DesignSwitcher';
 import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
-import TeaNameEditorModal from '../../components/TeaNameEditorModal';
+import TeaEditorModal from '../../components/TeaEditorModal';
 import ModalFrame from '../../components/ui/ModalFrame';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { bluetoothScaleService } from '../../services/BluetoothScaleService';
@@ -49,6 +49,8 @@ import {
     formatZenSeconds,
     formatZenWeight,
 } from './zenBrewingShared';
+import { formatTeaLabel } from '../../utils/teaSearch';
+import { Tea } from '../../entities/Tea.entity';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'dryTeaLeavesWeight';
 type EditableField = SetupField | 'teaName' | 'brewingVesselName';
@@ -108,11 +110,11 @@ const BrewingZen: React.FC = () => {
         connectionStatus: state.connectionStatus,
         currentWeight: state.currentWeight,
     })));
-    const { knownTeaNames, loadKnownTeaNames, upsertKnownTeaName } = useHistoryStore(
+    const { knownTeas, loadKnownTeas, saveTea } = useHistoryStore(
         useShallow((state) => ({
-            knownTeaNames: state.knownTeaNames,
-            loadKnownTeaNames: state.loadKnownTeaNames,
-            upsertKnownTeaName: state.upsertKnownTeaName,
+            knownTeas: state.knownTeas,
+            loadKnownTeas: state.loadKnownTeas,
+            saveTea: state.saveTea,
         }))
     );
     const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
@@ -127,7 +129,8 @@ const BrewingZen: React.FC = () => {
     const infusionHistoryStripRef = useRef<HTMLDivElement | null>(null);
 
     const phaseCopy = PHASE_COPY[brewingPhase] ?? PHASE_COPY[BrewingPhase.IDLE];
-    const hasTeaName = Boolean(activeSession?.teaName?.trim());
+    const activeTeaLabel = formatTeaLabel(activeSession?.tea) || activeSession?.teaName?.trim() || '';
+    const hasTeaName = Boolean(activeTeaLabel);
     const hasBrewingVesselWeights = Boolean((activeSession?.vesselWeight ?? 0) > 0 && (activeSession?.lidWeight ?? 0) > 0);
     const hasBrewingVesselName = Boolean(activeSession?.brewingVessel?.name?.trim());
     const brewingVesselLabel = activeSession?.brewingVessel?.name?.trim()
@@ -238,9 +241,9 @@ const BrewingZen: React.FC = () => {
 
         const config: Record<EditableField, { header: string; inputType: 'number' | 'text'; value: string }> = {
             teaName: {
-                header: 'Tea Name',
+                header: 'Tea',
                 inputType: 'text',
-                value: activeSession?.teaName ?? '',
+                value: activeTeaLabel,
             },
             vesselWeight: {
                 header: 'Vessel',
@@ -272,7 +275,7 @@ const BrewingZen: React.FC = () => {
         setDraftValue(config[field].value);
 
         if (field === 'teaName') {
-            void loadKnownTeaNames();
+            void loadKnownTeas();
         }
     };
 
@@ -420,6 +423,12 @@ const BrewingZen: React.FC = () => {
         </section>
     );
 
+    const handleTeaSave = async (tea: Tea) => {
+        const savedTea = await saveTea(tea);
+        brewingSessionService.updateTea(savedTea);
+        closeEditor();
+    };
+
     const handleAlertSave = () => {
         if (!alertState) {
             return;
@@ -427,8 +436,6 @@ const BrewingZen: React.FC = () => {
 
         const nextValue = draftValue;
         if (alertState.field === 'teaName') {
-            brewingSessionService.updateTeaName(nextValue);
-            upsertKnownTeaName(nextValue);
             closeEditor();
             return;
         }
@@ -499,7 +506,7 @@ const BrewingZen: React.FC = () => {
                     {renderFieldButton('Vessel', formatZenWeight(activeSession?.vesselWeight), 'vesselWeight')}
                     {renderFieldButton('Lid', formatZenWeight(activeSession?.lidWeight), 'lidWeight')}
                     {renderFieldButton('Tea', formatZenWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
-                    {renderFieldButton('Tea name', activeSession?.teaName?.trim() || 'no tea selected', 'teaName')}
+                    {renderFieldButton('Tea', activeTeaLabel || 'no tea selected', 'teaName')}
                     {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                 </div>
             </section>
@@ -560,7 +567,7 @@ const BrewingZen: React.FC = () => {
             {(!hasTeaName || !hasBrewingVesselName) && (
                 <section className={zenPanelClass}>
                     <div className="grid gap-3">
-                        {!hasTeaName && renderFieldButton('Tea name', 'no tea selected', 'teaName')}
+                        {!hasTeaName && renderFieldButton('Tea', 'no tea selected', 'teaName')}
                         {!hasBrewingVesselName && renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                     </div>
                 </section>
@@ -660,14 +667,13 @@ const BrewingZen: React.FC = () => {
                     {renderPhaseContent()}
                 </div>
 
-                <TeaNameEditorModal
+                <TeaEditorModal
                     isOpen={alertState?.field === 'teaName'}
-                    title={alertState?.header ?? 'Tea Name'}
-                    value={draftValue}
-                    knownTeaNames={knownTeaNames}
-                    onChange={setDraftValue}
+                    title={alertState?.header ?? 'Tea'}
+                    selectedTea={activeSession?.tea ?? null}
+                    teas={knownTeas}
                     onCancel={closeEditor}
-                    onSave={handleAlertSave}
+                    onSave={handleTeaSave}
                 />
                 <InfusionNoteEditorModal
                     isOpen={Boolean(noteEditorTarget)}

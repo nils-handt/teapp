@@ -6,7 +6,7 @@ import { setupIonicReact } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorSQLite } from '@capacitor-community/sqlite';
 import { defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader';
-import { AppDataSource } from './database/dataSource';
+import { AppDataSource, sqliteConnection } from './database/dataSource';
 import { createLogger } from './services/logging';
 
 /* Core CSS required for Ionic components to work properly */
@@ -58,6 +58,9 @@ const initApp = async () => {
       logger.info('Initializing application data source');
       await AppDataSource.initialize();
       logger.info('Application data source initialized');
+      if (platform === 'web') {
+        await sqliteConnection.saveToStore('teapp');
+      }
     }
   } catch (err) {
     logger.error('Error during application data source initialization', err);
