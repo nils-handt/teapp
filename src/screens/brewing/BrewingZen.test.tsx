@@ -602,7 +602,7 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'first steep' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Notes first steep' }));
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'rounder after cooling' } });
         fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
 

@@ -162,8 +162,11 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                     disabled={!notesAction}
                     className={cn(zenSummaryListItemClass, notesAction ? 'cursor-pointer' : 'cursor-default')}
                 >
-                    <div className={session.notes?.trim() ? 'text-zen-text' : 'text-zen-muted'}>
-                        {session.notes?.trim() || 'No notes'}
+                    <div className="mb-2 flex justify-between gap-3">
+                        <strong>Notes</strong>
+                    </div>
+                    <div className="flex flex-wrap gap-4 text-[0.92rem] text-zen-muted">
+                        <span>{session.notes?.trim() || 'No notes'}</span>
                     </div>
                 </button>
             </section>

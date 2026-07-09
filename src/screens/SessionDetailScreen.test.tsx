@@ -175,7 +175,7 @@ describe('SessionDetailScreen', () => {
 
         const informationHeading = screen.getByRole('heading', { name: 'Information' });
         const infusionsHeading = screen.getByRole('heading', { name: 'Infusions' });
-        const informationBox = screen.getByRole('button', { name: 'Bright and sweet' });
+        const informationBox = screen.getByRole('button', { name: 'Notes Bright and sweet' });
         const infusionBox = screen.getByRole('button', { name: /Infusion 1/i });
 
         expect(informationHeading.compareDocumentPosition(infusionsHeading) & 4).toBe(4);
@@ -185,7 +185,7 @@ describe('SessionDetailScreen', () => {
     it('edits session notes by pressing the Information field', async () => {
         render(<SessionDetailScreen />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Bright and sweet' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Notes Bright and sweet' }));
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'honey and grass' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
