@@ -39,6 +39,8 @@ yarn-error.log*
 .idea
 .vscode
 .gemini
+docs/superpowers
+.superpowers
 
 public/*
 !public/
