@@ -76,6 +76,8 @@
 }
 
 .zen-list-section-header {
+  min-height: auto;
+  padding: 14px 16px 6px;
   color: var(--color-zen-muted);
   font-size: 0.76rem;
   letter-spacing: 0.16em;
