@@ -44,6 +44,20 @@ describe('useScaleStore', () => {
     expect(scaleStore.getState().connectedDevice).toEqual(device);
   });
 
+  it('tracks mock scale mode reactively', () => {
+    const state = scaleStore.getState() as unknown as {
+      isMockMode: boolean;
+      setIsMockMode: (isMockMode: boolean) => void;
+    };
+
+    expect(state.isMockMode).toBe(false);
+    expect(state.setIsMockMode).toEqual(expect.any(Function));
+
+    state.setIsMockMode(true);
+
+    expect((scaleStore.getState() as unknown as { isMockMode: boolean }).isMockMode).toBe(true);
+  });
+
   it('clears available devices and scanning state', () => {
     scaleStore.getState().addDiscoveredDevice(device);
     scaleStore.getState().setIsScanning(true);

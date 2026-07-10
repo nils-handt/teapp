@@ -4,6 +4,7 @@ import { RealScaleService } from './RealScaleService';
 import { MockScaleService } from './MockScaleService';
 import { DiscoveredDevice } from './bluetooth/types/ble.types';
 import { createLogger } from './logging';
+import { scaleStore } from '../stores/useScaleStore';
 
 const logger = createLogger('BluetoothScaleService');
 
@@ -92,6 +93,7 @@ class BluetoothScaleService implements IScaleService {
 
     // Initialize the new service if needed
     await this.activeService.initialize();
+    scaleStore.getState().setIsMockMode(enabled);
     logger.info('Scale service mode switched', { enabled });
   }
 

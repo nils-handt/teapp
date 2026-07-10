@@ -10,6 +10,7 @@ export interface ScaleStoreState {
   currentWeight: number;
   availableDevices: DiscoveredDevice[];
   isScanning: boolean;
+  isMockMode: boolean;
 }
 
 export interface ScaleStoreActions {
@@ -20,6 +21,7 @@ export interface ScaleStoreActions {
   setConnectedDevice: (device: DiscoveredDevice | null) => void;
   setCurrentWeight: (weight: number) => void;
   setIsScanning: (scanning: boolean) => void;
+  setIsMockMode: (isMockMode: boolean) => void;
 }
 
 export type ScaleStore = ScaleStoreState & ScaleStoreActions;
@@ -30,6 +32,7 @@ export const initialScaleStoreState: ScaleStoreState = {
   currentWeight: 0,
   availableDevices: [],
   isScanning: false,
+  isMockMode: false,
 };
 
 export const scaleStore = createStore<ScaleStore>()((set, get) => ({
@@ -54,6 +57,7 @@ export const scaleStore = createStore<ScaleStore>()((set, get) => ({
   setConnectedDevice: (device) => set({ connectedDevice: device }),
   setCurrentWeight: (weight) => set({ currentWeight: weight }),
   setIsScanning: (scanning) => set({ isScanning: scanning }),
+  setIsMockMode: (isMockMode) => set({ isMockMode }),
 }));
 
 export const useScaleStore = <T>(selector: (state: ScaleStore) => T): T =>
