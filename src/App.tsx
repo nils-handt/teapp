@@ -7,7 +7,6 @@ import RecordingsScreen from './screens/RecordingsScreen';
 import { useEffect, useState } from 'react';
 import { bluetoothScaleService } from './services/BluetoothScaleService';
 import { useBrewingSync } from './hooks/useBrewingSync';
-import { getBrewingScreenPath } from './constants/brewingScreens';
 import { createLogger } from './services/logging';
 import { brewingStore } from './stores/useBrewingStore';
 import { settingsStore, useSettingsStore } from './stores/useSettingsStore';
@@ -25,14 +24,12 @@ const App: React.FC = () => {
   const {
     hasSeenTutorial,
     isTutorialOpen,
-    lastUsedBrewingScreen,
     markTutorialSeen,
     openTutorial,
     settingsLoaded,
   } = useSettingsStore(useShallow((state) => ({
     hasSeenTutorial: state.hasSeenTutorial,
     isTutorialOpen: state.isTutorialOpen,
-    lastUsedBrewingScreen: state.lastUsedBrewingScreen,
     markTutorialSeen: state.markTutorialSeen,
     openTutorial: state.openTutorial,
     settingsLoaded: state.settingsLoaded,
@@ -92,7 +89,7 @@ const App: React.FC = () => {
           <Route path="/recordings" component={RecordingsScreen} />
 
           {/* Phase 13 Design Routes */}
-          <Route path="/" render={() => <Redirect to={getBrewingScreenPath(lastUsedBrewingScreen)} />} exact={true} />
+          <Route path="/" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />
         </IonRouterOutlet>
         <IonAlert
           isOpen={showBrowserCompatibilityWarning}

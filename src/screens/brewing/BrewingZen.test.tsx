@@ -72,10 +72,6 @@ type ButtonProps = PropsWithChildren<{
     disabled?: boolean;
     onClick?: MouseEventHandler<HTMLButtonElement>;
 }>;
-vi.mock('../../components/DesignSwitcher', () => ({
-    default: () => <div>Design Switcher</div>,
-}));
-
 vi.mock('../../hooks/useBrewingControl', () => ({
     useBrewingControl: () => ({
         startBrewingSession,

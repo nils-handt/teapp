@@ -8,7 +8,6 @@ import {
 } from '@ionic/react';
 import React, { useEffect, useRef, useState } from 'react';
 import AppButton from '../../components/ui/AppButton';
-import DesignSwitcher from '../../components/DesignSwitcher';
 import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
 import TeaEditorModal from '../../components/TeaEditorModal';
@@ -659,7 +658,6 @@ const BrewingZen: React.FC = () => {
             <IonHeader className="[--border-width:0]">
                 <IonToolbar>
                     <IonTitle>Zen</IonTitle>
-                    <DesignSwitcher />
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>

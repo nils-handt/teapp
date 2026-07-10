@@ -28,7 +28,6 @@ vi.mock('../services/logging', async () => {
 });
 
 import { settingsRepository } from '../repositories/SettingsRepository';
-import { DEFAULT_BREWING_SCREEN_ID } from '../constants/brewingScreens';
 import { DEFAULT_LOGGER_CONFIG, configureLogger } from '../services/logging';
 import { initialSettingsStoreValues, settingsStore } from './useSettingsStore';
 
@@ -41,22 +40,20 @@ describe('useSettingsStore', () => {
   it('starts with default logger settings before persisted settings load', () => {
     expect(settingsStore.getState().logLevel).toBe(DEFAULT_LOGGER_CONFIG.minLevel);
     expect(settingsStore.getState().logToFileEnabled).toBe(DEFAULT_LOGGER_CONFIG.enableFileLogging);
-    expect(settingsStore.getState().lastUsedBrewingScreen).toBe(DEFAULT_BREWING_SCREEN_ID);
+    expect(settingsStore.getState()).not.toHaveProperty('lastUsedBrewingScreen');
     expect(settingsStore.getState().hasSeenTutorial).toBe(false);
     expect(settingsStore.getState().settingsLoaded).toBe(false);
     expect(settingsStore.getState().isTutorialOpen).toBe(false);
   });
 
   it('updates persisted settings without touching the logger when logger settings are absent', () => {
-    settingsStore.getState().updateSettings({ devMode: true, playbackSpeed: 2, lastUsedBrewingScreen: 4 });
+    settingsStore.getState().updateSettings({ devMode: true, playbackSpeed: 2 });
 
     expect(settingsStore.getState().devMode).toBe(true);
     expect(settingsStore.getState().playbackSpeed).toBe(2);
-    expect(settingsStore.getState().lastUsedBrewingScreen).toBe(4);
     expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({
       devMode: true,
       playbackSpeed: 2,
-      lastUsedBrewingScreen: 4,
     });
     expect(configureLogger).not.toHaveBeenCalled();
   });
@@ -75,7 +72,6 @@ describe('useSettingsStore', () => {
 
   it('loads persisted settings and applies logger configuration', async () => {
     vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
-      lastUsedBrewingScreen: '5',
       devMode: 'true',
       hasSeenTutorial: 'true',
       logLevel: 'error',
@@ -88,7 +84,6 @@ describe('useSettingsStore', () => {
     await settingsStore.getState().loadSettings();
 
     expect(settingsStore.getState()).toMatchObject({
-      lastUsedBrewingScreen: 5,
       devMode: true,
       hasSeenTutorial: true,
       logLevel: 'error',

@@ -2,11 +2,6 @@ import { useStore as useZustandStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { settingsRepository } from '../repositories/SettingsRepository';
 import {
-  DEFAULT_BREWING_SCREEN_ID,
-  isBrewingScreenId,
-  type BrewingScreenId,
-} from '../constants/brewingScreens';
-import {
   configureLogger,
   createLogger,
   DEFAULT_LOGGER_CONFIG,
@@ -25,7 +20,6 @@ export interface SettingsStoreValues {
   logToFileEnabled: boolean;
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
-  lastUsedBrewingScreen: BrewingScreenId;
   hasSeenTutorial: boolean;
   settingsLoaded: boolean;
   isTutorialOpen: boolean;
@@ -50,7 +44,6 @@ export type PersistedSettingsStoreValues = Pick<
   | 'logToFileEnabled'
   | 'weightLoggerEnabled'
   | 'playbackSpeed'
-  | 'lastUsedBrewingScreen'
   | 'hasSeenTutorial'
 >;
 
@@ -61,7 +54,6 @@ export const initialSettingsStoreValues: SettingsStoreValues = {
   logToFileEnabled: DEFAULT_LOGGER_CONFIG.enableFileLogging,
   weightLoggerEnabled: false,
   playbackSpeed: 1,
-  lastUsedBrewingScreen: DEFAULT_BREWING_SCREEN_ID,
   hasSeenTutorial: false,
   settingsLoaded: false,
   isTutorialOpen: false,
@@ -113,12 +105,6 @@ export const settingsStore = createStore<SettingsStore>()((set) => ({
     }
     if (allSettings['playbackSpeed']) {
       loadedSettings.playbackSpeed = Number(allSettings['playbackSpeed']);
-    }
-    if (allSettings['lastUsedBrewingScreen']) {
-      const screenId = Number(allSettings['lastUsedBrewingScreen']);
-      if (isBrewingScreenId(screenId)) {
-        loadedSettings.lastUsedBrewingScreen = screenId;
-      }
     }
     if (allSettings['hasSeenTutorial']) {
       loadedSettings.hasSeenTutorial = allSettings['hasSeenTutorial'] === 'true';
