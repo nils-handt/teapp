@@ -44,7 +44,7 @@
 }
 
 .zen-list-search {
-  --background: var(--color-zen-panel-strong);
+  --background: rgb(240, 240, 240);
   --border-radius: 16px;
   --box-shadow: none;
   --color: var(--color-zen-text);
