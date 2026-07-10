@@ -82,6 +82,24 @@
   text-transform: uppercase;
 }
 
+.zen-list-surface ion-toggle {
+  --track-background-checked: var(--color-zen-muted);
+  --handle-background-checked: var(--color-zen-panel-strong);
+}
+
+.zen-list-surface ion-select {
+  color: var(--color-zen-text);
+}
+
+.zen-list-inline-card {
+  margin: 12px 16px;
+  border: 1px solid var(--color-zen-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: none;
+  color: var(--color-zen-text);
+}
+
 ion-button[data-zen-variant="primary"] {
   --background: var(--zen-background);
   --color: #000000;

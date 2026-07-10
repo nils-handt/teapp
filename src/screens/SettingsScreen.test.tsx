@@ -74,6 +74,11 @@ type ButtonProps = PropsWithChildren<{
     onClick?: MouseEventHandler<HTMLButtonElement>;
 }>;
 
+type ClassedContainerProps = PropsWithChildren<{
+    className?: string;
+    'data-testid'?: string;
+}>;
+
 type ItemProps = PropsWithChildren<{
     button?: boolean;
     onClick?: MouseEventHandler<HTMLDivElement>;
@@ -145,7 +150,9 @@ vi.mock('@ionic/react', () => ({
     IonButton: ({ children, disabled, onClick }: ButtonProps) => <button disabled={disabled} onClick={onClick}>{children}</button>,
     IonCard: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonCardContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonContent: ({ children, className, 'data-testid': testId }: ClassedContainerProps) => (
+        <div className={className} data-testid={testId}>{children}</div>
+    ),
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItem: ({ button, children, onClick }: ItemProps) => (
         button
@@ -153,8 +160,10 @@ vi.mock('@ionic/react', () => ({
             : <div>{children}</div>
     ),
     IonLabel: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonList: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonListHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonList: ({ children, className, 'data-testid': testId }: ClassedContainerProps) => (
+        <div className={className} data-testid={testId}>{children}</div>
+    ),
+    IonListHeader: ({ children, className }: ClassedContainerProps) => <div className={className}>{children}</div>,
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonSelect: ({ children, onIonChange, value }: SelectProps) => (
         <select
@@ -284,6 +293,16 @@ describe('SettingsScreen', () => {
         renderScreen();
 
         expect(screen.queryByText('Brewing Tab Screen')).toBeNull();
+    });
+
+    it('groups existing settings sections with the shared Zen list treatment', () => {
+        renderScreen({ devMode: true }, {}, { isMockMode: true });
+
+        expect(screen.getByTestId('settings-page').classList.contains('zen-list-page')).toBe(true);
+        expect(screen.getByTestId('settings-development').classList.contains('zen-list-surface')).toBe(true);
+        expect(screen.getByTestId('settings-data-management').classList.contains('zen-list-surface')).toBe(true);
+        expect(screen.getByText('Use Mock Scale')).not.toBeNull();
+        expect(screen.getByText('Backup Data')).not.toBeNull();
     });
 
     it('prompts for PWA installation when Chrome exposes the install event', async () => {

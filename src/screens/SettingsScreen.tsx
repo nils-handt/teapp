@@ -27,6 +27,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { useScaleStore } from '../stores/useScaleStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import {
+  zenListPageClass,
+  zenListSectionHeaderClass,
+  zenListSurfaceClass,
+  zenListToolbarClass,
+} from '../styles/zen';
 
 const logger = createLogger('SettingsScreen');
 
@@ -189,26 +195,26 @@ const SettingsScreen: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar>
+        <IonToolbar className={zenListToolbarClass}>
           <IonTitle>Settings</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen>
+      <IonContent fullscreen className={zenListPageClass} data-testid="settings-page">
         <IonHeader collapse="condense">
-          <IonToolbar>
+          <IonToolbar className={zenListToolbarClass}>
             <IonTitle size="large">Settings</IonTitle>
           </IonToolbar>
         </IonHeader>
 
-        <IonList>
+        <IonList className={zenListSurfaceClass}>
           <IonItem button onClick={openTutorial}>
             <IonLabel>Show Tutorial Again</IonLabel>
           </IonItem>
         </IonList>
 
         {pwaInstall.status !== 'installed' && (
-          <IonList>
-            <IonListHeader>
+          <IonList className={zenListSurfaceClass}>
+            <IonListHeader className={zenListSectionHeaderClass}>
               <IonLabel>App Installation</IonLabel>
             </IonListHeader>
             <IonItem
@@ -228,8 +234,8 @@ const SettingsScreen: React.FC = () => {
           </IonList>
         )}
 
-        <IonList>
-          <IonListHeader>
+        <IonList className={zenListSurfaceClass}>
+          <IonListHeader className={zenListSectionHeaderClass}>
             <IonLabel>Bluetooth Scale</IonLabel>
           </IonListHeader>
 
@@ -240,7 +246,7 @@ const SettingsScreen: React.FC = () => {
               {isMockMode && <p className="text-orange-500">Mock Mode Active</p>}
             </IonLabel>
             {connectionStatus === 'connected' && (
-              <IonButton slot="end" color="danger" onClick={() => bluetoothScaleService.disconnect()}>
+              <IonButton slot="end" color="danger" data-zen-variant="danger" onClick={() => bluetoothScaleService.disconnect()}>
                 Disconnect
               </IonButton>
             )}
@@ -258,7 +264,7 @@ const SettingsScreen: React.FC = () => {
 
           {connectionStatus !== 'connected' && (
             <IonItem lines="none">
-              <IonButton expand="block" onClick={handleConnectNew} disabled={connectionStatus === 'connecting'}>
+              <IonButton expand="block" data-zen-variant="primary" onClick={handleConnectNew} disabled={connectionStatus === 'connecting'}>
                 {isMockMode ? 'Connect Mock Scale' : 'Connect New Scale'}
               </IonButton>
             </IonItem>
@@ -266,8 +272,8 @@ const SettingsScreen: React.FC = () => {
 
         </IonList>
 
-        <IonList>
-          <IonListHeader>
+        <IonList className={zenListSurfaceClass} data-testid="settings-development">
+          <IonListHeader className={zenListSectionHeaderClass}>
             <IonLabel>Development</IonLabel>
           </IonListHeader>
           <ToggleSettingItem
@@ -306,7 +312,7 @@ const SettingsScreen: React.FC = () => {
               />
 
               {isMockMode && (
-                <IonCard>
+                <IonCard className="zen-list-inline-card">
                   <IonCardContent>
                     <IonLabel><h2>Mock Scale Controls</h2></IonLabel>
                     <div className="mt-2.5">
@@ -314,9 +320,9 @@ const SettingsScreen: React.FC = () => {
                       <input type="file" accept=".json" onChange={handleFileUpload} />
                     </div>
                     <div className="mt-[15px] flex gap-2.5">
-                      <IonButton size="small" onClick={() => bluetoothScaleService.mock.startReplay()}>Play</IonButton>
-                      <IonButton size="small" color="warning" onClick={() => bluetoothScaleService.mock.pauseReplay()}>Pause</IonButton>
-                      <IonButton size="small" color="medium" onClick={() => bluetoothScaleService.mock.stopReplay()}>Stop</IonButton>
+                      <IonButton size="small" data-zen-variant="primary" onClick={() => bluetoothScaleService.mock.startReplay()}>Play</IonButton>
+                      <IonButton size="small" color="warning" data-zen-variant="soft" onClick={() => bluetoothScaleService.mock.pauseReplay()}>Pause</IonButton>
+                      <IonButton size="small" color="medium" data-zen-variant="soft" onClick={() => bluetoothScaleService.mock.stopReplay()}>Stop</IonButton>
                     </div>
                     <div className="mt-[15px]">
                       <IonLabel>Playback Speed</IonLabel>
@@ -349,8 +355,10 @@ const SettingsScreen: React.FC = () => {
               )}
             </>
           )}
+        </IonList>
 
-          <IonListHeader>
+        <IonList className={zenListSurfaceClass} data-testid="settings-data-management">
+          <IonListHeader className={zenListSectionHeaderClass}>
             <IonLabel>Data Management</IonLabel>
           </IonListHeader>
           <IonItem button onClick={() => handleBackup()}>
