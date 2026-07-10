@@ -25,7 +25,15 @@ import { useShallow } from 'zustand/react/shallow';
 import { useHistoryStore } from '../stores/useHistoryStore';
 import SuggestionList from '../components/ui/SuggestionList';
 import SuggestedInput from '../components/ui/SuggestedInput';
-import { cn } from '../styles/zen';
+import {
+  cn,
+  zenListItemMetaClass,
+  zenListItemTitleClass,
+  zenListPageClass,
+  zenListSearchClass,
+  zenListSurfaceClass,
+  zenListToolbarClass,
+} from '../styles/zen';
 import {
   filterSessionsByTeaFilters,
   formatTeaLabel,
@@ -167,10 +175,10 @@ const HistoryScreen: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar>
+        <IonToolbar className={zenListToolbarClass}>
           <IonTitle>History</IonTitle>
         </IonToolbar>
-        <IonToolbar>
+        <IonToolbar className={zenListToolbarClass}>
           <div
             onClick={() => {
               if (!areFiltersExpanded) {
@@ -179,6 +187,7 @@ const HistoryScreen: React.FC = () => {
             }}
           >
             <IonSearchbar
+              className={zenListSearchClass}
               value={searchText}
               onIonInput={handleSearch}
               placeholder="Search teas"
@@ -205,7 +214,7 @@ const HistoryScreen: React.FC = () => {
           </div>
         </IonToolbar>
         {areFiltersExpanded && (
-          <IonToolbar>
+          <IonToolbar className={zenListToolbarClass}>
             <div className="grid gap-2 px-4 py-3 sm:grid-cols-2">
               {FILTER_FIELDS.map((field) => {
                 const fieldSuggestions = getTeaAttributeSuggestions(knownTeas, field.key, filters[field.key], 8);
@@ -243,12 +252,12 @@ const HistoryScreen: React.FC = () => {
           </IonToolbar>
         )}
       </IonHeader>
-      <IonContent fullscreen>
+      <IonContent fullscreen data-testid="history-page" className={zenListPageClass}>
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent />
         </IonRefresher>
 
-        <IonList onClick={() => {
+        <IonList className={zenListSurfaceClass} onClick={() => {
           if (areFiltersExpanded) {
             setAreFiltersExpanded(false);
           }
@@ -267,14 +276,14 @@ const HistoryScreen: React.FC = () => {
               <IonItemSliding key={session.sessionId}>
                 <IonItem routerLink={`/tabs/history/${session.sessionId}`} detail>
                   <IonLabel>
-                    <h2>{formatTeaLabel(session.tea) || session.teaName}</h2>
-                    <p>{formatDate(session.startTime)}</p>
+                    <h2 className={zenListItemTitleClass}>{formatTeaLabel(session.tea) || session.teaName}</h2>
+                    <p className={zenListItemMetaClass}>{formatDate(session.startTime)}</p>
                   </IonLabel>
                   <div slot="end" className="text-right">
-                    <IonNote color="primary" className="block">
+                    <IonNote color="medium" className="block text-zen-muted">
                       {session.infusions?.length || 0} Infusions
                     </IonNote>
-                    <IonNote color="medium" className="text-[0.8em]">
+                    <IonNote color="medium" className={zenListItemMetaClass}>
                       {formatDuration(getSessionDuration(session))}
                     </IonNote>
                   </div>

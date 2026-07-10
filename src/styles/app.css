@@ -32,6 +32,56 @@
   --zen-flow-background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
 }
 
+.zen-list-page {
+  --background: #ffffff;
+  color: var(--color-zen-text);
+}
+
+.zen-list-toolbar {
+  --background: rgba(255, 255, 255, 0.86);
+  --border-color: var(--color-zen-border);
+  --color: var(--color-zen-text);
+}
+
+.zen-list-search {
+  --background: var(--color-zen-panel-strong);
+  --border-radius: 16px;
+  --box-shadow: none;
+  --color: var(--color-zen-text);
+  --placeholder-color: var(--color-zen-muted);
+}
+
+.zen-list-surface {
+  margin: 16px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-zen-border);
+  border-radius: 22px;
+  background: var(--color-zen-panel);
+  box-shadow: 0 12px 28px rgba(69, 83, 66, 0.07);
+}
+
+.zen-list-surface ion-item {
+  --background: transparent;
+  --border-color: var(--color-zen-border);
+  --color: var(--color-zen-text);
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+}
+
+.zen-list-surface ion-item:last-child,
+.zen-list-surface ion-item-sliding:last-child ion-item {
+  --border-color: transparent;
+  --inner-border-width: 0;
+}
+
+.zen-list-section-header {
+  color: var(--color-zen-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 ion-button[data-zen-variant="primary"] {
   --background: var(--zen-background);
   --color: #000000;

@@ -24,6 +24,8 @@ type ButtonProps = PropsWithChildren<{
 }>;
 
 type DivProps = PropsWithChildren<{
+    className?: string;
+    'data-testid'?: string;
     onClick?: MouseEventHandler<HTMLDivElement>;
 }>;
 
@@ -40,15 +42,15 @@ type SearchbarProps = {
 };
 
 vi.mock('@ionic/react', () => ({
-    IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonContent: ({ children, className, 'data-testid': testId }: DivProps) => <div className={className} data-testid={testId}>{children}</div>,
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonList: ({ children, onClick }: DivProps) => <div data-testid="history-list" onClick={onClick}>{children}</div>,
+    IonList: ({ children, className, onClick }: DivProps) => <div className={className} data-testid="history-list" onClick={onClick}>{children}</div>,
     IonItem: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonLabel: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonNote: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonLabel: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
+    IonNote: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
     IonRefresher: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonRefresherContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -128,6 +130,14 @@ describe('HistoryScreen', () => {
 
         expect(loadHistory).toHaveBeenCalled();
         expect(loadKnownTeas).toHaveBeenCalled();
+    });
+
+    it('uses the shared Zen list treatment without changing the session structure', () => {
+        render(<HistoryScreen />);
+
+        expect(screen.getByTestId('history-page').classList.contains('zen-list-page')).toBe(true);
+        expect(screen.getByTestId('history-list').classList.contains('zen-list-surface')).toBe(true);
+        expect(screen.getByText('Morning Sencha').classList.contains('text-zen-text')).toBe(true);
     });
 
     it('filters sessions using fuzzy tea name matches', () => {
