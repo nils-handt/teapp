@@ -54,7 +54,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
             {title}
           </h3>
         ) : null}
-        <div className="min-h-0 overflow-y-auto pr-0.5">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
           {children}
         </div>
         {actions ? <div className={zenModalActionsClass}>{actions}</div> : null}

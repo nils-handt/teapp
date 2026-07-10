@@ -195,6 +195,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
             isOpen={isOpen}
             header={header}
             headerClassName="-mx-[22px] -mt-[22px] shrink-0"
+            panelClassName="h-[510px]"
             ariaLabel="Tea"
             actions={(
                 <>
@@ -208,7 +209,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
             )}
         >
             {activeTab === 'existing' ? (
-                <div role="tabpanel" className="grid gap-3">
+                <div role="tabpanel" className="flex min-h-0 flex-1 flex-col gap-3">
                     <SuggestedInput
                         ariaLabel="Search existing teas"
                         value={searchQuery}
@@ -217,6 +218,8 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                         onChange={setSearchQuery}
                         onSelectSuggestion={applyTea}
                         inlineSuggestions
+                        inlineSuggestionsFill
+                        className="flex min-h-0 flex-1 flex-col"
                         inputClassName={zenInputClass}
                     />
                 </div>

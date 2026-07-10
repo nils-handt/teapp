@@ -15,6 +15,7 @@ type SuggestedInputProps = {
   className?: string;
   inputClassName?: string;
   inlineSuggestions?: boolean;
+  inlineSuggestionsFill?: boolean;
 };
 
 const SuggestedInput: React.FC<SuggestedInputProps> = ({
@@ -31,6 +32,7 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
   className,
   inputClassName,
   inlineSuggestions = false,
+  inlineSuggestionsFill = false,
 }) => {
   const listId = useId();
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +41,11 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
     [suggestions],
   );
   const hasSuggestions = visibleSuggestions.length > 0;
+  const suggestionPositionClass = !inlineSuggestions
+    ? 'absolute top-full max-h-56'
+    : inlineSuggestionsFill
+      ? 'relative min-h-0 flex-1'
+      : 'relative max-h-56';
 
   const closeSoon = () => {
     window.setTimeout(() => setIsOpen(false), 120);
@@ -93,8 +100,8 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
           id={listId}
           role="listbox"
           className={cn(
-            'left-0 z-[1100] mt-1 max-h-56 w-full overflow-y-auto border-t-[6px] border-t-[#bfd2f5] bg-white py-1 shadow-[0_2px_12px_rgba(0,0,0,0.24)]',
-            inlineSuggestions ? 'relative' : 'absolute top-full',
+            'left-0 z-[1100] mt-1 w-full overflow-y-auto border-t-[6px] border-t-[#bfd2f5] bg-white py-1 shadow-[0_2px_12px_rgba(0,0,0,0.24)]',
+            suggestionPositionClass,
           )}
         >
           {visibleSuggestions.map((suggestion) => (
