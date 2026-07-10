@@ -49,7 +49,6 @@ const testState = vi.hoisted(() => {
 
 type SettingsUpdate = Partial<{
     devMode: boolean;
-    lastUsedBrewingScreen: number;
     logLevel: string;
     logToFileEnabled: boolean;
     playbackSpeed: number;
@@ -58,7 +57,6 @@ type SettingsUpdate = Partial<{
 
 type SettingsScreenSettingsSeed = {
     devMode: SettingsStoreValues['devMode'];
-    lastUsedBrewingScreen: SettingsStoreValues['lastUsedBrewingScreen'];
     logLevel: SettingsStoreValues['logLevel'];
     logToFileEnabled: SettingsStoreValues['logToFileEnabled'];
     playbackSpeed: SettingsStoreValues['playbackSpeed'];
@@ -126,12 +124,6 @@ vi.mock('../utils/fileUtils', () => ({
 
 vi.mock('../hooks/usePwaInstall', () => ({
     usePwaInstall: () => testState.pwaInstall,
-}));
-
-vi.mock('../constants/brewingScreens', () => ({
-    DEFAULT_BREWING_SCREEN_ID: 1,
-    BREWING_SCREEN_OPTIONS: [{ id: 1, name: 'Zen' }],
-    isBrewingScreenId: (value: number) => value === 1,
 }));
 
 vi.mock('../services/logging', () => ({
@@ -203,7 +195,6 @@ const renderScreen = (
     settingsStore.setState({
         devMode: false,
         isTutorialOpen: false,
-        lastUsedBrewingScreen: 1,
         logLevel: 'info',
         logToFileEnabled: false,
         playbackSpeed: 1,
@@ -287,6 +278,12 @@ describe('SettingsScreen', () => {
         fireEvent.click(screen.getByRole('button', { name: /Show Tutorial Again/i }));
 
         expect(settingsStore.getState().isTutorialOpen).toBe(true);
+    });
+
+    it('does not expose a brewing screen selector', () => {
+        renderScreen();
+
+        expect(screen.queryByText('Brewing Tab Screen')).toBeNull();
     });
 
     it('prompts for PWA installation when Chrome exposes the install event', async () => {

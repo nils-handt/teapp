@@ -85,10 +85,6 @@ type AlertProps = {
     header?: string;
     isOpen?: boolean;
 };
-vi.mock('../../components/DesignSwitcher', () => ({
-    default: () => <div>Design Switcher</div>,
-}));
-
 vi.mock('../../hooks/useBrewingControl', () => ({
     useBrewingControl: () => ({
         startBrewingSession,

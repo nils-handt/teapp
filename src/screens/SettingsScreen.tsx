@@ -22,7 +22,6 @@ import { useHistory } from 'react-router';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { backupService, isBackupData, type BackupData } from '../services/BackupService';
 import { shareFile } from '../utils/fileUtils';
-import { BREWING_SCREEN_OPTIONS, isBrewingScreenId } from '../constants/brewingScreens';
 import { createLogger, isLogLevel, LOG_LEVELS } from '../services/logging';
 import { useShallow } from 'zustand/react/shallow';
 import { useScaleStore } from '../stores/useScaleStore';
@@ -67,7 +66,6 @@ const SettingsScreen: React.FC = () => {
     logToFileEnabled,
     weightLoggerEnabled,
     playbackSpeed,
-    lastUsedBrewingScreen,
     openTutorial,
     updateSettings
   } = useSettingsStore(useShallow((state) => ({
@@ -76,7 +74,6 @@ const SettingsScreen: React.FC = () => {
     logToFileEnabled: state.logToFileEnabled,
     weightLoggerEnabled: state.weightLoggerEnabled,
     playbackSpeed: state.playbackSpeed,
-    lastUsedBrewingScreen: state.lastUsedBrewingScreen,
     openTutorial: state.openTutorial,
     updateSettings: state.updateSettings,
   })));
@@ -98,12 +95,6 @@ const SettingsScreen: React.FC = () => {
   const handleSpeedChange = (speed: number) => {
     bluetoothScaleService.mock.setPlaybackSpeed(speed);
     updateSettings({ playbackSpeed: speed });
-  };
-
-  const handleBrewingScreenChange = (value: number) => {
-    if (isBrewingScreenId(value)) {
-      updateSettings({ lastUsedBrewingScreen: value });
-    }
   };
 
   const handleLogLevelChange = (value: string) => {
@@ -210,23 +201,6 @@ const SettingsScreen: React.FC = () => {
         </IonHeader>
 
         <IonList>
-          <IonListHeader>
-            <IonLabel>Brewing</IonLabel>
-          </IonListHeader>
-          <IonItem>
-            <IonLabel>Brewing Tab Screen</IonLabel>
-            <IonSelect
-              value={lastUsedBrewingScreen}
-              onIonChange={e => handleBrewingScreenChange(Number(e.detail.value))}
-              interface="popover"
-            >
-              {BREWING_SCREEN_OPTIONS.map((screen) => (
-                <IonSelectOption key={screen.id} value={screen.id}>
-                  {screen.name}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-          </IonItem>
           <IonItem button onClick={openTutorial}>
             <IonLabel>Show Tutorial Again</IonLabel>
           </IonItem>
