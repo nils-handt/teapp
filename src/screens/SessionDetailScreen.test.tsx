@@ -182,6 +182,16 @@ describe('SessionDetailScreen', () => {
         expect(informationBox.className).toBe(infusionBox.className);
     });
 
+    it('keeps a non-editable vessel name visually non-interactive', () => {
+        render(<SessionDetailScreen />);
+
+        const vesselName = screen.getByText('Vessel name');
+
+        expect(vesselName.parentElement?.tagName).toBe('DIV');
+        expect(vesselName.parentElement?.className).toContain('cursor-default');
+        expect(vesselName.parentElement?.className).not.toContain('cursor-pointer');
+    });
+
     it('edits session notes by pressing the Information field', async () => {
         render(<SessionDetailScreen />);
 

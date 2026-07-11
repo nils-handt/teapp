@@ -56,11 +56,13 @@ const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, onClick, disa
     const className = cn(
         zenFieldBaseClass,
         highlighted ? zenFieldToneClassMap.highlighted : zenFieldToneClassMap.default,
-        disabled ? zenFieldStateClassMap.disabled : zenFieldStateClassMap.enabled,
+        onClick
+            ? (disabled ? zenFieldStateClassMap.disabled : zenFieldStateClassMap.enabled)
+            : 'cursor-default',
     );
 
     if (!onClick) {
-        return <div className={cn(className, 'cursor-default')}>{content}</div>;
+        return <div className={className}>{content}</div>;
     }
 
     return (
