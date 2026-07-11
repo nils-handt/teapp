@@ -16,7 +16,7 @@
     "qa:scale-reconnect:control": "playwright test tests/e2e/scale-reconnect.spec.ts --config=playwright.config.ts --project=chromium-debug --headed"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=24.0.0"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^7.3.0",
