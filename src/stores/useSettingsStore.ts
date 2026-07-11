@@ -8,6 +8,7 @@ import {
   isLogLevel,
   type LogLevel,
 } from '../services/logging';
+import { isStatisticsPeriod, type StatisticsPeriod } from '../utils/HistoryStatistics';
 
 const logger = createLogger('SettingsStore');
 
@@ -21,6 +22,7 @@ export interface SettingsStoreValues {
   weightLoggerEnabled: boolean;
   playbackSpeed: number;
   hasSeenTutorial: boolean;
+  statisticsPeriod: StatisticsPeriod;
   settingsLoaded: boolean;
   isTutorialOpen: boolean;
 }
@@ -45,6 +47,7 @@ export type PersistedSettingsStoreValues = Pick<
   | 'weightLoggerEnabled'
   | 'playbackSpeed'
   | 'hasSeenTutorial'
+  | 'statisticsPeriod'
 >;
 
 export const initialSettingsStoreValues: SettingsStoreValues = {
@@ -55,6 +58,7 @@ export const initialSettingsStoreValues: SettingsStoreValues = {
   weightLoggerEnabled: false,
   playbackSpeed: 1,
   hasSeenTutorial: false,
+  statisticsPeriod: 'total',
   settingsLoaded: false,
   isTutorialOpen: false,
 };
@@ -108,6 +112,9 @@ export const settingsStore = createStore<SettingsStore>()((set) => ({
     }
     if (allSettings['hasSeenTutorial']) {
       loadedSettings.hasSeenTutorial = allSettings['hasSeenTutorial'] === 'true';
+    }
+    if (isStatisticsPeriod(allSettings['statisticsPeriod'])) {
+      loadedSettings.statisticsPeriod = allSettings['statisticsPeriod'];
     }
     if (allSettings['scaleConfig']) {
       try {
