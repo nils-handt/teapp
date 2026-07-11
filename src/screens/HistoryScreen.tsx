@@ -128,6 +128,11 @@ const HistoryScreen: React.FC = () => {
     season: filters.season,
     year: filters.year.trim() ? Number(filters.year) : null,
   }), [filters]);
+  const activeFilterCount = Object.values(filters).filter((value) => value.trim().length > 0).length;
+  const filterToggleLabel = `${areFiltersExpanded ? 'Hide' : 'Show'} history filters${
+    activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''
+  }`;
+
   const filteredSessions = useMemo(
     () => {
       let searchedSessions = sessionList;
@@ -182,13 +187,7 @@ const HistoryScreen: React.FC = () => {
           <IonTitle>History</IonTitle>
         </IonToolbar>
         <IonToolbar className={zenListToolbarClass}>
-          <div
-            onClick={() => {
-              if (!areFiltersExpanded) {
-                setAreFiltersExpanded(true);
-              }
-            }}
-          >
+          <div>
             <IonSearchbar
               className={zenListSearchClass}
               value={searchText}
@@ -196,24 +195,33 @@ const HistoryScreen: React.FC = () => {
               placeholder="Search teas"
               debounce={500}
             />
-            <button
-              type="button"
-              aria-label={areFiltersExpanded ? 'Hide history filters' : 'Show history filters'}
-              aria-expanded={areFiltersExpanded}
-              onClick={(event) => {
-                event.stopPropagation();
-                setAreFiltersExpanded((current) => !current);
-              }}
-              className="flex h-6 w-full items-center justify-center text-zen-muted"
-            >
-              <IonIcon
-                icon={chevronDown}
-                className={cn(
-                  'text-base transition-transform',
-                  areFiltersExpanded && 'rotate-180',
-                )}
-              />
-            </button>
+            <div className="flex items-center gap-3 px-4 pb-2">
+              <button
+                type="button"
+                aria-label={filterToggleLabel}
+                aria-expanded={areFiltersExpanded}
+                onClick={() => setAreFiltersExpanded((current) => !current)}
+                className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl text-zen-muted"
+              >
+                <span>Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+                <IonIcon
+                  icon={chevronDown}
+                  className={cn(
+                    'text-base transition-transform',
+                    areFiltersExpanded && 'rotate-180',
+                  )}
+                />
+              </button>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilters(EMPTY_FILTERS)}
+                  className="min-h-11 shrink-0 px-2 text-[0.9rem] text-zen-muted underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           </div>
         </IonToolbar>
         {areFiltersExpanded && (
@@ -260,11 +268,7 @@ const HistoryScreen: React.FC = () => {
           <IonRefresherContent />
         </IonRefresher>
 
-        <IonList className={zenListSurfaceClass} onClick={() => {
-          if (areFiltersExpanded) {
-            setAreFiltersExpanded(false);
-          }
-        }}>
+        <IonList className={zenListSurfaceClass}>
           {!areFiltersExpanded && suggestions.length > 0 && (
             <div className="px-4 pt-4">
               <SuggestionList items={suggestions} onSelect={applySearchSuggestion} />

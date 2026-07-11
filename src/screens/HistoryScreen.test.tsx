@@ -172,13 +172,17 @@ describe('HistoryScreen', () => {
         expect((screen.getByLabelText('Search teas') as HTMLInputElement).value).toBe('ORT 2015 Gao Jia Shan');
     });
 
-    it('expands filters from the search area and collapses them from the disclosure arrow', () => {
+    it('expands filters only from the explicit Filters control', () => {
         render(<HistoryScreen />);
 
         expect(screen.queryByLabelText('Filter Name')).toBeNull();
         expect(screen.getByRole('button', { name: 'Show history filters' }).getAttribute('aria-expanded')).toBe('false');
 
         fireEvent.click(screen.getByLabelText('Search teas'));
+
+        expect(screen.queryByLabelText('Filter Name')).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
 
         expect(screen.getByLabelText('Filter Name')).toBeDefined();
         expect(screen.getByRole('button', { name: 'Hide history filters' }).getAttribute('aria-expanded')).toBe('true');
@@ -188,7 +192,7 @@ describe('HistoryScreen', () => {
         expect(screen.queryByLabelText('Filter Name')).toBeNull();
     });
 
-    it('collapses expanded filters when the history list is clicked', () => {
+    it('keeps expanded filters visible when the history list is clicked', () => {
         render(<HistoryScreen />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
@@ -196,7 +200,26 @@ describe('HistoryScreen', () => {
 
         fireEvent.click(screen.getByTestId('history-list'));
 
-        expect(screen.queryByLabelText('Filter Year')).toBeNull();
+        expect(screen.getByLabelText('Filter Year')).toBeDefined();
+    });
+
+    it('shows active filter state and can clear all filters', () => {
+        render(<HistoryScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
+        fireEvent.change(screen.getByLabelText('Filter Name'), { target: { value: 'sencha' } });
+
+        expect(screen.getByRole('button', { name: 'Hide history filters (1 active)' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDefined();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Hide history filters (1 active)' }));
+
+        expect(screen.getByRole('button', { name: 'Show history filters (1 active)' })).toBeDefined();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+        expect(screen.getByRole('button', { name: 'Show history filters' })).toBeDefined();
+        expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull();
     });
 
     it('does not expand filters when a fuzzy tea suggestion is selected', () => {
