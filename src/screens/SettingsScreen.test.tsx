@@ -67,6 +67,7 @@ type SettingsScreenSettingsSeed = {
 type SettingsScreenScaleSeed = {
     connectedDevice: DiscoveredDevice | null;
     connectionStatus: ScaleStoreState['connectionStatus'];
+    isMockMode: ScaleStoreState['isMockMode'];
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -256,6 +257,19 @@ describe('SettingsScreen', () => {
         await waitFor(() => {
             expect(testState.setMockMode).toHaveBeenCalledWith(true);
         });
+    });
+
+    it('reacts to mock mode changes from the scale store', () => {
+        renderScreen({ devMode: true }, { isMockMode: false });
+
+        expect(screen.getByRole('button', { name: 'Connect New Scale' })).not.toBeNull();
+
+        act(() => {
+            scaleStore.getState().setIsMockMode(true);
+        });
+
+        expect(screen.getByRole('button', { name: 'Connect Mock Scale' })).not.toBeNull();
+        expect(screen.getByText('Mock Mode Active')).not.toBeNull();
     });
 
     it('clicking the toggle itself only updates once', () => {

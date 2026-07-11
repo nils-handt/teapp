@@ -62,9 +62,10 @@ const ToggleSettingItem: React.FC<ToggleSettingItemProps> = ({ checked, label, o
 
 const SettingsScreen: React.FC = () => {
   const history = useHistory();
-  const { connectionStatus, connectedDevice } = useScaleStore(useShallow((state) => ({
+  const { connectionStatus, connectedDevice, isMockMode } = useScaleStore(useShallow((state) => ({
     connectionStatus: state.connectionStatus,
     connectedDevice: state.connectedDevice,
+    isMockMode: state.isMockMode,
   })));
   const {
     devMode,
@@ -84,7 +85,6 @@ const SettingsScreen: React.FC = () => {
     updateSettings: state.updateSettings,
   })));
 
-  const [isMockMode, setIsMockMode] = useState(bluetoothScaleService.isMockMode);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [restoreData, setRestoreData] = useState<BackupData | null>(null);
   const pwaInstall = usePwaInstall();
@@ -95,7 +95,6 @@ const SettingsScreen: React.FC = () => {
 
   const toggleMockMode = async (enabled: boolean) => {
     await bluetoothScaleService.setMockMode(enabled);
-    setIsMockMode(enabled);
   };
 
   const handleSpeedChange = (speed: number) => {
