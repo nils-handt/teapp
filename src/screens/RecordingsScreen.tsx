@@ -77,7 +77,7 @@ const RecordingsScreen: React.FC = () => {
                     <IonTitle>Recordings</IonTitle>
                 </IonToolbar>
             </IonHeader>
-            <IonContent fullscreen>
+            <IonContent fullscreen className="zen-recordings-page">
                 <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
                     <IonRefresherContent />
                 </IonRefresher>

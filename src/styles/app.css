@@ -61,6 +61,24 @@
   box-shadow: 0 12px 28px rgba(69, 83, 66, 0.07);
 }
 
+@media (min-width: 1024px) {
+  .zen-list-toolbar > div {
+    width: 100%;
+    max-width: 900px;
+    margin-inline: auto;
+  }
+
+  .zen-list-surface {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+
+  .zen-recordings-page > ion-list {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+}
+
 .zen-list-surface ion-item {
   --background: transparent;
   --border-color: var(--color-zen-border);
