@@ -192,6 +192,16 @@ describe('SessionDetailScreen', () => {
         expect(vesselName.parentElement?.className).not.toContain('cursor-pointer');
     });
 
+    it('uses one setup-metric column on mobile and three on larger screens', () => {
+        render(<SessionDetailScreen />);
+
+        const vesselMetric = screen.getByText('Vessel');
+        const setupMetricGrid = vesselMetric.parentElement?.parentElement;
+
+        expect(setupMetricGrid?.className).toContain('grid-cols-1');
+        expect(setupMetricGrid?.className).toContain('sm:grid-cols-3');
+    });
+
     it('edits session notes by pressing the Information field', async () => {
         render(<SessionDetailScreen />);
 

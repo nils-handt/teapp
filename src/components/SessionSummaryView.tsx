@@ -136,7 +136,7 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                         highlighted={Boolean(brewingVesselAction) && !hasBrewingVesselName && hasBrewingVesselWeights}
                     />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {setupItems.map((item) => (
                         <div key={item.label} className={zenMetricCardClass}>
                             <div className={zenSummaryStatLabelClass}>{item.label}</div>
