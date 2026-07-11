@@ -5,8 +5,10 @@ import { MockScaleService } from './MockScaleService';
 import { DiscoveredDevice } from './bluetooth/types/ble.types';
 import { createLogger } from './logging';
 import { scaleStore } from '../stores/useScaleStore';
+import { settingsRepository } from '../repositories/SettingsRepository';
 
 const logger = createLogger('BluetoothScaleService');
+const USE_MOCK_SCALE_SETTING_KEY = 'useMockScale';
 
 class BluetoothScaleService implements IScaleService {
   private static instance: BluetoothScaleService;
@@ -39,6 +41,9 @@ class BluetoothScaleService implements IScaleService {
 
   // Proxy methods
   async initialize(): Promise<void> {
+    const useMockScale = await settingsRepository.getSetting(USE_MOCK_SCALE_SETTING_KEY) === 'true';
+    this.activeService = useMockScale ? this.mockService : this.realService;
+    scaleStore.getState().setIsMockMode(useMockScale);
     logger.info('Initializing active scale service', { mockMode: this.isMockMode });
     return this.activeService.initialize();
   }
@@ -94,6 +99,7 @@ class BluetoothScaleService implements IScaleService {
     // Initialize the new service if needed
     await this.activeService.initialize();
     scaleStore.getState().setIsMockMode(enabled);
+    await settingsRepository.saveSetting(USE_MOCK_SCALE_SETTING_KEY, String(enabled));
     logger.info('Scale service mode switched', { enabled });
   }
 

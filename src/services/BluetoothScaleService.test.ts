@@ -4,12 +4,13 @@ import { RealScaleService } from './RealScaleService';
 import { MockScaleService } from './MockScaleService';
 import { DiscoveredDevice, LimitedPeripheralData } from './bluetooth/types/ble.types';
 import { initialScaleStoreState, scaleStore } from '../stores/useScaleStore';
+import { settingsRepository } from '../repositories/SettingsRepository';
 
 vi.mock('./RealScaleService', { spy: true });
 vi.mock('./MockScaleService', { spy: true });
 vi.mock('../repositories/SettingsRepository', () => ({
     settingsRepository: {
-        getSetting: vi.fn(),
+        getSetting: vi.fn().mockResolvedValue(null),
         saveSetting: vi.fn(),
         getPreferredDeviceId: vi.fn().mockResolvedValue(null),
         getScaleDevice: vi.fn().mockResolvedValue(null),
@@ -39,8 +40,20 @@ describe('BluetoothScaleService', () => {
 
     it('should initialize successfully', async () => {
         await bluetoothScaleService.initialize();
+        expect(settingsRepository.getSetting).toHaveBeenCalledWith('useMockScale');
         expect(realService.initialize).toHaveBeenCalled();
         expect(mockService.initialize).not.toHaveBeenCalled();
+    });
+
+    it('should restore persisted mock mode during initialization', async () => {
+        vi.mocked(settingsRepository.getSetting).mockResolvedValueOnce('true');
+
+        await bluetoothScaleService.initialize();
+
+        expect(bluetoothScaleService.isMockMode).toBe(true);
+        expect(scaleStore.getState().isMockMode).toBe(true);
+        expect(mockService.initialize).toHaveBeenCalled();
+        expect(realService.initialize).not.toHaveBeenCalled();
     });
 
     describe('Mode Switching', () => {
@@ -50,6 +63,7 @@ describe('BluetoothScaleService', () => {
             expect(bluetoothScaleService.isMockMode).toBe(true);
             expect((scaleStore.getState() as unknown as { isMockMode: boolean }).isMockMode).toBe(true);
             expect(mockService.initialize).toHaveBeenCalled();
+            expect(settingsRepository.saveSetting).toHaveBeenCalledWith('useMockScale', 'true');
             expect((bluetoothScaleService as unknown as { activeService: MockScaleService }).activeService).toBe(mockService);
         });
 
@@ -62,6 +76,7 @@ describe('BluetoothScaleService', () => {
             expect(bluetoothScaleService.isMockMode).toBe(false);
             expect((scaleStore.getState() as unknown as { isMockMode: boolean }).isMockMode).toBe(false);
             expect(realService.initialize).toHaveBeenCalled();
+            expect(settingsRepository.saveSetting).toHaveBeenCalledWith('useMockScale', 'false');
             expect((bluetoothScaleService as unknown as { activeService: RealScaleService }).activeService).toBe(realService);
         });
 
