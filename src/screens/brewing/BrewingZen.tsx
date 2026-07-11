@@ -557,8 +557,8 @@ const BrewingZen: React.FC = () => {
                 <div className="grid gap-3">
                     {renderFieldButton('Vessel', formatZenWeight(activeSession?.vesselWeight), 'vesselWeight')}
                     {renderFieldButton('Lid', formatZenWeight(activeSession?.lidWeight), 'lidWeight')}
-                    {renderFieldButton('Tea', formatZenWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
-                    {renderFieldButton('Tea', activeTeaLabel || 'no tea selected', 'teaName')}
+                    {renderFieldButton('Dry tea weight', formatZenWeight(activeSession?.dryTeaLeavesWeight), 'dryTeaLeavesWeight')}
+                    {renderFieldButton('Tea name', activeTeaLabel || 'no tea selected', 'teaName')}
                     {renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                 </div>
             </section>
@@ -619,7 +619,7 @@ const BrewingZen: React.FC = () => {
             {(!hasTeaName || !hasBrewingVesselName) && (
                 <section className={zenPanelClass}>
                     <div className="grid gap-3">
-                        {!hasTeaName && renderFieldButton('Tea', 'no tea selected', 'teaName')}
+                        {!hasTeaName && renderFieldButton('Tea name', 'no tea selected', 'teaName')}
                         {!hasBrewingVesselName && renderFieldButton('Vessel name', brewingVesselLabel, 'brewingVesselName', { disabled: !hasBrewingVesselWeights })}
                     </div>
                 </section>

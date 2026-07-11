@@ -271,8 +271,8 @@ describe('BrewingZen', () => {
         expect(screen.getByRole('button', { name: /^Vessel95\.2 g$/i }).className).toContain('zen-field-button');
         expect(screen.getByRole('button', { name: /Lid/i })).toBeDefined();
         expect(screen.queryByRole('button', { name: /Tray/i })).toBeNull();
-        expect(screen.getByRole('button', { name: /Tea6.4 g/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Teano tea selected/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Dry tea weight6.4 g/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Tea nameno tea selected/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /vessel name/i })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Confirm Setup' })).toBeDefined();
     });
@@ -321,7 +321,7 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
-        expect(screen.getByRole('button', { name: /Teano tea selected/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Tea nameno tea selected/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /vessel nameno vessel selected/i })).toBeDefined();
         expect(screen.queryByText('63.5 g')).toBeNull();
         expect(screen.queryByTestId('infusion-history-strip')).toBeNull();
@@ -743,7 +743,7 @@ describe('BrewingZen', () => {
     it('uses the shared tea editor suggestions when saving a tea name', async () => {
         render(<BrewingZen />);
 
-        fireEvent.click(screen.getByRole('button', { name: /Teano tea selected/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Tea nameno tea selected/i }));
 
         expect(loadKnownTeas).toHaveBeenCalled();
 
