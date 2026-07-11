@@ -190,6 +190,27 @@ describe('BrewingSessionService', () => {
         expect(brewingSessionService.timer$.value).toBe(0);
     });
 
+    it('reopens an ended session when ending is undone', async () => {
+        brewingSessionService.startSession('Test Tea');
+        brewingSessionService.updateSetupValue('vesselWeight', 95);
+        brewingSessionService.updateSetupValue('lidWeight', 12);
+        brewingSessionService.updateSetupValue('dryTeaLeavesWeight', 6);
+        brewingSessionService.confirmSetupDone();
+
+        await brewingSessionService.endSession();
+        await brewingSessionService.undoEndSession();
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.READY);
+        expect(brewingSessionService.session$.value).toEqual(expect.objectContaining({
+            status: 'active',
+            endTime: '',
+        }));
+        expect(sessionRepository.saveSession).toHaveBeenLastCalledWith(expect.objectContaining({
+            status: 'active',
+            endTime: '',
+        }));
+    });
+
     it('should detect vessel and confirm setup', () => {
         brewingSessionService.startSession('Test Tea');
 

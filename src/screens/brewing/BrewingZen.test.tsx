@@ -21,6 +21,7 @@ const {
     connectNewDevice,
     startBrewingSession,
     handleEndSession,
+    handleUndoEndSession,
     confirmSetupDone,
     manuallyStartInfusion,
     manuallyStopInfusion,
@@ -35,10 +36,12 @@ const {
     loadKnownTeas,
     saveTea,
     deleteSession,
+    presentToast,
 } = vi.hoisted(() => ({
     connectNewDevice: vi.fn(),
     startBrewingSession: vi.fn(),
     handleEndSession: vi.fn(),
+    handleUndoEndSession: vi.fn(),
     confirmSetupDone: vi.fn(),
     manuallyStartInfusion: vi.fn(),
     manuallyStopInfusion: vi.fn(),
@@ -53,6 +56,7 @@ const {
     loadKnownTeas: vi.fn().mockResolvedValue(undefined),
     saveTea: vi.fn(),
     deleteSession: vi.fn().mockResolvedValue(undefined),
+    presentToast: vi.fn(),
 }));
 
 type BrewingZenBrewingSeed = {
@@ -94,6 +98,7 @@ vi.mock('../../hooks/useBrewingControl', () => ({
     useBrewingControl: () => ({
         startBrewingSession,
         handleEndSession,
+        handleUndoEndSession,
         recordingAlert: null,
     }),
 }));
@@ -144,6 +149,7 @@ vi.mock('@ionic/react', () => ({
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    useIonToast: () => [presentToast],
 }));
 
 describe('BrewingZen', () => {
@@ -278,6 +284,24 @@ describe('BrewingZen', () => {
 
         expect(actionRow?.className).toContain('grid-cols-2');
         expect(actionRow?.className).toContain('[&>ion-button]:min-h-11');
+    });
+
+    it('offers Undo after ending a session', async () => {
+        render(<BrewingZen />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'End Session' }));
+
+        await waitFor(() => {
+            expect(presentToast).toHaveBeenCalledWith(expect.objectContaining({
+                message: 'Session ended',
+                duration: 5000,
+            }));
+        });
+
+        const toastOptions = presentToast.mock.calls[0][0];
+        toastOptions.buttons[0].handler();
+
+        expect(handleUndoEndSession).toHaveBeenCalled();
     });
 
     it('shows the tea placeholder in ready when no tea name exists and hides live weight', () => {

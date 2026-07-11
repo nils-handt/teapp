@@ -582,6 +582,20 @@ class BrewingSessionService {
         this.stopWeightSubscription();
     }
 
+    public async undoEndSession() {
+        const session = this.session$.value;
+
+        if (!session || this.state$.value !== BrewingPhase.ENDED) {
+            return;
+        }
+
+        session.status = 'active';
+        session.endTime = '';
+        await sessionRepository.saveSession(session);
+        this.restoreSession(session);
+        logger.info('Reopened ended brewing session', { sessionId: session.sessionId });
+    }
+
     public updateTeaName(name: string) {
         const session = this.session$.value;
         const allowedPhases = new Set<BrewingPhase>([

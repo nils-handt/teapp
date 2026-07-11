@@ -60,6 +60,16 @@ export const useBrewingControl = () => {
         }
     };
 
+    const handleUndoEndSession = async () => {
+        logger.info('Undoing end-session request');
+        await brewingSessionService.undoEndSession();
+        setShowSaveAlert(false);
+
+        if (bluetoothScaleService.isMockMode) {
+            bluetoothScaleService.mock.startReplay();
+        }
+    };
+
     const recordingAlert = (
         <IonAlert
             isOpen={showSaveAlert}
@@ -102,6 +112,7 @@ export const useBrewingControl = () => {
     return {
         startBrewingSession,
         handleEndSession,
+        handleUndoEndSession,
         recordingAlert
     };
 };

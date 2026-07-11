@@ -6,6 +6,7 @@ import {
     IonPage,
     IonTitle,
     IonToolbar,
+    useIonToast,
 } from '@ionic/react';
 import React, { useEffect, useRef, useState } from 'react';
 import AppButton from '../../components/ui/AppButton';
@@ -120,7 +121,8 @@ const BrewingZen: React.FC = () => {
             deleteSession: state.deleteSession,
         }))
     );
-    const { startBrewingSession, handleEndSession, recordingAlert } = useBrewingControl();
+    const { startBrewingSession, handleEndSession, handleUndoEndSession, recordingAlert } = useBrewingControl();
+    const [presentToast] = useIonToast();
     const [alertState, setAlertState] = useState<AlertState>(null);
     const [draftValue, setDraftValue] = useState('');
     const [noteEditorTarget, setNoteEditorTarget] = useState<NoteEditorTarget>(null);
@@ -319,6 +321,23 @@ const BrewingZen: React.FC = () => {
         await deleteSession(activeSession.sessionId);
         brewingSessionService.clearSession();
         setShowDeleteSessionAlert(false);
+    };
+
+    const handleEndSessionWithUndo = async () => {
+        await handleEndSession();
+        presentToast({
+            message: 'Session ended',
+            duration: 5000,
+            position: 'bottom',
+            buttons: [
+                {
+                    text: 'Undo',
+                    handler: () => {
+                        void handleUndoEndSession();
+                    },
+                },
+            ],
+        });
     };
 
     const closeNoteEditor = () => {
@@ -547,7 +566,7 @@ const BrewingZen: React.FC = () => {
             <section className={zenActionRowClass}>
                 <AppButton
                     expand="block"
-                    onClick={() => handleEndSession()}
+                    onClick={handleEndSessionWithUndo}
                     variant="danger"
                 >
                     End Session
@@ -609,7 +628,7 @@ const BrewingZen: React.FC = () => {
             <section className={zenActionRowClass}>
                 <AppButton
                     expand="block"
-                    onClick={() => handleEndSession()}
+                    onClick={handleEndSessionWithUndo}
                     variant="danger"
                 >
                     End Session
