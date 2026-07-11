@@ -28,7 +28,7 @@ type ClassValue = string | false | null | undefined;
 
 export const cn = (...classValues: ClassValue[]) => classValues.filter(Boolean).join(' ');
 
-export const zenPageShellClass = 'min-h-full bg-white px-5 pt-6 pb-10 text-zen-text';
+export const zenPageShellClass = 'flex min-h-full flex-col bg-white px-5 pt-6 pb-10 text-zen-text';
 export const zenStackClass = 'mx-auto flex max-w-[720px] flex-col gap-[18px]';
 export const zenPanelClass = 'rounded-[28px] border border-zen-border bg-zen-panel p-[22px] shadow-zen-panel backdrop-blur-[10px]';
 export const zenPanelStrongClass = cn(zenPanelClass, 'bg-zen-panel-strong bg-[image:var(--zen-background)]');

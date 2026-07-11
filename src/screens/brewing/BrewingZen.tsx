@@ -504,17 +504,23 @@ const BrewingZen: React.FC = () => {
         </button>
     );
 
-    const renderDisconnectedState = () => (
-        <div className={cn(zenStackClass, 'min-h-[calc(100vh-120px)] justify-center')}>
+    const renderEmptyState = (label: string, onClick: () => void, options?: { disabled?: boolean }) => (
+        <div className={cn(zenStackClass, 'flex flex-1 justify-center')}>
             <button
                 type="button"
-                onClick={() => bluetoothScaleService.connectNewDevice()}
-                disabled={connectionStatus === 'connecting'}
-                className={cn(zenHeroButtonClass, connectionStatus === 'connecting' ? 'cursor-default' : 'cursor-pointer')}
+                onClick={onClick}
+                disabled={options?.disabled}
+                className={cn(zenHeroButtonClass, options?.disabled ? 'cursor-default' : 'cursor-pointer')}
             >
-                CONNECT TO SCALE
+                {label}
             </button>
         </div>
+    );
+
+    const renderDisconnectedState = () => renderEmptyState(
+        'CONNECT TO SCALE',
+        () => bluetoothScaleService.connectNewDevice(),
+        { disabled: connectionStatus === 'connecting' },
     );
 
     const renderSetupView = () => (
@@ -657,17 +663,7 @@ const BrewingZen: React.FC = () => {
         />
     );
 
-    const renderIdleView = () => (
-        <div className={zenStackClass}>
-            <button
-                type="button"
-                onClick={() => startBrewingSession()}
-                className={zenHeroButtonClass}
-            >
-                START SESSION
-            </button>
-        </div>
-    );
+    const renderIdleView = () => renderEmptyState('START SESSION', () => startBrewingSession());
 
     const renderPhaseContent = () => {
         if (connectionStatus !== 'connected') {
