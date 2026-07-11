@@ -3,7 +3,6 @@ import {
   IonContent,
   IonHeader,
   IonPage,
-  IonTitle,
   IonToolbar,
   IonList,
   IonItem,
@@ -205,9 +204,6 @@ const HistoryScreen: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar className={zenListToolbarClass}>
-          <IonTitle>History</IonTitle>
-        </IonToolbar>
         <IonToolbar className={zenListToolbarClass}>
           <div>
             <IonSearchbar

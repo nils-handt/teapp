@@ -2,10 +2,7 @@ import {
     createGesture,
     IonContent,
     IonAlert,
-    IonHeader,
     IonPage,
-    IonTitle,
-    IonToolbar,
     useIonToast,
 } from '@ionic/react';
 import React, { useEffect, useRef, useState } from 'react';
@@ -708,11 +705,6 @@ const BrewingZen: React.FC = () => {
 
     return (
         <IonPage>
-            <IonHeader className="[--border-width:0]">
-                <IonToolbar>
-                    <IonTitle>Zen</IonTitle>
-                </IonToolbar>
-            </IonHeader>
             <IonContent fullscreen scrollY={connectionStatus === 'connected'}>
                 <div className={zenPageShellClass}>
                     {renderPhaseContent()}

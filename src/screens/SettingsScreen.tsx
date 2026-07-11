@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import {
   IonContent,
-  IonHeader,
   IonPage,
-  IonTitle,
-  IonToolbar,
   IonList,
   IonItem,
   IonLabel,
@@ -31,7 +28,6 @@ import {
   zenListPageClass,
   zenListSectionHeaderClass,
   zenListSurfaceClass,
-  zenListToolbarClass,
 } from '../styles/zen';
 
 const logger = createLogger('SettingsScreen');
@@ -193,18 +189,7 @@ const SettingsScreen: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar className={zenListToolbarClass}>
-          <IonTitle>Settings</IonTitle>
-        </IonToolbar>
-      </IonHeader>
       <IonContent fullscreen className={zenListPageClass} data-testid="settings-page">
-        <IonHeader collapse="condense">
-          <IonToolbar className={zenListToolbarClass}>
-            <IonTitle size="large">Settings</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-
         <IonList className={zenListSurfaceClass}>
           <IonItem button onClick={openTutorial}>
             <IonLabel>Show Tutorial Again</IonLabel>
