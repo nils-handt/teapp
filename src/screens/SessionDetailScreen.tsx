@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, type CSSProperties } from 'react';
 import {
     IonContent,
     IonHeader,
@@ -180,6 +180,7 @@ const SessionDetailScreen: React.FC = () => {
     const hasBrewingVesselWeights = Boolean((selectedSession.vesselWeight ?? 0) > 0 && (selectedSession.lidWeight ?? 0) > 0);
     const brewingVesselLabel = selectedSession.brewingVessel?.name?.trim()
         || (hasBrewingVesselWeights ? 'no vessel selected' : 'detect vessel first');
+    const sessionTeaLabel = formatTeaLabel(selectedSession.tea) || selectedSession.teaName?.trim() || '';
 
     return (
         <IonPage>
@@ -188,7 +189,13 @@ const SessionDetailScreen: React.FC = () => {
                     <IonButtons slot="start">
                         <IonBackButton defaultHref="/tabs/history" />
                     </IonButtons>
-                    <IonTitle>{formatTeaLabel(selectedSession.tea) || selectedSession.teaName}</IonTitle>
+                    <IonTitle
+                        style={sessionTeaLabel
+                            ? undefined
+                            : { '--color': 'var(--color-zen-muted)' } as CSSProperties}
+                    >
+                        {sessionTeaLabel || 'No tea selected'}
+                    </IonTitle>
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>

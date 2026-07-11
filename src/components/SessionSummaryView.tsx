@@ -31,6 +31,7 @@ type SummaryFieldProps = {
     onClick?: () => void;
     disabled?: boolean;
     highlighted?: boolean;
+    valueMuted?: boolean;
 };
 
 type SessionSummaryViewProps = {
@@ -45,11 +46,11 @@ type SessionSummaryViewProps = {
     footer?: React.ReactNode;
 };
 
-const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, onClick, disabled, highlighted }) => {
+const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, onClick, disabled, highlighted, valueMuted }) => {
     const content = (
         <>
             <span className={zenFieldLabelClass}>{label}</span>
-            <span>{value}</span>
+            <span className={valueMuted ? 'text-zen-muted' : undefined}>{value}</span>
         </>
     );
 
@@ -110,8 +111,10 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 <p className={zenSectionEyebrowClass}>
                     {title}
                 </p>
-                <h2 className="mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text">
-                    {teaLabel || 'no tea selected'}
+                <h2 className={hasTeaName
+                    ? 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text'
+                    : 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-muted'}>
+                    {teaLabel || 'No tea selected'}
                 </h2>
             </section>
 
@@ -122,9 +125,10 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 <div className="mb-3">
                     <SummaryField
                         label="Tea name"
-                        value={teaLabel || 'no tea selected'}
+                        value={teaLabel || 'No tea selected'}
                         onClick={teaNameAction}
                         highlighted={Boolean(teaNameAction) && !hasTeaName}
+                        valueMuted={!hasTeaName}
                     />
                 </div>
                 <div className="mb-3">

@@ -128,7 +128,6 @@ const HistoryScreen: React.FC = () => {
     season: filters.season,
     year: filters.year.trim() ? Number(filters.year) : null,
   }), [filters]);
-
   const filteredSessions = useMemo(
     () => {
       let searchedSessions = sessionList;
@@ -171,6 +170,10 @@ const HistoryScreen: React.FC = () => {
     const stats = calculateSessionStats(session);
     return stats.totalBrewTime;
   }
+
+  const getSessionTeaLabel = (session: BrewingSession) => (
+    formatTeaLabel(session.tea) || session.teaName?.trim() || ''
+  );
 
   return (
     <IonPage>
@@ -276,7 +279,9 @@ const HistoryScreen: React.FC = () => {
               <IonItemSliding key={session.sessionId}>
                 <IonItem routerLink={`/tabs/history/${session.sessionId}`} detail>
                   <IonLabel>
-                    <h2 className={zenListItemTitleClass}>{formatTeaLabel(session.tea) || session.teaName}</h2>
+                    <h2 className={getSessionTeaLabel(session) ? zenListItemTitleClass : 'text-[0.98rem] font-medium text-zen-muted'}>
+                      {getSessionTeaLabel(session) || 'No tea selected'}
+                    </h2>
                     <p className={zenListItemMetaClass}>{formatDate(session.startTime)}</p>
                   </IonLabel>
                   <div slot="end" className="text-right">

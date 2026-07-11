@@ -140,6 +140,20 @@ describe('HistoryScreen', () => {
         expect(screen.getByText('Morning Sencha').classList.contains('text-zen-text')).toBe(true);
     });
 
+    it('labels sessions without tea in muted text', () => {
+        const unnamedSession = createSession('unnamed', createTea('tea-3', 'Placeholder Tea'), '2026-03-16T10:00:00.000Z');
+        unnamedSession.tea = null;
+        unnamedSession.teaId = null;
+        unnamedSession.teaName = '  ';
+        seedHistoryStore({ sessionList: [unnamedSession] });
+
+        render(<HistoryScreen />);
+
+        const sessionTitle = screen.getByRole('heading', { name: 'No tea selected' });
+
+        expect(sessionTitle.className).toContain('text-zen-muted');
+    });
+
     it('filters sessions using fuzzy tea name matches', () => {
         render(<HistoryScreen />);
 

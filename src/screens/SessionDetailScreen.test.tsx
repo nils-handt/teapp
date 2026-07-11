@@ -1,4 +1,4 @@
-import type { MouseEventHandler, PropsWithChildren } from 'react';
+import type { CSSProperties, MouseEventHandler, PropsWithChildren } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionDetailScreen from './SessionDetailScreen';
@@ -34,6 +34,10 @@ type AlertProps = {
     isOpen?: boolean;
 };
 
+type TitleProps = PropsWithChildren<{
+    style?: CSSProperties;
+}>;
+
 vi.mock('react-router-dom', () => ({
     useHistory: () => ({ goBack }),
     useParams: () => ({ sessionId: 'session-1' }),
@@ -43,7 +47,7 @@ vi.mock('@ionic/react', () => ({
     IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonTitle: ({ children, style }: TitleProps) => <div data-testid="session-title" style={style}>{children}</div>,
     IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonBackButton: () => null,
@@ -200,6 +204,22 @@ describe('SessionDetailScreen', () => {
 
         expect(setupMetricGrid?.className).toContain('grid-cols-1');
         expect(setupMetricGrid?.className).toContain('sm:grid-cols-3');
+    });
+
+    it('labels an unnamed session in muted text', () => {
+        const unnamedSession = createSession();
+        unnamedSession.tea = null;
+        unnamedSession.teaId = null;
+        unnamedSession.teaName = '  ';
+        seedHistoryStore({ selectedSession: unnamedSession });
+
+        render(<SessionDetailScreen />);
+
+        const summaryTitle = screen.getByRole('heading', { name: 'No tea selected' });
+
+        expect(summaryTitle.className).toContain('text-zen-muted');
+        expect(screen.getByTestId('session-title').textContent).toBe('No tea selected');
+        expect(screen.getByTestId('session-title').getAttribute('style')).toContain('--color: var(--color-zen-muted)');
     });
 
     it('edits session notes by pressing the Information field', async () => {
