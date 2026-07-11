@@ -271,6 +271,15 @@ describe('BrewingZen', () => {
         expect(screen.getByRole('button', { name: 'Confirm Setup' })).toBeDefined();
     });
 
+    it('keeps setup actions in an equal two-button row', () => {
+        render(<BrewingZen />);
+
+        const actionRow = screen.getByRole('button', { name: 'End Session' }).parentElement;
+
+        expect(actionRow?.className).toContain('grid-cols-2');
+        expect(actionRow?.className).toContain('[&>ion-button]:min-h-11');
+    });
+
     it('shows the tea placeholder in ready when no tea name exists and hides live weight', () => {
         brewingStore.setState({
             brewingPhase: BrewingPhase.READY,
