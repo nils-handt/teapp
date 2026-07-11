@@ -81,6 +81,10 @@ type ButtonProps = PropsWithChildren<{
     onClick?: MouseEventHandler<HTMLButtonElement>;
 }>;
 
+type ContentProps = PropsWithChildren<{
+    scrollY?: boolean;
+}>;
+
 type AlertProps = {
     buttons?: Array<{ handler?: () => void | Promise<void>; text: string }>;
     header?: string;
@@ -133,7 +137,9 @@ vi.mock('@ionic/react', () => ({
         </div>
     ) : null,
     IonButton: ({ children, onClick, disabled }: ButtonProps) => <button onClick={onClick} disabled={disabled}>{children}</button>,
-    IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonContent: ({ children, scrollY }: ContentProps) => (
+        <div data-testid="brewing-content" data-scroll-y={scrollY}>{children}</div>
+    ),
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -238,6 +244,7 @@ describe('BrewingZen', () => {
 
         expect(screen.getByRole('button', { name: /connect to scale/i }).className).toContain('zen-hero-button');
         expect(screen.queryByText('End Session')).toBeNull();
+        expect(screen.getByTestId('brewing-content').getAttribute('data-scroll-y')).toBe('false');
     });
 
     it('renders the setup phase with live weight and editable fields', () => {

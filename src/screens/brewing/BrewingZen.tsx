@@ -698,7 +698,7 @@ const BrewingZen: React.FC = () => {
                     <IonTitle>Zen</IonTitle>
                 </IonToolbar>
             </IonHeader>
-            <IonContent fullscreen>
+            <IonContent fullscreen scrollY={connectionStatus === 'connected'}>
                 <div className={zenPageShellClass}>
                     {renderPhaseContent()}
                 </div>
