@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useId, useRef, type CSSProperties } from 'react';
 import {
   cn,
   zenModalActionsClass,
@@ -6,6 +6,7 @@ import {
   zenModalPanelClass,
   zenModalTitleClass,
 } from '../../styles/zen';
+import { useModalKeyboardAvoidance } from '../../hooks/useModalKeyboardAvoidance';
 
 type ModalFrameProps = {
   isOpen: boolean;
@@ -31,6 +32,8 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
   headerClassName,
 }) => {
   const titleId = useId();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const { keyboardHeight, scrollFocusedFieldIntoView } = useModalKeyboardAvoidance(isOpen, bodyRef);
 
   if (!isOpen) {
     return null;
@@ -43,6 +46,8 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
       aria-labelledby={title || header ? titleId : undefined}
       aria-label={!title && !header ? ariaLabel : undefined}
       className={cn(zenModalOverlayClass, overlayClassName)}
+      data-keyboard-open={keyboardHeight > 0}
+      style={{ '--modal-keyboard-height': `${keyboardHeight}px` } as CSSProperties}
     >
       <div className={cn(zenModalPanelClass, panelClassName)}>
         {header ? (
@@ -54,7 +59,11 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
             {title}
           </h3>
         ) : null}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
+        <div
+          ref={bodyRef}
+          onFocusCapture={scrollFocusedFieldIntoView}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5"
+        >
           {children}
         </div>
         {actions ? <div className={zenModalActionsClass}>{actions}</div> : null}

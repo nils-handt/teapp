@@ -1,4 +1,5 @@
 import { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.teapp.app',
@@ -13,7 +14,11 @@ const config: CapacitorConfig = {
     CapacitorSQLite: {
       iosDatabaseLocation: 'default',
       androidIsEncryption: false,
-    }
+    },
+    Keyboard: {
+      resize: KeyboardResize.Ionic,
+      resizeOnFullScreen: true,
+    },
   }
 };
 

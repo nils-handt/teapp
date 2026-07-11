@@ -32,6 +32,16 @@
   --zen-flow-background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
 }
 
+.zen-modal-overlay {
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + var(--modal-keyboard-height, 0px));
+  transition: padding 200ms ease-out;
+}
+
+.zen-modal-panel {
+  transition: max-height 200ms ease-out;
+}
+
 .zen-list-page {
   --background: #ffffff;
   color: var(--color-zen-text);

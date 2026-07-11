@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { IonAlert } from '@ionic/react';
 import { brewingSessionService } from '../services/brewing/BrewingSessionService';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { createLogger } from '../services/logging';
 import { useShallow } from 'zustand/react/shallow';
 import { useRecordingStore } from '../stores/useRecordingStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
+import RecordingSaveModal from '../components/RecordingSaveModal';
 
 const logger = createLogger('BrewingControl');
 
@@ -20,6 +20,7 @@ export const useBrewingControl = () => {
         }))
     );
     const [showSaveAlert, setShowSaveAlert] = useState(false);
+    const [recordingSessionName, setRecordingSessionName] = useState('');
 
     const startBrewingSession = (teaName?: string) => {
         logger.info('Starting brewing session from UI', { teaName: teaName ?? '' });
@@ -56,6 +57,7 @@ export const useBrewingControl = () => {
         // Handle recording stop
         if (isRecording) {
             logger.info('Prompting to save active weight recording after session end');
+            setRecordingSessionName(`Session ${new Date().toLocaleTimeString()}`);
             setShowSaveAlert(true);
         }
     };
@@ -71,41 +73,19 @@ export const useBrewingControl = () => {
     };
 
     const recordingAlert = (
-        <IonAlert
+        <RecordingSaveModal
             isOpen={showSaveAlert}
-            onDidDismiss={() => setShowSaveAlert(false)}
-            header={'Save Recording'}
-            inputs={[
-                {
-                    name: 'sessionName',
-                    type: 'text',
-                    placeholder: 'Session Name',
-                    value: `Session ${new Date().toLocaleTimeString()}`
-                },
-                {
-                    name: 'notes',
-                    type: 'text',
-                    placeholder: 'Notes (optional)'
-                }
-            ]}
-            buttons={[
-                {
-                    text: 'Cancel',
-                    role: 'cancel',
-                    cssClass: 'secondary',
-                    handler: () => {
-                        logger.info('Discarding recording from end-session prompt');
-                        discardRecording();
-                    }
-                },
-                {
-                    text: 'Save',
-                    handler: (data) => {
-                        logger.info('Saving recording from end-session prompt', { sessionName: data.sessionName });
-                        stopRecording(data.sessionName, data.notes);
-                    }
-                }
-            ]}
+            initialSessionName={recordingSessionName}
+            onCancel={() => {
+                logger.info('Discarding recording from end-session prompt');
+                discardRecording();
+                setShowSaveAlert(false);
+            }}
+            onSave={(sessionName, notes) => {
+                logger.info('Saving recording from end-session prompt', { sessionName });
+                stopRecording(sessionName, notes);
+                setShowSaveAlert(false);
+            }}
         />
     );
 

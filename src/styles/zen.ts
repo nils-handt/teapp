@@ -73,8 +73,8 @@ export const zenActiveTimerToneClassMap = {
 };
 export const zenInfusionHistoryClass = 'mt-3 flex touch-pan-y select-none items-center justify-center gap-[10px] text-[0.98rem] text-zen-muted';
 export const zenDotRailClass = 'inline-flex min-w-6 items-center gap-1.5';
-export const zenModalOverlayClass = 'fixed inset-0 z-[1000] flex items-center justify-center bg-zen-overlay p-5';
-export const zenModalPanelClass = 'flex max-h-[calc(100vh-40px)] w-full max-w-[420px] flex-col overflow-hidden rounded-[24px] border border-zen-border bg-[#fffdf8] p-[22px] shadow-zen-modal';
+export const zenModalOverlayClass = 'zen-modal-overlay fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-zen-overlay';
+export const zenModalPanelClass = 'zen-modal-panel flex max-h-full w-full max-w-[420px] flex-col overflow-hidden rounded-[24px] border border-zen-border bg-[#fffdf8] p-[22px] shadow-zen-modal';
 export const zenModalTitleClass = 'mb-[14px] text-[1.1rem] font-medium text-zen-text';
 export const zenModalActionsClass = 'mt-4 flex shrink-0 justify-center gap-3';
 export const zenInputClass = 'w-full rounded-2xl border border-zen-border px-4 py-[14px] text-base text-zen-text outline-none transition focus:border-zen-muted';
