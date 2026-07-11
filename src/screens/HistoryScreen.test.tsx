@@ -1,5 +1,5 @@
 import type { ChangeEvent, MouseEventHandler, PropsWithChildren } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
 import type { BrewingSession } from '../entities/BrewingSession.entity';
@@ -10,9 +10,12 @@ import { Tea } from '../entities/Tea.entity';
 const loadHistory = vi.fn().mockResolvedValue(undefined);
 const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
 const deleteSession = vi.fn().mockResolvedValue(undefined);
+const restoreSession = vi.fn().mockResolvedValue(undefined);
+const presentToast = vi.fn();
 
 type HistoryScreenStoreSeed = {
     deleteSession: (sessionId: string) => Promise<void>;
+    restoreSession: (session: BrewingSession) => Promise<void>;
     knownTeas: Tea[];
     loadHistory: () => Promise<void>;
     loadKnownTeas: (force?: boolean) => Promise<void>;
@@ -41,6 +44,12 @@ type SearchbarProps = {
     value?: string;
 };
 
+type ToastOptions = {
+    buttons: Array<{ handler: () => void; text: string }>;
+    duration: number;
+    message: string;
+};
+
 vi.mock('@ionic/react', () => ({
     IonContent: ({ children, className, 'data-testid': testId }: DivProps) => <div className={className} data-testid={testId}>{children}</div>,
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -55,7 +64,7 @@ vi.mock('@ionic/react', () => ({
     IonRefresherContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemOptions: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonItemOption: ({ children, onClick }: ButtonProps) => <button onClick={onClick}>{children}</button>,
+    IonItemOption: ({ children, onClick }: ButtonProps) => <button aria-label="Delete session" onClick={onClick}>{children}</button>,
     IonIcon: () => null,
     IonSearchbar: ({ value, onIonInput, placeholder }: SearchbarProps) => (
         <input
@@ -64,6 +73,7 @@ vi.mock('@ionic/react', () => ({
             onChange={(event: ChangeEvent<HTMLInputElement>) => onIonInput?.({ detail: { value: event.target.value } })}
         />
     ),
+    useIonToast: () => [presentToast],
     useIonViewWillEnter: (callback: () => void) => callback(),
 }));
 
@@ -116,6 +126,7 @@ describe('HistoryScreen', () => {
             loadHistory,
             loadKnownTeas,
             deleteSession,
+            restoreSession,
             ...overrides,
         });
     };
@@ -152,6 +163,25 @@ describe('HistoryScreen', () => {
         const sessionTitle = screen.getByRole('heading', { name: 'No tea selected' });
 
         expect(sessionTitle.className).toContain('text-zen-muted');
+    });
+
+    it('offers Undo after deleting a session from the history list', async () => {
+        render(<HistoryScreen />);
+
+        fireEvent.click(screen.getAllByRole('button', { name: 'Delete session' })[0]);
+
+        await waitFor(() => {
+            expect(deleteSession).toHaveBeenCalledWith('1');
+            expect(presentToast).toHaveBeenCalledWith(expect.objectContaining({
+                message: 'Session deleted',
+                duration: 5000,
+            }));
+        });
+
+        const toastOptions = presentToast.mock.calls[0][0] as ToastOptions;
+        toastOptions.buttons[0].handler();
+
+        expect(restoreSession).toHaveBeenCalledWith(expect.objectContaining({ sessionId: '1' }));
     });
 
     it('filters sessions using fuzzy tea name matches', () => {

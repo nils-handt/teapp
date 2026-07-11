@@ -78,6 +78,17 @@ describe('useHistoryStore', () => {
     expect(historyStore.getState().selectedSession).toBeNull();
   });
 
+  it('restores a deleted session and refreshes the history list', async () => {
+    vi.mocked(sessionRepository.getAllSessions).mockResolvedValue(mockSessions);
+
+    await historyStore.getState().restoreSession(mockSession);
+
+    expect(sessionRepository.saveSession).toHaveBeenCalledWith(mockSession);
+    expect(sessionRepository.getAllSessions).toHaveBeenCalled();
+    expect(historyStore.getState().sessionList).toBe(mockSessions);
+    expect(historyStore.getState().selectedSession).toBeNull();
+  });
+
   it('filters history by tea name', async () => {
     vi.mocked(sessionRepository.getSessionsByTeaName).mockResolvedValue(mockSessions);
 

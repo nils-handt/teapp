@@ -16,6 +16,7 @@ import {
   IonItemOptions,
   IonItemOption,
   IonIcon,
+  useIonToast,
   useIonViewWillEnter
 } from '@ionic/react';
 import { chevronDown, trash } from 'ionicons/icons';
@@ -75,11 +76,12 @@ const FILTER_FIELDS: Array<{ key: keyof TeaFilterDraft; label: string }> = [
 ];
 
 const HistoryScreen: React.FC = () => {
-  const { sessionList, loadHistory, deleteSession, knownTeas, loadKnownTeas } = useHistoryStore(
+  const { sessionList, loadHistory, deleteSession, restoreSession, knownTeas, loadKnownTeas } = useHistoryStore(
     useShallow((state) => ({
       sessionList: state.sessionList,
       loadHistory: state.loadHistory,
       deleteSession: state.deleteSession,
+      restoreSession: state.restoreSession,
       knownTeas: state.knownTeas,
       loadKnownTeas: state.loadKnownTeas,
     }))
@@ -87,6 +89,7 @@ const HistoryScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [filters, setFilters] = useState<TeaFilterDraft>(EMPTY_FILTERS);
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
+  const [presentToast] = useIonToast();
 
   // Load history when entering the view
   useIonViewWillEnter(() => {
@@ -148,7 +151,26 @@ const HistoryScreen: React.FC = () => {
 
   // Handle delete
   const handleDelete = async (sessionId: string) => {
+    const deletedSession = sessionList.find((session) => session.sessionId === sessionId);
     await deleteSession(sessionId);
+
+    if (!deletedSession) {
+      return;
+    }
+
+    presentToast({
+      message: 'Session deleted',
+      duration: 5000,
+      position: 'bottom',
+      buttons: [
+        {
+          text: 'Undo',
+          handler: () => {
+            void restoreSession(deletedSession);
+          },
+        },
+      ],
+    });
   };
 
   const formatDate = (value: string | number | Date) => {

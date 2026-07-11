@@ -20,6 +20,7 @@ export interface HistoryStoreActions {
   upsertKnownTea: (tea: Tea) => void;
   selectSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
+  restoreSession: (session: BrewingSession) => Promise<void>;
   filterHistoryByTea: (teaName: string) => Promise<void>;
   updateSession: (session: BrewingSession) => Promise<void>;
   saveTea: (tea: Tea) => Promise<Tea>;
@@ -87,6 +88,11 @@ export const historyStore = createStore<HistoryStore>()((set, get) => ({
   },
   deleteSession: async (sessionId) => {
     await sessionRepository.deleteSession(sessionId);
+    const sessions = await sessionRepository.getAllSessions();
+    set({ sessionList: sessions, selectedSession: null });
+  },
+  restoreSession: async (session) => {
+    await sessionRepository.saveSession(session);
     const sessions = await sessionRepository.getAllSessions();
     set({ sessionList: sessions, selectedSession: null });
   },
