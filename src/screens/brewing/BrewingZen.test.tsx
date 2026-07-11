@@ -66,6 +66,7 @@ type BrewingZenBrewingSeed = {
 type BrewingZenScaleSeed = {
     connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'scanning';
     currentWeight: number;
+    isMockMode: boolean;
 };
 
 type BrewingZenHistorySeed = {
@@ -312,6 +313,8 @@ describe('BrewingZen', () => {
 
         const timer = screen.getByText('1:32');
         expect(timer.getAttribute('data-tone')).toBe('resting');
+        expect(timer.classList.contains('text-zen-rest')).toBe(true);
+        expect(timer.classList.contains('text-zen-text')).toBe(false);
     });
 
     it('shows the latest completed infusion in active phases and removes duplicate timer labels', () => {
@@ -480,7 +483,7 @@ describe('BrewingZen', () => {
         expect(screen.getByRole('button', { name: 'Start New Session' })).toBeDefined();
     });
 
-    it('shows an end infusion action while infusing', () => {
+    it('hides the end infusion action while using a real scale', () => {
         brewingStore.setState({
             brewingPhase: BrewingPhase.INFUSION,
             editableInfusionMetadata: {
@@ -493,7 +496,42 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
+        expect(screen.queryByRole('button', { name: 'End Infusion' })).toBeNull();
+    });
+
+    it('shows an end infusion action while infusing with a mock scale', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.INFUSION,
+            editableInfusionMetadata: {
+                infusionId: 'inf-1',
+                note: '',
+                temperature: null,
+                source: 'current',
+            },
+        });
+        scaleStore.setState({ isMockMode: true });
+
+        render(<BrewingZen />);
+
         expect(screen.getByRole('button', { name: 'End Infusion' })).toBeDefined();
+    });
+
+    it('shows a start infusion action while resting with a mock scale', () => {
+        brewingStore.setState({
+            brewingPhase: BrewingPhase.REST,
+            currentInfusion: createInfusion(),
+            editableInfusionMetadata: {
+                infusionId: 'inf-1',
+                note: '',
+                temperature: null,
+                source: 'resting',
+            },
+        });
+        scaleStore.setState({ isMockMode: true });
+
+        render(<BrewingZen />);
+
+        expect(screen.getByRole('button', { name: 'Start Infusion' })).toBeDefined();
     });
 
     it('cycles weak quick notes from the top controls', () => {

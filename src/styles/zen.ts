@@ -66,7 +66,7 @@ export const zenInfusionControlStateClassMap = {
   disabled: 'cursor-not-allowed opacity-50',
 };
 export const zenActiveTimerWellClass = 'mx-auto mt-[14px] mb-[10px] flex aspect-square w-[min(320px,78vw)] flex-col items-center justify-center rounded-full border border-zen-border bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.9),rgba(230,238,226,0.9))] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]';
-export const zenActiveTimerClass = 'text-[3.4rem] font-light text-zen-text transition-colors duration-200';
+export const zenActiveTimerClass = 'text-[3.4rem] font-light transition-colors duration-200';
 export const zenActiveTimerToneClassMap = {
   default: 'text-zen-text',
   resting: 'text-zen-rest',

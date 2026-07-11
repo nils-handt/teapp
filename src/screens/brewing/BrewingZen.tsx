@@ -107,9 +107,10 @@ const BrewingZen: React.FC = () => {
             timerValue: state.timerValue,
         }))
     );
-    const { connectionStatus, currentWeight } = useScaleStore(useShallow((state) => ({
+    const { connectionStatus, currentWeight, isMockMode } = useScaleStore(useShallow((state) => ({
         connectionStatus: state.connectionStatus,
         currentWeight: state.currentWeight,
+        isMockMode: state.isMockMode,
     })));
     const { knownTeas, loadKnownTeas, saveTea, deleteSession } = useHistoryStore(
         useShallow((state) => ({
@@ -607,7 +608,7 @@ const BrewingZen: React.FC = () => {
                 >
                     End Session
                 </AppButton>
-                {(brewingPhase === BrewingPhase.INFUSION || brewingPhase === BrewingPhase.INFUSION_VESSEL_LIFTED) && (
+                {isMockMode && (brewingPhase === BrewingPhase.INFUSION || brewingPhase === BrewingPhase.INFUSION_VESSEL_LIFTED) && (
                     <AppButton
                         expand="block"
                         onClick={() => brewingSessionService.manuallyStopInfusion()}
@@ -615,7 +616,7 @@ const BrewingZen: React.FC = () => {
                         End Infusion
                     </AppButton>
                 )}
-                {(brewingPhase === BrewingPhase.READY || brewingPhase === BrewingPhase.REST) && (
+                {isMockMode && (brewingPhase === BrewingPhase.READY || brewingPhase === BrewingPhase.REST) && (
                     <AppButton
                         expand="block"
                         onClick={() => brewingSessionService.manuallyStartInfusion()}
