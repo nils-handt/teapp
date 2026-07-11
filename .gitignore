@@ -41,6 +41,7 @@ yarn-error.log*
 .gemini
 docs/superpowers
 .superpowers
+.worktrees
 
 public/*
 !public/
