@@ -9,6 +9,15 @@ const groups = (prefix: string, count: number) => Array.from({ length: count }, 
 }));
 
 describe('StatisticsBreakdownCard', () => {
+    it('keeps every tab in the native keyboard tab order', () => {
+        render(<StatisticsBreakdownCard rankings={{
+            types: groups('Type', 1), teas: groups('Tea', 1), brands: groups('Brand', 1),
+        }} />);
+
+        const tabs = screen.getAllByRole('tab');
+        expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, 0, 0]);
+    });
+
     it('switches accessible tabs and limits each ranking to five rows', () => {
         render(<StatisticsBreakdownCard rankings={{
             types: groups('Type', 6), teas: groups('Tea', 7), brands: groups('Brand', 2),

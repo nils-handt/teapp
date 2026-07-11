@@ -44,7 +44,6 @@ const StatisticsBreakdownCard: React.FC<StatisticsBreakdownCardProps> = ({ ranki
                             role="tab"
                             aria-selected={selected}
                             aria-controls={panelId}
-                            tabIndex={selected ? 0 : -1}
                             onClick={() => selectTab(tab.key)}
                             className={cn(
                                 'min-h-11 px-2 text-sm transition',
