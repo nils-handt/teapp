@@ -524,7 +524,7 @@ const BrewingZen: React.FC = () => {
     );
 
     const renderEmptyState = (label: string, onClick: () => void, options?: { disabled?: boolean }) => (
-        <div className={cn(zenStackClass, 'flex flex-1 justify-center')}>
+        <div className={cn(zenStackClass, 'flex w-full flex-1 justify-center')}>
             <button
                 type="button"
                 onClick={onClick}

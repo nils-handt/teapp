@@ -252,7 +252,7 @@ describe('BrewingZen', () => {
         expect(screen.queryByText('End Session')).toBeNull();
         expect(screen.getByTestId('brewing-content').getAttribute('data-scroll-y')).toBe('false');
         expect(screen.getByRole('button', { name: /connect to scale/i }).parentElement?.className)
-            .toContain('flex-1 justify-center');
+            .toContain('w-full flex-1 justify-center');
     });
 
     it('keeps the idle start action aligned with the connect state', () => {

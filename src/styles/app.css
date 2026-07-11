@@ -122,6 +122,8 @@ ion-button[data-zen-variant="soft"] {
   -webkit-appearance: none;
   display: block;
   width: 100%;
+  max-width: 360px;
+  margin-inline: auto;
   border: 1px solid var(--color-zen-border);
   border-radius: 28px;
   padding: 40px 24px;
