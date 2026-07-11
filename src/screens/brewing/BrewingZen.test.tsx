@@ -696,6 +696,17 @@ describe('BrewingZen', () => {
         });
     });
 
+    it('orders completed-session actions from destructive to primary', () => {
+        brewingStore.setState({ brewingPhase: BrewingPhase.ENDED });
+
+        render(<BrewingZen />);
+
+        const deleteButton = screen.getByRole('button', { name: 'Delete Session' });
+        const startButton = screen.getByRole('button', { name: 'Start New Session' });
+
+        expect(deleteButton.compareDocumentPosition(startButton) & 4).toBe(4);
+    });
+
     it('uses the shared tea editor suggestions when saving a tea name', async () => {
         render(<BrewingZen />);
 

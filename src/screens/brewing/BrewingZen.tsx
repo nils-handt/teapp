@@ -647,16 +647,16 @@ const BrewingZen: React.FC = () => {
                 <>
                     <AppButton
                         expand="block"
-                        onClick={() => startBrewingSession()}
-                    >
-                        Start New Session
-                    </AppButton>
-                    <AppButton
-                        expand="block"
                         variant="danger"
                         onClick={() => setShowDeleteSessionAlert(true)}
                     >
                         Delete Session
+                    </AppButton>
+                    <AppButton
+                        expand="block"
+                        onClick={() => startBrewingSession()}
+                    >
+                        Start New Session
                     </AppButton>
                 </>
             )}
