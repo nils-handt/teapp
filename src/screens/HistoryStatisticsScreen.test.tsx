@@ -22,8 +22,12 @@ const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
 type DivProps = PropsWithChildren<{ className?: string }>;
 const deferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void;
-  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve; });
-  return { promise, resolve };
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, resolve, reject };
 };
 
 vi.mock('../services/logging', async (importOriginal) => ({
@@ -99,6 +103,7 @@ describe('HistoryStatisticsScreen', () => {
     viewMocks.entered = false;
     historyFiltersStore.setState(initialHistoryFiltersState);
     settingsStore.setState(initialSettingsStoreValues);
+    settingsStore.setState({ settingsLoaded: true });
     const tea = createTea();
     historyStore.setState(initialHistoryStoreState);
     historyStore.setState({
@@ -141,6 +146,60 @@ describe('HistoryStatisticsScreen', () => {
 
     expect(await screen.findByText('2 sessions')).toBeDefined();
     expect(screen.queryByText('Loading tea statistics…')).toBeNull();
+  });
+
+  it('waits for deferred settings hydration before enabling periods or calculating statistics', async () => {
+    const settingsLoad = deferred<Record<string, string>>();
+    vi.spyOn(settingsRepository, 'getAllSettings').mockReturnValueOnce(settingsLoad.promise);
+    historyStore.setState({
+      sessionList: [
+        createSession('recent', 'completed'),
+        Object.assign(createSession('old', 'completed'), { startTime: '2020-01-01T12:00:00.000Z' }),
+      ],
+    });
+    settingsStore.setState({ settingsLoaded: false });
+    const hydration = settingsStore.getState().loadSettings();
+
+    render(<HistoryStatisticsScreen />);
+
+    expect(await screen.findByText('Loading tea statistics…')).toBeDefined();
+    const totalButton = screen.getByRole('button', { name: 'Total' });
+    expect((totalButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(totalButton);
+    expect(settingsRepository.saveSettingsState).not.toHaveBeenCalled();
+    expect(screen.queryByText('2 sessions')).toBeNull();
+
+    await act(async () => {
+      settingsLoad.resolve({ statisticsPeriod: 'lastWeek' });
+      await hydration;
+    });
+
+    expect((await screen.findByText('Sessions')).parentElement?.textContent).toContain('1 session');
+    expect(screen.getByRole('button', { name: 'Last week' }).getAttribute('aria-pressed')).toBe('true');
+    expect((screen.getByRole('button', { name: 'Total' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('ignores an older overlapping load after a newer refresh succeeds', async () => {
+    const staleHistoryLoad = deferred<void>();
+    loadHistory.mockImplementationOnce(() => staleHistoryLoad.promise);
+
+    render(<HistoryStatisticsScreen />);
+    expect(await screen.findByText('Loading tea statistics…')).toBeDefined();
+
+    const complete = vi.fn();
+    await act(async () => {
+      await refresherMocks.onIonRefresh?.({ detail: { complete } } as CustomEvent);
+    });
+    expect(await screen.findByText('2 sessions')).toBeDefined();
+
+    await act(async () => {
+      staleHistoryLoad.reject(new Error('stale load failed'));
+      await staleHistoryLoad.promise.catch(() => undefined);
+    });
+
+    expect(screen.getByText('2 sessions')).toBeDefined();
+    expect(screen.queryByText('Loading tea statistics…')).toBeNull();
+    expect(screen.queryByText('Statistics could not be loaded. Pull to refresh and try again.')).toBeNull();
   });
 
   it('shares editable Tea filters with History and reports an empty result', async () => {

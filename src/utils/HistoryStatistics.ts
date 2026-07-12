@@ -50,7 +50,7 @@ const increment = (map: Map<string, HistoryStatisticGroup>, key: string, label: 
 
 const normalizedGroup = (value: string | null | undefined): { key: string; label: string } => {
     const label = value?.trim();
-    return label ? { key: normalizeTeaValue(label), label } : { key: 'unknown', label: 'Unknown' };
+    return label ? { key: label.toLowerCase(), label } : { key: 'unknown', label: 'Unknown' };
 };
 
 const eligibleSessions = (

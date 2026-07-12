@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   IonBackButton,
   IonButtons,
@@ -59,30 +59,37 @@ const HistoryStatisticsScreen: React.FC = () => {
     searchText: state.searchText,
     filters: state.filters,
   })));
-  const { statisticsPeriod, updateSettings } = useSettingsStore(useShallow((state) => ({
+  const { statisticsPeriod, settingsLoaded, updateSettings } = useSettingsStore(useShallow((state) => ({
     statisticsPeriod: state.statisticsPeriod,
+    settingsLoaded: state.settingsLoaded,
     updateSettings: state.updateSettings,
   })));
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
+  const loadSequence = useRef(0);
 
   const filteredSessions = useMemo(
     () => filterHistorySessions(sessionList, knownTeas, searchText, filters),
     [filters, knownTeas, searchText, sessionList],
   );
   const statistics = useMemo(
-    () => calculateHistoryStatistics(filteredSessions, statisticsPeriod),
-    [filteredSessions, statisticsPeriod],
+    () => settingsLoaded ? calculateHistoryStatistics(filteredSessions, statisticsPeriod) : null,
+    [filteredSessions, settingsLoaded, statisticsPeriod],
   );
 
   const reload = async (forceTeas = false) => {
+    const sequence = ++loadSequence.current;
     setLoadState('loading');
     try {
       await Promise.all([loadHistory(), loadKnownTeas(forceTeas)]);
-      setLoadState('ready');
+      if (sequence === loadSequence.current) {
+        setLoadState('ready');
+      }
     } catch (error) {
       logger.error('Failed to load tea statistics', error);
-      setLoadState('error');
+      if (sequence === loadSequence.current) {
+        setLoadState('error');
+      }
     }
   };
 
@@ -94,7 +101,9 @@ const HistoryStatisticsScreen: React.FC = () => {
   };
 
   const selectPeriod = (nextStatisticsPeriod: StatisticsPeriod) => {
-    updateSettings({ statisticsPeriod: nextStatisticsPeriod });
+    if (settingsLoaded) {
+      updateSettings({ statisticsPeriod: nextStatisticsPeriod });
+    }
   };
 
   return (
@@ -125,6 +134,7 @@ const HistoryStatisticsScreen: React.FC = () => {
                   type="button"
                   aria-label={option.label}
                   aria-pressed={statisticsPeriod === option.value}
+                  disabled={!settingsLoaded}
                   onClick={() => selectPeriod(option.value)}
                   className={cn(
                     'min-h-11 rounded-xl border border-zen-border px-2 text-sm transition',
@@ -138,13 +148,13 @@ const HistoryStatisticsScreen: React.FC = () => {
               ))}
             </div>
 
-            {loadState === 'loading' ? (
+            {loadState === 'loading' || !settingsLoaded ? (
               <p className="m-0 text-center text-zen-muted">Loading tea statistics…</p>
             ) : loadState === 'error' ? (
               <p role="alert" className="m-0 text-center text-zen-muted">
                 Statistics could not be loaded. Pull to refresh and try again.
               </p>
-            ) : (
+            ) : statistics && (
               <>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className={zenMetricCardClass}>

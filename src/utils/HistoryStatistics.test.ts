@@ -126,6 +126,23 @@ describe('HistoryStatistics', () => {
         expect(result.rankings.brands.map((group) => group.label)).toEqual(['alpha', 'Zulu']);
     });
 
+    it('merges casing-only Type and Brand variants without merging punctuation-distinct values', () => {
+        const result = calculateHistoryStatistics([
+            createSession({ tea: createTea({ teaId: 'tea-a', type: ' Dark-Tea ', brand: ' Tea.Co ' }) }),
+            createSession({ tea: createTea({ teaId: 'tea-b', type: 'dark-tea', brand: 'tea.co' }) }),
+            createSession({ tea: createTea({ teaId: 'tea-c', type: 'Dark Tea', brand: 'Tea Co' }) }),
+        ], 'total', NOW);
+
+        expect(result.rankings.types).toEqual([
+            { key: 'dark-tea', label: 'Dark-Tea', sessionCount: 2 },
+            { key: 'dark tea', label: 'Dark Tea', sessionCount: 1 },
+        ]);
+        expect(result.rankings.brands).toEqual([
+            { key: 'tea.co', label: 'Tea.Co', sessionCount: 2 },
+            { key: 'tea co', label: 'Tea Co', sessionCount: 1 },
+        ]);
+    });
+
     it('formats weights and liquid with one-decimal rounding and unit conversion', () => {
         expect(formatStatisticWeight(12)).toBe('12 g');
         expect(formatStatisticWeight(12.25)).toBe('12.3 g');
