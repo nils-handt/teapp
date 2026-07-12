@@ -29,6 +29,8 @@ type HistoryScreenStoreSeed = {
 
 type ButtonProps = PropsWithChildren<{
     onClick?: MouseEventHandler<HTMLButtonElement>;
+    routerLink?: string;
+    'aria-label'?: string;
 }>;
 
 type DivProps = PropsWithChildren<{
@@ -77,6 +79,9 @@ vi.mock('@ionic/react', () => ({
     IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemOptions: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemOption: ({ children, onClick }: ButtonProps) => <button aria-label="Delete session" onClick={onClick}>{children}</button>,
+    IonButton: ({ children, routerLink, onClick, 'aria-label': ariaLabel }: ButtonProps) => routerLink
+        ? <a href={routerLink} aria-label={ariaLabel}>{children}</a>
+        : <button onClick={onClick} aria-label={ariaLabel}>{children}</button>,
     IonIcon: () => null,
     IonSearchbar: ({ value, onIonInput, placeholder }: SearchbarProps) => (
         <input
@@ -154,6 +159,12 @@ describe('HistoryScreen', () => {
 
         expect(loadHistory).toHaveBeenCalled();
         expect(loadKnownTeas).toHaveBeenCalled();
+    });
+
+    it('links the pie-chart action to the dedicated statistics page', () => {
+        render(<HistoryScreen />);
+        expect(screen.getByRole('link', { name: 'Open tea statistics' }).getAttribute('href'))
+            .toBe('/tabs/history/statistics');
     });
 
     it('keeps shared Tea filters when history refreshes', async () => {

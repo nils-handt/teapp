@@ -7,13 +7,15 @@ import HistoryScreen from './HistoryScreen';
 import SessionDetailScreen from './SessionDetailScreen';
 import SettingsScreen from './SettingsScreen';
 import BrewingZen from './brewing/BrewingZen';
+import HistoryStatisticsScreen from './HistoryStatisticsScreen';
 
 const Tabs: React.FC = () => {
   return (
     <IonTabs>
       <IonRouterOutlet>
         <Route path="/tabs/brewing/1" component={BrewingZen} exact={true} />
-        <Route path="/tabs/history/:sessionId" component={SessionDetailScreen} />
+        <Route path="/tabs/history/statistics" component={HistoryStatisticsScreen} exact={true} />
+        <Route path="/tabs/history/:sessionId" component={SessionDetailScreen} exact={true} />
         <Route path="/tabs/history" component={HistoryScreen} exact={true} />
         <Route path="/tabs/settings" component={SettingsScreen} exact={true} />
         <Route path="/tabs" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />

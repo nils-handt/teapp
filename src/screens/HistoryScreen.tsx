@@ -13,10 +13,11 @@ import {
   IonItemOptions,
   IonItemOption,
   IonIcon,
+  IonButton,
   useIonToast,
   useIonViewWillEnter
 } from '@ionic/react';
-import { trash } from 'ionicons/icons';
+import { pieChartOutline, trash } from 'ionicons/icons';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { calculateSessionStats } from '../utils/SessionStatistics';
 import { useShallow } from 'zustand/react/shallow';
@@ -128,6 +129,16 @@ const HistoryScreen: React.FC = () => {
           knownTeas={knownTeas}
           areFiltersExpanded={areFiltersExpanded}
           onToggleFilters={() => setAreFiltersExpanded((current) => !current)}
+          searchAction={(
+            <IonButton
+              routerLink="/tabs/history/statistics"
+              fill="clear"
+              aria-label="Open tea statistics"
+              className="m-0 h-11 w-11 shrink-0 rounded-2xl border border-zen-border text-zen-text"
+            >
+              <IonIcon icon={pieChartOutline} aria-hidden="true" />
+            </IonButton>
+          )}
         />
       </IonHeader>
       <IonContent fullscreen data-testid="history-page" className={zenListPageClass}>
