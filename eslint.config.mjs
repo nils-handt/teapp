@@ -18,6 +18,7 @@ const compat = new FlatCompat({
 export default defineConfig([{
     ignores: [
         'dist/**',
+        '**/.worktrees/**',
         "eslint.config.mjs",
         "jest.config.js",
         "android/**",
