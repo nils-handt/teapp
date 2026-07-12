@@ -20,6 +20,8 @@ const showKeyboard = (keyboardHeight: number) => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  document.documentElement.classList.remove('zen-modal-keyboard-open');
+  document.querySelectorAll('ion-app[data-test-layout-root]').forEach((element) => element.remove());
 });
 
 describe('ModalFrame keyboard avoidance', () => {
@@ -33,11 +35,32 @@ describe('ModalFrame keyboard avoidance', () => {
 
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('286px');
     expect(dialog.getAttribute('data-keyboard-open')).toBe('true');
+    expect(document.documentElement.classList.contains('zen-modal-keyboard-open')).toBe(true);
 
     act(() => window.dispatchEvent(new Event('ionKeyboardDidHide')));
 
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
     expect(dialog.getAttribute('data-keyboard-open')).toBe('false');
+    expect(document.documentElement.classList.contains('zen-modal-keyboard-open')).toBe(false);
+  });
+
+  it('does not add a second keyboard inset when Ionic already resized the app', () => {
+    const app = document.createElement('ion-app');
+    app.dataset.testLayoutRoot = '';
+    let appHeight = 800;
+    Object.defineProperty(app, 'clientHeight', {
+      configurable: true,
+      get: () => appHeight,
+    });
+    document.body.append(app);
+    renderModal();
+
+    appHeight = 520;
+    act(() => showKeyboard(280));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
+    expect(dialog.getAttribute('data-keyboard-open')).toBe('true');
   });
 
   it('scrolls a focused field into the modal body after the keyboard opens', () => {

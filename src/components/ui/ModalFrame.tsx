@@ -33,7 +33,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
 }) => {
   const titleId = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
-  const { keyboardHeight, scrollFocusedFieldIntoView } = useModalKeyboardAvoidance(isOpen, bodyRef);
+  const { keyboardHeight, isKeyboardOpen, scrollFocusedFieldIntoView } = useModalKeyboardAvoidance(isOpen, bodyRef);
 
   if (!isOpen) {
     return null;
@@ -46,7 +46,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
       aria-labelledby={title || header ? titleId : undefined}
       aria-label={!title && !header ? ariaLabel : undefined}
       className={cn(zenModalOverlayClass, overlayClassName)}
-      data-keyboard-open={keyboardHeight > 0}
+      data-keyboard-open={isKeyboardOpen}
       style={{ '--modal-keyboard-height': `${keyboardHeight}px` } as CSSProperties}
     >
       <div className={cn(zenModalPanelClass, panelClassName)}>

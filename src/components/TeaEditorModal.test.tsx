@@ -37,7 +37,7 @@ describe('TeaEditorModal', () => {
         expect(screen.getByLabelText('Search existing teas')).toBeDefined();
         expect(screen.queryByLabelText('Name')).toBeNull();
         const panel = screen.getByRole('dialog').firstElementChild as HTMLElement;
-        expect(panel.className).toContain('h-[510px]');
+        expect(panel.className).toContain('h-[520px]');
 
         fireEvent.click(screen.getByRole('button', { name: 'Show Search existing teas suggestions' }));
         expect(screen.getByRole('listbox').className).toContain('flex-1');

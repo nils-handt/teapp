@@ -30,16 +30,29 @@
   --zen-danger-gradient: linear-gradient(180deg, #fad3ce 0%, #f4c4bc 100%);
   --zen-tutorial-background: linear-gradient(180deg, #fffdf7 0%, #f3efe2 100%);
   --zen-flow-background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+  --zen-modal-keyboard-transition: 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .zen-modal-overlay {
   padding: 1.25rem;
   padding-bottom: calc(1.25rem + var(--modal-keyboard-height, 0px));
-  transition: padding 200ms ease-out;
+  transition: padding var(--zen-modal-keyboard-transition);
 }
 
-.zen-modal-panel {
-  transition: max-height 200ms ease-out;
+ion-header {
+  max-height: 128px;
+  overflow: hidden;
+  transition:
+    max-height var(--zen-modal-keyboard-transition),
+    opacity var(--zen-modal-keyboard-transition),
+    transform var(--zen-modal-keyboard-transition);
+}
+
+:root.zen-modal-keyboard-open ion-header {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-100%);
 }
 
 .zen-list-page {
