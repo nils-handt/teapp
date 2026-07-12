@@ -68,4 +68,12 @@ export default defineConfig([{
             { "argsIgnorePattern": "^_" }
         ]
     },
+}, {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+        globals: globals.node,
+        parserOptions: {
+            projectService: false,
+        },
+    },
 }]);

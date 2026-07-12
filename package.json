@@ -8,6 +8,7 @@
     "build:pwa": "tsc && vite build --mode pwa",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
+    "generate:sample-data": "node scripts/generate-sample-dataset.mjs",
     "verify:pwa": "npm run build:pwa",
     "test": "vitest run",
     "test:sandbox": "vitest run --configLoader native --pool threads -c vite.config.ts",

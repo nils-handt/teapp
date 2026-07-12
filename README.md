@@ -8,6 +8,16 @@ Teapp is an Android application designed for tea enthusiasts to automatically tr
 *   **Automatic Infusion Tracking:** The app automatically detects weight changes to start and stop infusion timers.
 *   **Session History:** Browse and review your past brewing sessions.
 
+## Development sample data
+
+Create a full backup file that can be imported through Settings → Data Management → Restore Data:
+
+```bash
+npm run generate:sample-data -- --sessions 100 --teas 12 --vessels 4 --seed demo --output ./tmp/sample-data.json
+```
+
+All sessions are completed, linked to a generated tea entity, and populated with randomized infusions. Tea metadata is selected from the preset arrays in `scripts/generate-sample-dataset.mjs`. The `--seed` option makes generated values and IDs repeatable; timestamps are based on the generation time. Omit the seed for a fresh random dataset. Restore overwrites the current database, so use this only with development data.
+
 ## Project Documentation
 
 This project is described in more detail in the following documents:
