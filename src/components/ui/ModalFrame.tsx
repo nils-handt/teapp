@@ -49,7 +49,10 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
       data-keyboard-open={isKeyboardOpen}
       style={{ '--modal-keyboard-height': `${keyboardHeight}px` } as CSSProperties}
     >
-      <div className={cn(zenModalPanelClass, panelClassName)}>
+      <div
+        className={cn(zenModalPanelClass, panelClassName)}
+        style={isKeyboardOpen ? { height: '100%' } : undefined}
+      >
         {header ? (
           <div id={titleId} className={cn(zenModalTitleClass, headerClassName)}>
             {header}

@@ -29,18 +29,22 @@ describe('ModalFrame keyboard avoidance', () => {
     renderModal();
 
     const dialog = screen.getByRole('dialog');
+    const panel = dialog.firstElementChild as HTMLElement;
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
+    expect(panel.style.height).toBe('');
 
     act(() => showKeyboard(286));
 
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('286px');
     expect(dialog.getAttribute('data-keyboard-open')).toBe('true');
+    expect(panel.style.height).toBe('100%');
     expect(document.documentElement.classList.contains('zen-modal-keyboard-open')).toBe(true);
 
     act(() => window.dispatchEvent(new Event('ionKeyboardDidHide')));
 
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
     expect(dialog.getAttribute('data-keyboard-open')).toBe('false');
+    expect(panel.style.height).toBe('');
     expect(document.documentElement.classList.contains('zen-modal-keyboard-open')).toBe(false);
   });
 

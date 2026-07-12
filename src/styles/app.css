@@ -39,6 +39,10 @@
   transition: padding var(--zen-modal-keyboard-transition);
 }
 
+.zen-modal-panel {
+  transition: height var(--zen-modal-keyboard-transition);
+}
+
 ion-header {
   max-height: 128px;
   overflow: hidden;
