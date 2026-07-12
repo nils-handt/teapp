@@ -15,7 +15,11 @@ const Tabs: React.FC = () => {
       <IonRouterOutlet>
         <Route path="/tabs/brewing/1" component={BrewingZen} exact={true} />
         <Route path="/tabs/history/statistics" component={HistoryStatisticsScreen} exact={true} />
-        <Route path="/tabs/history/:sessionId" component={SessionDetailScreen} exact={true} />
+        <Route
+          path="/tabs/history/:sessionId([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+          component={SessionDetailScreen}
+          exact={true}
+        />
         <Route path="/tabs/history" component={HistoryScreen} exact={true} />
         <Route path="/tabs/settings" component={SettingsScreen} exact={true} />
         <Route path="/tabs" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />

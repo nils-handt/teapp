@@ -5,11 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import Tabs from './Tabs';
 
 vi.mock('@ionic/react', async () => {
-  const { Switch } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   const Wrap = ({ children }: PropsWithChildren) => <div>{children}</div>;
   return {
     IonTabs: Wrap,
-    IonRouterOutlet: ({ children }: PropsWithChildren) => <Switch>{children}</Switch>,
+    IonRouterOutlet: Wrap,
     IonTabBar: Wrap,
     IonTabButton: Wrap,
     IonIcon: () => null,
@@ -23,9 +22,19 @@ vi.mock('./SessionDetailScreen', () => ({ default: () => <div>Session detail rou
 vi.mock('./SettingsScreen', () => ({ default: () => <div>Settings route</div> }));
 
 describe('Tabs routing', () => {
-  it('routes statistics before the dynamic session detail route', () => {
+  it('routes statistics without also matching the dynamic session detail route', () => {
     render(<MemoryRouter initialEntries={['/tabs/history/statistics']}><Tabs /></MemoryRouter>);
     expect(screen.getByText('Tea statistics route')).toBeDefined();
     expect(screen.queryByText('Session detail route')).toBeNull();
+  });
+
+  it('routes UUID session IDs to session details', () => {
+    render(
+      <MemoryRouter initialEntries={['/tabs/history/6d11744e-a074-4fec-8314-5b9452defc2b']}>
+        <Tabs />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Session detail route')).toBeDefined();
+    expect(screen.queryByText('Tea statistics route')).toBeNull();
   });
 });
