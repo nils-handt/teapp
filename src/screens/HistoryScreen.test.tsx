@@ -1,11 +1,16 @@
 import type { ChangeEvent, MouseEventHandler, PropsWithChildren } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
 import type { BrewingSession } from '../entities/BrewingSession.entity';
 import { BrewingSession as BrewingSessionEntity } from '../entities/BrewingSession.entity';
 import { historyStore, initialHistoryStoreState } from '../stores/useHistoryStore';
+import { historyFiltersStore, initialHistoryFiltersState } from '../stores/useHistoryFiltersStore';
 import { Tea } from '../entities/Tea.entity';
+
+const refresherMocks = vi.hoisted(() => ({
+    onIonRefresh: undefined as ((event: CustomEvent) => Promise<void>) | undefined,
+}));
 
 const loadHistory = vi.fn().mockResolvedValue(undefined);
 const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
@@ -24,6 +29,8 @@ type HistoryScreenStoreSeed = {
 
 type ButtonProps = PropsWithChildren<{
     onClick?: MouseEventHandler<HTMLButtonElement>;
+    routerLink?: string;
+    'aria-label'?: string;
 }>;
 
 type DivProps = PropsWithChildren<{
@@ -44,6 +51,10 @@ type SearchbarProps = {
     value?: string;
 };
 
+type RefresherProps = PropsWithChildren<{
+    onIonRefresh?: (event: CustomEvent) => Promise<void>;
+}>;
+
 type ToastOptions = {
     buttons: Array<{ handler: () => void; text: string }>;
     duration: number;
@@ -60,11 +71,17 @@ vi.mock('@ionic/react', () => ({
     IonItem: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonLabel: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
     IonNote: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
-    IonRefresher: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    IonRefresher: ({ children, onIonRefresh }: RefresherProps) => {
+        refresherMocks.onIonRefresh = onIonRefresh;
+        return <div data-testid="history-refresher">{children}</div>;
+    },
     IonRefresherContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemOptions: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonItemOption: ({ children, onClick }: ButtonProps) => <button aria-label="Delete session" onClick={onClick}>{children}</button>,
+    IonButton: ({ children, routerLink, onClick, 'aria-label': ariaLabel }: ButtonProps) => routerLink
+        ? <a href={routerLink} aria-label={ariaLabel}>{children}</a>
+        : <button onClick={onClick} aria-label={ariaLabel}>{children}</button>,
     IonIcon: () => null,
     IonSearchbar: ({ value, onIonInput, placeholder }: SearchbarProps) => (
         <input
@@ -132,6 +149,7 @@ describe('HistoryScreen', () => {
     };
 
     beforeEach(() => {
+        historyFiltersStore.setState(initialHistoryFiltersState);
         vi.clearAllMocks();
         seedHistoryStore();
     });
@@ -141,6 +159,30 @@ describe('HistoryScreen', () => {
 
         expect(loadHistory).toHaveBeenCalled();
         expect(loadKnownTeas).toHaveBeenCalled();
+    });
+
+    it('links the pie-chart action to the dedicated statistics page', () => {
+        render(<HistoryScreen />);
+        expect(screen.getByRole('link', { name: 'Open tea statistics' }).getAttribute('href'))
+            .toBe('/tabs/history/statistics');
+    });
+
+    it('keeps shared Tea filters when history refreshes', async () => {
+        render(<HistoryScreen />);
+        fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'sencha' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
+        fireEvent.change(screen.getByLabelText('Filter Brand'), { target: { value: 'Ippodo' } });
+
+        const complete = vi.fn();
+        await act(async () => {
+            await refresherMocks.onIonRefresh?.({ detail: { complete } } as CustomEvent);
+        });
+
+        expect(historyFiltersStore.getState()).toMatchObject({
+            searchText: 'sencha',
+            filters: expect.objectContaining({ brand: 'Ippodo' }),
+        });
+        expect(complete).toHaveBeenCalled();
     });
 
     it('uses the shared Zen list treatment without changing the session structure', () => {

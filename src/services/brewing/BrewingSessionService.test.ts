@@ -22,6 +22,12 @@ vi.mock('../../repositories/BrewingVesselRepository', () => ({
     },
 }));
 
+vi.mock('../../repositories/SettingsRepository', () => ({
+    settingsRepository: {
+        saveSetting: vi.fn(),
+    },
+}));
+
 import fs from 'fs';
 import path from 'path';
 

@@ -58,6 +58,36 @@ describe('useSettingsStore', () => {
     expect(configureLogger).not.toHaveBeenCalled();
   });
 
+  it('defaults statistics to Total and persists period updates', () => {
+    expect(settingsStore.getState().statisticsPeriod).toBe('total');
+
+    settingsStore.getState().updateSettings({ statisticsPeriod: 'lastMonth' });
+
+    expect(settingsStore.getState().statisticsPeriod).toBe('lastMonth');
+    expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({
+      statisticsPeriod: 'lastMonth',
+    });
+  });
+
+  it('loads a valid statistics period and rejects an invalid saved value', async () => {
+    vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
+      statisticsPeriod: 'lastWeek',
+    });
+
+    await settingsStore.getState().loadSettings();
+
+    expect(settingsStore.getState().statisticsPeriod).toBe('lastWeek');
+
+    settingsStore.setState(initialSettingsStoreValues);
+    vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
+      statisticsPeriod: 'calendarMonth',
+    });
+
+    await settingsStore.getState().loadSettings();
+
+    expect(settingsStore.getState().statisticsPeriod).toBe('total');
+  });
+
   it('pushes logger settings into the runtime logger on update', () => {
     settingsStore.getState().updateSettings({ logLevel: 'warn', logToFileEnabled: true });
 

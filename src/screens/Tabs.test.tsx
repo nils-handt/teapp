@@ -1,0 +1,40 @@
+import type { PropsWithChildren } from 'react';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import Tabs from './Tabs';
+
+vi.mock('@ionic/react', async () => {
+  const Wrap = ({ children }: PropsWithChildren) => <div>{children}</div>;
+  return {
+    IonTabs: Wrap,
+    IonRouterOutlet: Wrap,
+    IonTabBar: Wrap,
+    IonTabButton: Wrap,
+    IonIcon: () => null,
+    IonLabel: Wrap,
+  };
+});
+vi.mock('./brewing/BrewingZen', () => ({ default: () => <div>Brewing route</div> }));
+vi.mock('./HistoryScreen', () => ({ default: () => <div>History route</div> }));
+vi.mock('./HistoryStatisticsScreen', () => ({ default: () => <div>Tea statistics route</div> }));
+vi.mock('./SessionDetailScreen', () => ({ default: () => <div>Session detail route</div> }));
+vi.mock('./SettingsScreen', () => ({ default: () => <div>Settings route</div> }));
+
+describe('Tabs routing', () => {
+  it('routes statistics without also matching the dynamic session detail route', () => {
+    render(<MemoryRouter initialEntries={['/tabs/history/statistics']}><Tabs /></MemoryRouter>);
+    expect(screen.getByText('Tea statistics route')).toBeDefined();
+    expect(screen.queryByText('Session detail route')).toBeNull();
+  });
+
+  it('routes UUID session IDs to session details', () => {
+    render(
+      <MemoryRouter initialEntries={['/tabs/history/6d11744e-a074-4fec-8314-5b9452defc2b']}>
+        <Tabs />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Session detail route')).toBeDefined();
+    expect(screen.queryByText('Tea statistics route')).toBeNull();
+  });
+});
