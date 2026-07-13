@@ -1,5 +1,5 @@
 import type { ChangeEvent, PropsWithChildren } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { Infusion } from '../entities/Infusion.entity';
@@ -8,7 +8,6 @@ import { settingsRepository } from '../repositories/SettingsRepository';
 import { historyFiltersStore, initialHistoryFiltersState } from '../stores/useHistoryFiltersStore';
 import { historyStore, initialHistoryStoreState } from '../stores/useHistoryStore';
 import { initialSettingsStoreValues, settingsStore } from '../stores/useSettingsStore';
-import HistoryScreen from './HistoryScreen';
 import HistoryStatisticsScreen from './HistoryStatisticsScreen';
 
 const refresherMocks = vi.hoisted(() => ({
@@ -16,7 +15,7 @@ const refresherMocks = vi.hoisted(() => ({
 }));
 const viewMocks = vi.hoisted(() => ({ entered: false }));
 const logger = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn() }));
-const loadHistory = vi.fn().mockResolvedValue(undefined);
+const loadAllHistory = vi.fn();
 const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
 
 type DivProps = PropsWithChildren<{ className?: string }>;
@@ -39,17 +38,7 @@ vi.mock('@ionic/react', () => ({
   IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonContent: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
   IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  IonButton: ({ children, routerLink, 'aria-label': ariaLabel }: PropsWithChildren<{ routerLink?: string; 'aria-label'?: string }>) => routerLink
-    ? <a href={routerLink} aria-label={ariaLabel}>{children}</a>
-    : <button aria-label={ariaLabel}>{children}</button>,
   IonIcon: () => null,
-  IonItem: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  IonItemOption: ({ children, onClick }: PropsWithChildren<{ onClick?: () => void }>) => <button onClick={onClick}>{children}</button>,
-  IonItemOptions: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  IonLabel: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  IonList: ({ children }: PropsWithChildren) => <div>{children}</div>,
-  IonNote: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonRefresher: ({ children, onIonRefresh }: PropsWithChildren<{ onIonRefresh?: (event: CustomEvent) => Promise<void> }>) => {
     refresherMocks.onIonRefresh = onIonRefresh;
@@ -67,11 +56,10 @@ vi.mock('@ionic/react', () => ({
       callback();
     }
   },
-  useIonToast: () => [vi.fn()],
 }));
 
-const createTea = (): Tea => Object.assign(new Tea(), {
-  teaId: 'tea-1', name: 'Gao Jia Shan', brand: 'Farmer Leaf', type: 'Oolong', subtype: null,
+const createTea = (teaId = 'tea-1', name = 'Gao Jia Shan'): Tea => Object.assign(new Tea(), {
+  teaId, name, brand: 'Farmer Leaf', type: 'Oolong', subtype: null,
   region: 'Hunan', subregion: 'Anhua', year: 2015, season: null, sessions: [],
 });
 
@@ -81,22 +69,16 @@ const createInfusion = (waterWeight: number): Infusion => Object.assign(new Infu
   wetTeaLeavesWeight: 0, note: null, temperature: null, sessionId: 'session',
 });
 
-const createSession = (sessionId: string, status: 'completed' | 'active'): BrewingSession => {
-  const tea = createTea();
-  if (sessionId === 'two') {
-    tea.teaId = 'tea-2';
-    tea.name = 'Morning Sencha';
-    tea.type = 'Green';
-  }
-  return Object.assign(new BrewingSession(), {
-    sessionId, teaId: tea.teaId, tea, teaName: tea.name, startTime: '2026-07-10T12:00:00.000Z', endTime: '',
-    vesselWeight: 0, lidWeight: 0, dryTeaLeavesWeight: 5, currentWasteWater: 0,
-    notes: '', status, waterTemperature: 0, brewingVesselId: null, brewingVessel: null,
-    infusions: [createInfusion(250)],
-  });
-};
+const createSession = (sessionId: string, tea: Tea, status: 'completed' | 'active' = 'completed'): BrewingSession => Object.assign(new BrewingSession(), {
+  sessionId, teaId: tea.teaId, tea, teaName: tea.name, startTime: '2026-07-10T12:00:00.000Z', endTime: '',
+  vesselWeight: 0, lidWeight: 0, dryTeaLeavesWeight: 5, currentWasteWater: 0,
+  notes: '', status, waterTemperature: 0, brewingVesselId: null, brewingVessel: null,
+  infusions: [createInfusion(250)],
+});
 
 describe('HistoryStatisticsScreen', () => {
+  let fullHistory: BrewingSession[];
+
   beforeEach(() => {
     vi.clearAllMocks();
     refresherMocks.onIonRefresh = undefined;
@@ -104,168 +86,88 @@ describe('HistoryStatisticsScreen', () => {
     historyFiltersStore.setState(initialHistoryFiltersState);
     settingsStore.setState(initialSettingsStoreValues);
     settingsStore.setState({ settingsLoaded: true });
-    const tea = createTea();
+
+    const gao = createTea('tea-1', 'Gao Jia Shan');
+    const sencha = createTea('tea-2', 'Morning Sencha');
+    sencha.type = 'Green';
+    fullHistory = [
+      createSession('one', gao),
+      createSession('two', sencha),
+      createSession('active', gao, 'active'),
+    ];
+    loadAllHistory.mockResolvedValue(fullHistory);
+    loadKnownTeas.mockResolvedValue(undefined);
+
     historyStore.setState(initialHistoryStoreState);
     historyStore.setState({
-      sessionList: [createSession('one', 'completed'), createSession('two', 'completed'), createSession('active', 'active')],
-      knownTeas: [tea], loadHistory, loadKnownTeas,
+      // This represents the first 50-row History page; Statistics must not use it as its source.
+      sessionList: [fullHistory[0]],
+      knownTeas: [gao, sencha],
+      loadAllHistory,
+      loadKnownTeas,
     });
     vi.spyOn(settingsRepository, 'saveSettingsState').mockResolvedValue(undefined);
   });
 
-  it('shows completed filtered totals and updates the persisted rolling period', async () => {
+  it('calculates totals from the complete filtered history, not the current History page', async () => {
     render(<HistoryStatisticsScreen />);
-    expect(await screen.findByText('Tea statistics')).toBeDefined();
-    expect(screen.getByText('2 sessions')).toBeDefined();
+
+    expect(await screen.findByText('2 sessions')).toBeDefined();
     expect(screen.getByText('10 g')).toBeDefined();
     expect(screen.getByText('500 ml')).toBeDefined();
+    expect(loadAllHistory).toHaveBeenCalledWith({});
 
     fireEvent.click(screen.getByRole('button', { name: 'Last month' }));
     expect(settingsStore.getState().statisticsPeriod).toBe('lastMonth');
     expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({ statisticsPeriod: 'lastMonth' });
   });
 
-  it('shows only loading state until history and Tea metadata finish loading', async () => {
-    const historyLoad = deferred<void>();
-    const teaLoad = deferred<void>();
-    loadHistory.mockImplementationOnce(() => historyLoad.promise);
-    loadKnownTeas.mockImplementationOnce(() => teaLoad.promise);
+  it('keeps the loading state until the complete history query resolves', async () => {
+    const historyLoad = deferred<BrewingSession[]>();
+    loadAllHistory.mockImplementationOnce(() => historyLoad.promise);
 
     render(<HistoryStatisticsScreen />);
 
     expect(screen.getByText('Loading tea statistics…')).toBeDefined();
-    expect(screen.queryByText('2 sessions')).toBeNull();
-    expect(screen.queryByText('10 g')).toBeNull();
-    expect(screen.queryByText('500 ml')).toBeNull();
-
-    await act(async () => {
-      historyLoad.resolve();
-      teaLoad.resolve();
-      await Promise.all([historyLoad.promise, teaLoad.promise]);
-    });
+    historyLoad.resolve(fullHistory);
+    await act(async () => { await historyLoad.promise; });
 
     expect(await screen.findByText('2 sessions')).toBeDefined();
     expect(screen.queryByText('Loading tea statistics…')).toBeNull();
   });
 
-  it('waits for deferred settings hydration before enabling periods or calculating statistics', async () => {
-    const settingsLoad = deferred<Record<string, string>>();
-    vi.spyOn(settingsRepository, 'getAllSettings').mockReturnValueOnce(settingsLoad.promise);
-    historyStore.setState({
-      sessionList: [
-        createSession('recent', 'completed'),
-        Object.assign(createSession('old', 'completed'), { startTime: '2020-01-01T12:00:00.000Z' }),
-      ],
-    });
-    settingsStore.setState({ settingsLoaded: false });
-    const hydration = settingsStore.getState().loadSettings();
-
-    render(<HistoryStatisticsScreen />);
-
-    expect(await screen.findByText('Loading tea statistics…')).toBeDefined();
-    const totalButton = screen.getByRole('button', { name: 'Total' });
-    expect((totalButton as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(totalButton);
-    expect(settingsRepository.saveSettingsState).not.toHaveBeenCalled();
-    expect(screen.queryByText('2 sessions')).toBeNull();
-
-    await act(async () => {
-      settingsLoad.resolve({ statisticsPeriod: 'lastWeek' });
-      await hydration;
-    });
-
-    expect((await screen.findByText('Sessions')).parentElement?.textContent).toContain('1 session');
-    expect(screen.getByRole('button', { name: 'Last week' }).getAttribute('aria-pressed')).toBe('true');
-    expect((screen.getByRole('button', { name: 'Total' }) as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('ignores an older overlapping load after a newer refresh succeeds', async () => {
-    const staleHistoryLoad = deferred<void>();
-    loadHistory.mockImplementationOnce(() => staleHistoryLoad.promise);
-
-    render(<HistoryStatisticsScreen />);
-    expect(await screen.findByText('Loading tea statistics…')).toBeDefined();
-
-    const complete = vi.fn();
-    await act(async () => {
-      await refresherMocks.onIonRefresh?.({ detail: { complete } } as CustomEvent);
-    });
-    expect(await screen.findByText('2 sessions')).toBeDefined();
-
-    await act(async () => {
-      staleHistoryLoad.reject(new Error('stale load failed'));
-      await staleHistoryLoad.promise.catch(() => undefined);
-    });
-
-    expect(screen.getByText('2 sessions')).toBeDefined();
-    expect(screen.queryByText('Loading tea statistics…')).toBeNull();
-    expect(screen.queryByText('Statistics could not be loaded. Pull to refresh and try again.')).toBeNull();
-  });
-
-  it('shares editable Tea filters with History and reports an empty result', async () => {
-    historyFiltersStore.getState().setFilter('brand', 'No Match');
-    render(<HistoryStatisticsScreen />);
-    expect(await screen.findByText('No completed sessions match these filters.')).toBeDefined();
-    expect(screen.getByText('Sessions').parentElement?.textContent).toContain('0 sessions');
-    expect(screen.getByText('Dry leaf').parentElement?.textContent).toContain('0 g');
-    expect(screen.getByText('Liquid').parentElement?.textContent).toContain('0 ml');
-    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    expect(historyFiltersStore.getState().filters.brand).toBe('');
-  });
-
-  it('shows a retryable load error and completes refresh', async () => {
+  it('passes shared fuzzy filters to the complete-history query', async () => {
     historyFiltersStore.getState().setSearchText('gao');
     historyFiltersStore.getState().setFilter('brand', 'Farmer Leaf');
-    settingsStore.getState().updateSettings({ statisticsPeriod: 'lastMonth' });
-    loadHistory.mockRejectedValueOnce(new Error('database unavailable'));
+
+    render(<HistoryStatisticsScreen />);
+
+    await waitFor(() => expect(loadAllHistory).toHaveBeenCalledWith({ teaIds: ['tea-1'] }));
+  });
+
+  it('reloads complete history after a failed pull-to-refresh and completes the refresher', async () => {
+    loadAllHistory.mockRejectedValueOnce(new Error('database unavailable'));
     render(<HistoryStatisticsScreen />);
     expect(await screen.findByText('Statistics could not be loaded. Pull to refresh and try again.')).toBeDefined();
-    loadHistory.mockResolvedValueOnce(undefined);
+
+    loadAllHistory.mockResolvedValueOnce(fullHistory);
     const complete = vi.fn();
     await act(async () => {
       await refresherMocks.onIonRefresh?.({ detail: { complete } } as CustomEvent);
     });
+
     expect(loadKnownTeas).toHaveBeenCalledWith(true);
     expect(complete).toHaveBeenCalled();
     expect(screen.queryByText('Statistics could not be loaded. Pull to refresh and try again.')).toBeNull();
-    expect(historyFiltersStore.getState()).toMatchObject({
-      searchText: 'gao',
-      filters: expect.objectContaining({ brand: 'Farmer Leaf' }),
-    });
-    expect(settingsStore.getState().statisticsPeriod).toBe('lastMonth');
-    expect((screen.getByLabelText('Search teas') as HTMLInputElement).value).toBe('gao');
-    expect(screen.getByRole('button', { name: 'Last month' }).getAttribute('aria-pressed')).toBe('true');
+    expect(await screen.findByText('2 sessions')).toBeDefined();
   });
 
-  it('shares search and Tea filters bidirectionally with History', async () => {
-    const historyView = render(<HistoryScreen />);
-    fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'gao' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
-    fireEvent.change(screen.getByLabelText('Filter Brand'), { target: { value: 'Farmer Leaf' } });
-    expect(historyFiltersStore.getState()).toMatchObject({
-      searchText: 'gao',
-      filters: expect.objectContaining({ brand: 'Farmer Leaf' }),
-    });
-    historyView.unmount();
+  it('requeries complete history when shared filters change while Statistics is open', async () => {
+    render(<HistoryStatisticsScreen />);
+    await screen.findByText('2 sessions');
 
-    viewMocks.entered = false;
-    const statisticsView = render(<HistoryStatisticsScreen />);
-    expect((await screen.findByText('Sessions')).parentElement?.textContent).toContain('1 session');
-    expect((screen.getByLabelText('Search teas') as HTMLInputElement).value).toBe('gao');
-    fireEvent.click(screen.getByRole('button', { name: 'Show history filters (1 active)' }));
-    expect((screen.getByLabelText('Filter Brand') as HTMLInputElement).value).toBe('Farmer Leaf');
-    fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'sencha' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    expect(historyFiltersStore.getState()).toMatchObject({
-      searchText: '',
-      filters: expect.objectContaining({ brand: '' }),
-    });
-    statisticsView.unmount();
+    historyFiltersStore.getState().setFilter('type', 'Green');
 
-    viewMocks.entered = false;
-    render(<HistoryScreen />);
-    expect((screen.getByLabelText('Search teas') as HTMLInputElement).value).toBe('');
-    fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
-    expect((screen.getByLabelText('Filter Brand') as HTMLInputElement).value).toBe('');
+    await waitFor(() => expect(loadAllHistory).toHaveBeenLastCalledWith({ teaIds: ['tea-2'] }));
   });
 });

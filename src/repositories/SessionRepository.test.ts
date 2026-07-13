@@ -54,6 +54,59 @@ describe('SessionRepository', () => {
         expect(result).toBe(mockSessions);
     });
 
+    it('loads 50 history sessions at a time with only the list relations', async () => {
+        const mockSessions = Array.from({ length: 51 }, () => new BrewingSession());
+        const findSpy = vi.fn().mockResolvedValue(mockSessions);
+        sessionRepository.find = findSpy;
+
+        const result = await sessionRepository.getHistoryPage();
+
+        expect(findSpy).toHaveBeenCalledWith({
+            order: { startTime: 'DESC' },
+            relations: ['infusions', 'tea'],
+            skip: 0,
+            take: 51,
+        });
+        expect(result.sessions).toEqual(mockSessions.slice(0, 50));
+        expect(result.hasMore).toBe(true);
+    });
+
+    it('pages and loads complete history within matching tea IDs', async () => {
+        const mockSessions = [new BrewingSession()];
+        const findSpy = vi.fn().mockResolvedValue(mockSessions);
+        sessionRepository.find = findSpy;
+
+        const page = await sessionRepository.getHistoryPage({ offset: 50, teaIds: ['tea-1'] });
+        const complete = await sessionRepository.getAllHistorySessions({ teaIds: ['tea-1'] });
+
+        expect(findSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({
+            order: { startTime: 'DESC' },
+            relations: ['infusions', 'tea'],
+            skip: 50,
+            take: 51,
+            where: expect.objectContaining({ teaId: expect.objectContaining({ _value: ['tea-1'] }) }),
+        }));
+        expect(findSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({
+            order: { startTime: 'DESC' },
+            relations: ['infusions', 'tea'],
+            where: expect.objectContaining({ teaId: expect.objectContaining({ _value: ['tea-1'] }) }),
+        }));
+        expect(page).toEqual({ sessions: mockSessions, hasMore: false });
+        expect(complete).toBe(mockSessions);
+    });
+
+    it('avoids a database query when active filters match no teas', async () => {
+        const findSpy = vi.fn();
+        sessionRepository.find = findSpy;
+
+        await expect(sessionRepository.getHistoryPage({ teaIds: [] })).resolves.toEqual({
+            sessions: [],
+            hasMore: false,
+        });
+        await expect(sessionRepository.getAllHistorySessions({ teaIds: [] })).resolves.toEqual([]);
+        expect(findSpy).not.toHaveBeenCalled();
+    });
+
     it('getActiveSession should return the newest active session with infusions', async () => {
         const mockSession = new BrewingSession();
         const findOneSpy = vi.fn().mockResolvedValue(mockSession);

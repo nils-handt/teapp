@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonBackButton,
   IonButtons,
@@ -12,11 +12,12 @@ import {
   useIonViewWillEnter,
 } from '@ionic/react';
 import { useShallow } from 'zustand/react/shallow';
+import { BrewingSession } from '../entities/BrewingSession.entity';
 import HistoryFilters from '../components/history/HistoryFilters';
 import StatisticsBreakdownCard from '../components/history/StatisticsBreakdownCard';
 import { createLogger } from '../services/logging';
 import { useHistoryFiltersStore } from '../stores/useHistoryFiltersStore';
-import { useHistoryStore } from '../stores/useHistoryStore';
+import { historyStore, useHistoryStore } from '../stores/useHistoryStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import {
   cn,
@@ -33,7 +34,7 @@ import {
   formatStatisticWeight,
   type StatisticsPeriod,
 } from '../utils/HistoryStatistics';
-import { filterHistorySessions } from '../utils/historyFilters';
+import { createHistoryQuery, getHistoryQueryKey } from '../utils/historyFilters';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -47,11 +48,10 @@ const PERIOD_OPTIONS: Array<{ value: StatisticsPeriod; label: string }> = [
 const logger = createLogger('HistoryStatisticsScreen');
 
 const HistoryStatisticsScreen: React.FC = () => {
-  const { sessionList, knownTeas, loadHistory, loadKnownTeas } = useHistoryStore(
+  const { knownTeas, loadAllHistory, loadKnownTeas } = useHistoryStore(
     useShallow((state) => ({
-      sessionList: state.sessionList,
       knownTeas: state.knownTeas,
-      loadHistory: state.loadHistory,
+      loadAllHistory: state.loadAllHistory,
       loadKnownTeas: state.loadKnownTeas,
     })),
   );
@@ -66,23 +66,31 @@ const HistoryStatisticsScreen: React.FC = () => {
   })));
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
+  const [statisticsSessions, setStatisticsSessions] = useState<BrewingSession[]>([]);
   const loadSequence = useRef(0);
-
-  const filteredSessions = useMemo(
-    () => filterHistorySessions(sessionList, knownTeas, searchText, filters),
-    [filters, knownTeas, searchText, sessionList],
+  const skipInitialFilterReload = useRef(true);
+  const historyQuery = useMemo(
+    () => createHistoryQuery(knownTeas, searchText, filters),
+    [filters, knownTeas, searchText],
   );
+  const historyQueryKey = getHistoryQueryKey(historyQuery);
   const statistics = useMemo(
-    () => settingsLoaded ? calculateHistoryStatistics(filteredSessions, statisticsPeriod) : null,
-    [filteredSessions, settingsLoaded, statisticsPeriod],
+    () => settingsLoaded ? calculateHistoryStatistics(statisticsSessions, statisticsPeriod) : null,
+    [settingsLoaded, statisticsPeriod, statisticsSessions],
   );
 
-  const reload = async (forceTeas = false) => {
+  const reload = useCallback(async (forceTeas = false) => {
     const sequence = ++loadSequence.current;
     setLoadState('loading');
     try {
-      await Promise.all([loadHistory(), loadKnownTeas(forceTeas)]);
+      await loadKnownTeas(forceTeas);
+      const sessions = await loadAllHistory(createHistoryQuery(
+        historyStore.getState().knownTeas,
+        searchText,
+        filters,
+      ));
       if (sequence === loadSequence.current) {
+        setStatisticsSessions(sessions);
         setLoadState('ready');
       }
     } catch (error) {
@@ -91,9 +99,18 @@ const HistoryStatisticsScreen: React.FC = () => {
         setLoadState('error');
       }
     }
-  };
+  }, [filters, loadAllHistory, loadKnownTeas, searchText]);
 
   useIonViewWillEnter(() => { void reload(); });
+
+  useEffect(() => {
+    if (skipInitialFilterReload.current) {
+      skipInitialFilterReload.current = false;
+      return;
+    }
+
+    void reload();
+  }, [historyQueryKey, reload]);
 
   const handleRefresh = async (event: CustomEvent) => {
     await reload(true);

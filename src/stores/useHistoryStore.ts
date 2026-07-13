@@ -4,9 +4,13 @@ import { BrewingSession } from '../entities/BrewingSession.entity';
 import { sessionRepository } from '../repositories/SessionRepository';
 import { Tea } from '../entities/Tea.entity';
 import { teaRepository } from '../repositories/TeaRepository';
+import type { HistoryQuery } from '../utils/historyFilters';
 
 export interface HistoryStoreState {
   sessionList: BrewingSession[];
+  currentHistoryQuery: HistoryQuery;
+  hasMoreHistory: boolean;
+  isHistoryLoading: boolean;
   selectedSession: BrewingSession | null;
   knownTeaNames: string[];
   knownTeas: Tea[];
@@ -14,6 +18,9 @@ export interface HistoryStoreState {
 
 export interface HistoryStoreActions {
   loadHistory: () => Promise<void>;
+  reloadHistory: (query: HistoryQuery) => Promise<void>;
+  loadMoreHistory: () => Promise<void>;
+  loadAllHistory: (query: HistoryQuery) => Promise<BrewingSession[]>;
   loadKnownTeaNames: (force?: boolean) => Promise<void>;
   loadKnownTeas: (force?: boolean) => Promise<void>;
   upsertKnownTeaName: (teaName: string) => void;
@@ -30,17 +37,74 @@ export type HistoryStore = HistoryStoreState & HistoryStoreActions;
 
 export const initialHistoryStoreState: HistoryStoreState = {
   sessionList: [],
+  currentHistoryQuery: {},
+  hasMoreHistory: false,
+  isHistoryLoading: false,
   selectedSession: null,
   knownTeaNames: [],
   knownTeas: [],
 };
 
+let historyLoadSequence = 0;
+
 export const historyStore = createStore<HistoryStore>()((set, get) => ({
   ...initialHistoryStoreState,
-  loadHistory: async () => {
-    const sessions = await sessionRepository.getAllSessions();
-    set({ sessionList: sessions });
+  loadHistory: async () => get().reloadHistory({}),
+  reloadHistory: async (query) => {
+    const sequence = ++historyLoadSequence;
+    set({
+      sessionList: [],
+      currentHistoryQuery: query,
+      hasMoreHistory: false,
+      isHistoryLoading: true,
+    });
+
+    try {
+      const page = await sessionRepository.getHistoryPage({ teaIds: query.teaIds });
+      if (sequence !== historyLoadSequence) {
+        return;
+      }
+
+      set({
+        sessionList: page.sessions,
+        hasMoreHistory: page.hasMore,
+        isHistoryLoading: false,
+      });
+    } catch {
+      if (sequence === historyLoadSequence) {
+        set({ isHistoryLoading: false });
+      }
+    }
   },
+  loadMoreHistory: async () => {
+    const { currentHistoryQuery, hasMoreHistory, isHistoryLoading, sessionList } = get();
+    if (!hasMoreHistory || isHistoryLoading) {
+      return;
+    }
+
+    const sequence = historyLoadSequence;
+    set({ isHistoryLoading: true });
+    try {
+      const page = await sessionRepository.getHistoryPage({
+        offset: sessionList.length,
+        teaIds: currentHistoryQuery.teaIds,
+      });
+      if (sequence !== historyLoadSequence) {
+        return;
+      }
+
+      set((state) => ({
+        sessionList: [...state.sessionList, ...page.sessions],
+        hasMoreHistory: page.hasMore,
+        isHistoryLoading: false,
+      }));
+    } catch {
+      if (sequence === historyLoadSequence) {
+        set({ isHistoryLoading: false });
+      }
+    }
+  },
+  loadAllHistory: async (query) => sessionRepository.getAllHistorySessions({ teaIds: query.teaIds }),
   loadKnownTeaNames: async (force = false) => {
     if (!force && get().knownTeaNames.length > 0) {
       return;
@@ -88,13 +152,13 @@ export const historyStore = createStore<HistoryStore>()((set, get) => ({
   },
   deleteSession: async (sessionId) => {
     await sessionRepository.deleteSession(sessionId);
-    const sessions = await sessionRepository.getAllSessions();
-    set({ sessionList: sessions, selectedSession: null });
+    set({ selectedSession: null });
+    await get().reloadHistory(get().currentHistoryQuery);
   },
   restoreSession: async (session) => {
     await sessionRepository.saveSession(session);
-    const sessions = await sessionRepository.getAllSessions();
-    set({ sessionList: sessions, selectedSession: null });
+    set({ selectedSession: null });
+    await get().reloadHistory(get().currentHistoryQuery);
   },
   filterHistoryByTea: async (teaName) => {
     const sessions = await sessionRepository.getSessionsByTeaName(teaName);
@@ -102,8 +166,8 @@ export const historyStore = createStore<HistoryStore>()((set, get) => ({
   },
   updateSession: async (session) => {
     await sessionRepository.saveSession(session);
-    const sessions = await sessionRepository.getAllSessions();
-    set({ sessionList: sessions, selectedSession: session });
+    await get().reloadHistory(get().currentHistoryQuery);
+    set({ selectedSession: session });
   },
   saveTea: async (tea) => {
     const savedTea = await teaRepository.saveTea(tea);

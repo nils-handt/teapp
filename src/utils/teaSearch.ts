@@ -96,28 +96,29 @@ export const getTeaAttributeSuggestions = (
     }).slice(0, limit);
 };
 
-export const filterSessionsByTeaFilters = (sessions: BrewingSession[], filters: TeaFilters): BrewingSession[] => {
+export const teaMatchesFilters = (tea: Tea | null | undefined, filters: TeaFilters): boolean => {
     const entries = Object.entries(filters).filter(([, value]) => (
         value !== null && value !== undefined && String(value).trim() !== ''
     ));
 
     if (entries.length === 0) {
-        return sessions;
+        return true;
     }
 
-    return sessions.filter((session) => {
-        const tea = session.tea;
-        if (!tea) {
-            return false;
+    if (!tea) {
+        return false;
+    }
+
+    return entries.every(([attribute, value]) => {
+        if (attribute === 'year') {
+            return tea.year === Number(value);
         }
 
-        return entries.every(([attribute, value]) => {
-            if (attribute === 'year') {
-                return tea.year === Number(value);
-            }
-
-            return normalizeTeaValue(getAttributeValue(tea, attribute as TeaTextAttribute))
-                .includes(normalizeTeaValue(String(value)));
-        });
+        return normalizeTeaValue(getAttributeValue(tea, attribute as TeaTextAttribute))
+            .includes(normalizeTeaValue(String(value)));
     });
+};
+
+export const filterSessionsByTeaFilters = (sessions: BrewingSession[], filters: TeaFilters): BrewingSession[] => {
+    return sessions.filter((session) => teaMatchesFilters(session.tea, filters));
 };

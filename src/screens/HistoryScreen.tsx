@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -14,6 +14,8 @@ import {
   IonItemOption,
   IonIcon,
   IonButton,
+  IonInfiniteScroll,
+  IonInfiniteScrollContent,
   useIonToast,
   useIonViewWillEnter
 } from '@ionic/react';
@@ -21,7 +23,7 @@ import { pieChartOutline, trash } from 'ionicons/icons';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { calculateSessionStats } from '../utils/SessionStatistics';
 import { useShallow } from 'zustand/react/shallow';
-import { useHistoryStore } from '../stores/useHistoryStore';
+import { historyStore, useHistoryStore } from '../stores/useHistoryStore';
 import { useHistoryFiltersStore } from '../stores/useHistoryFiltersStore';
 import HistoryFilters from '../components/history/HistoryFilters';
 import {
@@ -31,13 +33,26 @@ import {
   zenListSurfaceClass,
 } from '../styles/zen';
 import { formatTeaLabel } from '../utils/teaSearch';
-import { filterHistorySessions } from '../utils/historyFilters';
+import { createHistoryQuery, getHistoryQueryKey } from '../utils/historyFilters';
 
 const HistoryScreen: React.FC = () => {
-  const { sessionList, loadHistory, deleteSession, restoreSession, knownTeas, loadKnownTeas } = useHistoryStore(
+  const {
+    sessionList,
+    hasMoreHistory,
+    isHistoryLoading,
+    reloadHistory,
+    loadMoreHistory,
+    deleteSession,
+    restoreSession,
+    knownTeas,
+    loadKnownTeas,
+  } = useHistoryStore(
     useShallow((state) => ({
       sessionList: state.sessionList,
-      loadHistory: state.loadHistory,
+      hasMoreHistory: state.hasMoreHistory,
+      isHistoryLoading: state.isHistoryLoading,
+      reloadHistory: state.reloadHistory,
+      loadMoreHistory: state.loadMoreHistory,
       deleteSession: state.deleteSession,
       restoreSession: state.restoreSession,
       knownTeas: state.knownTeas,
@@ -50,24 +65,46 @@ const HistoryScreen: React.FC = () => {
   })));
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
   const [presentToast] = useIonToast();
+  const skipInitialFilterReload = useRef(true);
+
+  const historyQuery = useMemo(
+    () => createHistoryQuery(knownTeas, searchText, filters),
+    [filters, knownTeas, searchText],
+  );
+  const historyQueryKey = getHistoryQueryKey(historyQuery);
+  const historyQueryRef = useRef(historyQuery);
+  historyQueryRef.current = historyQuery;
+
+  const reloadCurrentHistory = useCallback(async (forceTeas = false) => {
+    await loadKnownTeas(forceTeas);
+    await reloadHistory(createHistoryQuery(historyStore.getState().knownTeas, searchText, filters));
+  }, [filters, loadKnownTeas, reloadHistory, searchText]);
 
   // Load history when entering the view
   useIonViewWillEnter(() => {
-    void loadHistory();
-    void loadKnownTeas();
+    void reloadCurrentHistory();
   });
+
+  useEffect(() => {
+    if (skipInitialFilterReload.current) {
+      skipInitialFilterReload.current = false;
+      return;
+    }
+
+    void reloadHistory(historyQueryRef.current);
+  }, [historyQueryKey, reloadHistory]);
 
   // Handle refresh
   const handleRefresh = async (event: CustomEvent) => {
-    await Promise.all([loadHistory(), loadKnownTeas(true)]);
+    await reloadCurrentHistory(true);
     setAreFiltersExpanded(false);
     event.detail.complete();
   };
 
-  const filteredSessions = useMemo(
-    () => filterHistorySessions(sessionList, knownTeas, searchText, filters),
-    [filters, knownTeas, searchText, sessionList],
-  );
+  const handleLoadMore = async (event: CustomEvent) => {
+    await loadMoreHistory();
+    (event.target as HTMLIonInfiniteScrollElement).complete();
+  };
 
   // Handle delete
   const handleDelete = async (sessionId: string) => {
@@ -147,12 +184,14 @@ const HistoryScreen: React.FC = () => {
         </IonRefresher>
 
         <IonList className={zenListSurfaceClass}>
-          {filteredSessions.length === 0 ? (
+          {isHistoryLoading && sessionList.length === 0 ? (
+            <div className="p-5 text-center" role="status">Loading history…</div>
+          ) : sessionList.length === 0 ? (
             <div className="p-5 text-center">
               <IonLabel color="medium">No brewing sessions found.</IonLabel>
             </div>
           ) : (
-            filteredSessions.map((session) => (
+            sessionList.map((session) => (
               <IonItemSliding key={session.sessionId}>
                 <IonItem routerLink={`/tabs/history/${session.sessionId}`} detail>
                   <IonLabel>
@@ -182,6 +221,13 @@ const HistoryScreen: React.FC = () => {
             ))
           )}
         </IonList>
+        <IonInfiniteScroll
+          threshold="100px"
+          disabled={!hasMoreHistory}
+          onIonInfinite={handleLoadMore}
+        >
+          <IonInfiniteScrollContent loadingSpinner="bubbles" loadingText="Loading more history…" />
+        </IonInfiniteScroll>
       </IonContent>
     </IonPage>
   );
