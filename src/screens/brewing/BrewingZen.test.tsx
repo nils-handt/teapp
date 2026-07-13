@@ -286,6 +286,19 @@ describe('BrewingZen', () => {
         expect(actionRow?.className).toContain('[&>ion-button]:min-h-11');
     });
 
+    it('centers the end-session action when it is the only active-phase action', () => {
+        brewingStore.setState({ brewingPhase: BrewingPhase.INFUSION });
+        scaleStore.setState({ isMockMode: false });
+
+        render(<BrewingZen />);
+
+        const actionRow = screen.getByRole('button', { name: 'End Session' }).parentElement;
+
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:col-span-2');
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:justify-self-center');
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:max-w-[calc(50%-0.375rem)]');
+    });
+
     it('offers Undo after ending a session', async () => {
         render(<BrewingZen />);
 
