@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TeaEditorModal from './TeaEditorModal';
 import { Tea } from '../entities/Tea.entity';
@@ -38,6 +38,12 @@ describe('TeaEditorModal', () => {
         expect(screen.queryByLabelText('Name')).toBeNull();
         const panel = screen.getByRole('dialog').firstElementChild as HTMLElement;
         expect(panel.className).toContain('h-[520px]');
+
+        act(() => window.dispatchEvent(new CustomEvent('ionKeyboardDidShow', {
+            detail: { keyboardHeight: 286 },
+        })));
+        expect(panel.style.height).toBe('100%');
+        act(() => window.dispatchEvent(new Event('ionKeyboardDidHide')));
 
         fireEvent.click(screen.getByRole('button', { name: 'Show Search existing teas suggestions' }));
         expect(screen.getByRole('listbox').className).toContain('flex-1');

@@ -37,7 +37,7 @@ describe('ModalFrame keyboard avoidance', () => {
 
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('286px');
     expect(dialog.getAttribute('data-keyboard-open')).toBe('true');
-    expect(panel.style.height).toBe('100%');
+    expect(panel.style.height).toBe('');
     expect(document.documentElement.classList.contains('zen-modal-keyboard-open')).toBe(true);
 
     act(() => window.dispatchEvent(new Event('ionKeyboardDidHide')));

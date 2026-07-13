@@ -196,6 +196,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
             header={header}
             headerClassName="-mx-[22px] -mt-[22px] shrink-0"
             panelClassName="h-[520px]"
+            expandToAvailableHeightOnKeyboard
             ariaLabel="Tea"
             actions={(
                 <>
