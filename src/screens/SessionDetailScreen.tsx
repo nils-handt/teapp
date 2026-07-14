@@ -21,6 +21,7 @@ import { useHistoryStore } from '../stores/useHistoryStore';
 import { zenPageShellClass } from '../styles/zen';
 import { Tea } from '../entities/Tea.entity';
 import { formatTeaLabel } from '../utils/teaSearch';
+import { APP_TOAST_POSITION } from '../constants/ui';
 
 const TOAST_DURATION = 2000;
 
@@ -63,6 +64,7 @@ const SessionDetailScreen: React.FC = () => {
             await deleteSession(selectedSession.sessionId);
             history.goBack();
             present({
+                ...APP_TOAST_POSITION,
                 message: 'Session deleted',
                 duration: TOAST_DURATION,
                 color: 'success'
@@ -82,6 +84,7 @@ const SessionDetailScreen: React.FC = () => {
             await updateSession(updatedSession);
             setShowTeaNameEditor(false);
             present({
+                ...APP_TOAST_POSITION,
                 message: 'Session updated',
                 duration: TOAST_DURATION,
                 color: 'success'
@@ -120,6 +123,7 @@ const SessionDetailScreen: React.FC = () => {
         await updateSession({ ...selectedSession, notes: sessionNoteDraft.trim() });
         closeSessionNotesEditor();
         present({
+            ...APP_TOAST_POSITION,
             message: 'Session updated',
             duration: TOAST_DURATION,
             color: 'success'
@@ -153,6 +157,7 @@ const SessionDetailScreen: React.FC = () => {
         await updateSession(updatedSession as BrewingSession);
         closeInfusionNoteEditor();
         present({
+            ...APP_TOAST_POSITION,
             message: 'Infusion updated',
             duration: TOAST_DURATION,
             color: 'success'

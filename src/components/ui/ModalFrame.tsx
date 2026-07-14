@@ -18,6 +18,7 @@ type ModalFrameProps = {
   overlayClassName?: string;
   panelClassName?: string;
   headerClassName?: string;
+  expandToAvailableHeightOnKeyboard?: boolean;
 };
 
 const ModalFrame: React.FC<ModalFrameProps> = ({
@@ -30,6 +31,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
   overlayClassName,
   panelClassName,
   headerClassName,
+  expandToAvailableHeightOnKeyboard = false,
 }) => {
   const titleId = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -51,7 +53,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
     >
       <div
         className={cn(zenModalPanelClass, panelClassName)}
-        style={isKeyboardOpen ? { height: '100%' } : undefined}
+        style={isKeyboardOpen && expandToAvailableHeightOnKeyboard ? { height: '100%' } : undefined}
       >
         {header ? (
           <div id={titleId} className={cn(zenModalTitleClass, headerClassName)}>

@@ -3,13 +3,14 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Tabs from './Tabs';
+import { APP_TAB_BAR_ID } from '../constants/ui';
 
 vi.mock('@ionic/react', async () => {
   const Wrap = ({ children }: PropsWithChildren) => <div>{children}</div>;
   return {
     IonTabs: Wrap,
     IonRouterOutlet: Wrap,
-    IonTabBar: Wrap,
+    IonTabBar: ({ children, ...props }: PropsWithChildren<{ id?: string; slot?: string }>) => <div {...props}>{children}</div>,
     IonTabButton: Wrap,
     IonIcon: () => null,
     IonLabel: Wrap,
@@ -22,6 +23,12 @@ vi.mock('./SessionDetailScreen', () => ({ default: () => <div>Session detail rou
 vi.mock('./SettingsScreen', () => ({ default: () => <div>Settings route</div> }));
 
 describe('Tabs routing', () => {
+  it('exposes the bottom tab bar as the toast position anchor', () => {
+    render(<MemoryRouter initialEntries={['/tabs/history']}><Tabs /></MemoryRouter>);
+
+    expect(document.getElementById(APP_TAB_BAR_ID)).not.toBeNull();
+  });
+
   it('routes statistics without also matching the dynamic session detail route', () => {
     render(<MemoryRouter initialEntries={['/tabs/history/statistics']}><Tabs /></MemoryRouter>);
     expect(screen.getByText('Tea statistics route')).toBeDefined();

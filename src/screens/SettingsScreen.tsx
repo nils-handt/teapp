@@ -15,6 +15,7 @@ import {
   IonSelectOption,
   IonAlert
 } from '@ionic/react';
+import { APP_TOAST_POSITION } from '../constants/ui';
 import { useHistory } from 'react-router';
 import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { backupService, isBackupData, type BackupData } from '../services/BackupService';
@@ -388,6 +389,7 @@ const SettingsScreen: React.FC = () => {
         />
 
         <IonToast
+          {...APP_TOAST_POSITION}
           isOpen={toastMessage !== null}
           onDidDismiss={() => setToastMessage(null)}
           message={toastMessage ?? ''}

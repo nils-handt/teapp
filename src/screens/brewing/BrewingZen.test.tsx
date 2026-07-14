@@ -2,6 +2,7 @@ import type { MouseEventHandler, PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
+import { APP_TAB_BAR_ID } from '../../constants/ui';
 import { BrewingPhase, type EditableInfusionMetadata } from '../../services/interfaces/brewing.types';
 import type { BrewingSession } from '../../entities/BrewingSession.entity';
 import { Tea } from '../../entities/Tea.entity';
@@ -286,6 +287,19 @@ describe('BrewingZen', () => {
         expect(actionRow?.className).toContain('[&>ion-button]:min-h-11');
     });
 
+    it('centers the end-session action when it is the only active-phase action', () => {
+        brewingStore.setState({ brewingPhase: BrewingPhase.INFUSION });
+        scaleStore.setState({ isMockMode: false });
+
+        render(<BrewingZen />);
+
+        const actionRow = screen.getByRole('button', { name: 'End Session' }).parentElement;
+
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:col-span-2');
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:justify-self-center');
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:max-w-[calc(50%-0.375rem)]');
+    });
+
     it('offers Undo after ending a session', async () => {
         render(<BrewingZen />);
 
@@ -295,6 +309,8 @@ describe('BrewingZen', () => {
             expect(presentToast).toHaveBeenCalledWith(expect.objectContaining({
                 message: 'Session ended',
                 duration: 5000,
+                position: 'bottom',
+                positionAnchor: APP_TAB_BAR_ID,
             }));
         });
 
