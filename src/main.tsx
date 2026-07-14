@@ -9,6 +9,7 @@ import { defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader';
 import { AppDataSource, sqliteConnection } from './database/dataSource';
 import { createLogger } from './services/logging';
 import { initializePwaInstallController } from './services/PwaInstallService';
+import { getSqliteWasmPath } from './utils/assetPaths';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -43,7 +44,7 @@ const initApp = async () => {
 
     const existingJeepEl = document.querySelector('jeep-sqlite');
     const jeepEl = existingJeepEl ?? document.createElement('jeep-sqlite');
-    jeepEl.setAttribute('wasmPath', './assets');
+    jeepEl.setAttribute('wasmPath', getSqliteWasmPath(import.meta.env.BASE_URL));
 
     if (!existingJeepEl) {
       document.body.appendChild(jeepEl);
