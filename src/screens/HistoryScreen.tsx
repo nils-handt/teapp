@@ -19,6 +19,7 @@ import {
   useIonToast,
   useIonViewWillEnter
 } from '@ionic/react';
+import { APP_TOAST_POSITION } from '../constants/ui';
 import { pieChartOutline, trash } from 'ionicons/icons';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { calculateSessionStats } from '../utils/SessionStatistics';
@@ -116,9 +117,9 @@ const HistoryScreen: React.FC = () => {
     }
 
     presentToast({
+      ...APP_TOAST_POSITION,
       message: 'Session deleted',
       duration: 5000,
-      position: 'bottom',
       buttons: [
         {
           text: 'Undo',

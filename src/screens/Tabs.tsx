@@ -8,6 +8,7 @@ import SessionDetailScreen from './SessionDetailScreen';
 import SettingsScreen from './SettingsScreen';
 import BrewingZen from './brewing/BrewingZen';
 import HistoryStatisticsScreen from './HistoryStatisticsScreen';
+import { APP_TAB_BAR_ID } from '../constants/ui';
 
 const Tabs: React.FC = () => {
   return (
@@ -25,7 +26,7 @@ const Tabs: React.FC = () => {
         <Route path="/tabs" render={() => <Redirect to="/tabs/brewing/1" />} exact={true} />
       </IonRouterOutlet>
 
-      <IonTabBar slot="bottom">
+      <IonTabBar id={APP_TAB_BAR_ID} slot="bottom">
         <IonTabButton tab="brewing" href="/tabs/brewing/1">
           <IonIcon icon={cafe} />
           <IonLabel>Brewing</IonLabel>
