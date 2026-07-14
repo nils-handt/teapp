@@ -2,6 +2,7 @@ import type { ChangeEvent, MouseEventHandler, PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
+import { APP_TAB_BAR_ID } from '../constants/ui';
 import type { BrewingSession } from '../entities/BrewingSession.entity';
 import { BrewingSession as BrewingSessionEntity } from '../entities/BrewingSession.entity';
 import { historyStore, initialHistoryStoreState } from '../stores/useHistoryStore';
@@ -257,6 +258,8 @@ describe('HistoryScreen', () => {
       expect(presentToast).toHaveBeenCalledWith(expect.objectContaining({
         message: 'Session deleted',
         duration: 5000,
+        position: 'bottom',
+        positionAnchor: APP_TAB_BAR_ID,
       }));
     });
 

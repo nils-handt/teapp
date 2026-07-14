@@ -5,6 +5,7 @@ import {
     IonPage,
     useIonToast,
 } from '@ionic/react';
+import { APP_TOAST_POSITION } from '../../constants/ui';
 import React, { useEffect, useRef, useState } from 'react';
 import AppButton from '../../components/ui/AppButton';
 import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
@@ -323,9 +324,9 @@ const BrewingZen: React.FC = () => {
     const handleEndSessionWithUndo = async () => {
         await handleEndSession();
         presentToast({
+            ...APP_TOAST_POSITION,
             message: 'Session ended',
             duration: 5000,
-            position: 'bottom',
             buttons: [
                 {
                     text: 'Undo',

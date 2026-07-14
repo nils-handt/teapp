@@ -2,6 +2,7 @@ import type { MouseEventHandler, PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BrewingZen from './BrewingZen';
+import { APP_TAB_BAR_ID } from '../../constants/ui';
 import { BrewingPhase, type EditableInfusionMetadata } from '../../services/interfaces/brewing.types';
 import type { BrewingSession } from '../../entities/BrewingSession.entity';
 import { Tea } from '../../entities/Tea.entity';
@@ -295,6 +296,8 @@ describe('BrewingZen', () => {
             expect(presentToast).toHaveBeenCalledWith(expect.objectContaining({
                 message: 'Session ended',
                 duration: 5000,
+                position: 'bottom',
+                positionAnchor: APP_TAB_BAR_ID,
             }));
         });
 
