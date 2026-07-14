@@ -44,16 +44,12 @@
 }
 
 ion-header {
-  max-height: 128px;
-  overflow: hidden;
   transition:
-    max-height var(--zen-modal-keyboard-transition),
     opacity var(--zen-modal-keyboard-transition),
     transform var(--zen-modal-keyboard-transition);
 }
 
 :root.zen-modal-keyboard-open ion-header {
-  max-height: 0;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-100%);
