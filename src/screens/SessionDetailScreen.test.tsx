@@ -13,6 +13,7 @@ const deleteSession = vi.fn().mockResolvedValue(undefined);
 const updateSession = vi.fn().mockResolvedValue(undefined);
 const loadKnownTeas = vi.fn().mockResolvedValue(undefined);
 const saveTea = vi.fn();
+const updateSharedTea = vi.fn();
 const presentToast = vi.fn();
 
 type SessionDetailStoreSeed = {
@@ -23,6 +24,7 @@ type SessionDetailStoreSeed = {
     selectedSession: BrewingSession | null;
     updateSession: (session: BrewingSession) => Promise<void>;
     saveTea: (tea: Tea) => Promise<Tea>;
+    updateSharedTea: (tea: Tea) => Promise<Tea>;
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -125,6 +127,7 @@ describe('SessionDetailScreen', () => {
             updateSession,
             loadKnownTeas,
             saveTea,
+            updateSharedTea,
             ...overrides,
         });
     };
@@ -134,7 +137,7 @@ describe('SessionDetailScreen', () => {
         seedHistoryStore();
     });
 
-    it('uses the shared tea name editor to update the session tea name', async () => {
+    it('selects an existing tea for only the open session', async () => {
         render(<SessionDetailScreen />);
 
         const summaryHeadingClass = screen.getByText('Session Summary').className;
@@ -150,10 +153,58 @@ describe('SessionDetailScreen', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
-            expect(saveTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'ORT 2015 Gao Jia Shan' }));
+            expect(saveTea).not.toHaveBeenCalled();
+            expect(updateSharedTea).not.toHaveBeenCalled();
             expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({
+                sessionId: 'session-1',
                 teaId: 'tea-2',
                 teaName: 'ORT 2015 Gao Jia Shan',
+            }));
+        });
+    });
+
+    it('edits the assigned shared tea and refreshes the open session', async () => {
+        updateSharedTea.mockImplementation(async (tea: Tea) => tea);
+        render(<SessionDetailScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: /Morning Sencha/i }));
+        fireEvent.click(screen.getByRole('tab', { name: 'Edit Tea' }));
+        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Evening Sencha' } });
+        fireEvent.click(screen.getByText('Save'));
+
+        await waitFor(() => {
+            expect(updateSharedTea).toHaveBeenCalledWith(expect.objectContaining({
+                teaId: 'tea-1',
+                name: 'Evening Sencha',
+            }));
+            expect(saveTea).not.toHaveBeenCalled();
+            expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({
+                sessionId: 'session-1',
+                teaId: 'tea-1',
+                teaName: 'Evening Sencha',
+            }));
+        });
+    });
+
+    it('creates a new tea before assigning it to an unnamed session', async () => {
+        const unnamedSession = createSession();
+        unnamedSession.tea = null;
+        unnamedSession.teaId = null;
+        unnamedSession.teaName = '';
+        seedHistoryStore({ selectedSession: unnamedSession });
+        render(<SessionDetailScreen />);
+
+        fireEvent.click(screen.getByRole('button', { name: /No tea selected/i }));
+        fireEvent.click(screen.getByRole('tab', { name: 'New Tea' }));
+        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Silver Needle' } });
+        fireEvent.click(screen.getByText('Save'));
+
+        await waitFor(() => {
+            expect(saveTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'Silver Needle' }));
+            expect(updateSharedTea).not.toHaveBeenCalled();
+            expect(updateSession).toHaveBeenCalledWith(expect.objectContaining({
+                sessionId: 'session-1',
+                teaName: 'Silver Needle',
             }));
         });
     });

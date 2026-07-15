@@ -13,8 +13,18 @@ vi.mock('../repositories/SessionRepository', () => ({
   },
 }));
 
+vi.mock('../repositories/TeaRepository', () => ({
+  teaRepository: {
+    getAllTeas: vi.fn(),
+    saveTea: vi.fn(),
+    updateSharedTea: vi.fn(),
+  },
+}));
+
 import { BrewingSession } from '../entities/BrewingSession.entity';
+import { Tea } from '../entities/Tea.entity';
 import { sessionRepository } from '../repositories/SessionRepository';
+import { teaRepository } from '../repositories/TeaRepository';
 import { historyStore, initialHistoryStoreState } from './useHistoryStore';
 
 const deferred = <T,>() => {
@@ -145,5 +155,18 @@ describe('useHistoryStore', () => {
 
     expect(sessionRepository.getSessionById).toHaveBeenCalledWith('123');
     expect(historyStore.getState().selectedSession).toBe(mockSession);
+  });
+
+  it('updates a shared tea and replaces it in known teas', async () => {
+    const original = Object.assign(new Tea(), { teaId: 'tea-1', name: 'Old' });
+    const edited = Object.assign(new Tea(), { teaId: 'tea-1', name: 'Edited' });
+    historyStore.setState({ knownTeas: [original] });
+    vi.mocked(teaRepository.updateSharedTea).mockResolvedValue(edited);
+
+    const result = await historyStore.getState().updateSharedTea(edited);
+
+    expect(teaRepository.updateSharedTea).toHaveBeenCalledWith(edited);
+    expect(result).toBe(edited);
+    expect(historyStore.getState().knownTeas).toEqual([edited]);
   });
 });

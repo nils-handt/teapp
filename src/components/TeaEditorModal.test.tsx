@@ -73,7 +73,75 @@ describe('TeaEditorModal', () => {
         fireEvent.click(screen.getByRole('option', { name: '2020 Longjing Green Tea' }));
         fireEvent.click(screen.getByText('Save'));
 
-        expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ teaId: 'tea-1', name: 'Longjing' }));
+        expect(onSave).toHaveBeenCalledWith({
+            action: 'select',
+            tea: expect.objectContaining({ teaId: 'tea-1', name: 'Longjing' }),
+        });
+    });
+
+    it('keeps New Tea empty without an assigned tea and emits create', () => {
+        const onSave = vi.fn();
+        render(
+            <TeaEditorModal
+                isOpen
+                selectedTea={null}
+                teas={[]}
+                onCancel={vi.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('tab', { name: 'New Tea' }));
+        expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('');
+        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Silver Needle' } });
+        fireEvent.click(screen.getByText('Save'));
+
+        expect(onSave).toHaveBeenCalledWith({
+            action: 'create',
+            tea: expect.objectContaining({ teaId: expect.any(String), name: 'Silver Needle' }),
+        });
+    });
+
+    it('prefills Edit Tea for the assigned shared tea and preserves its id', () => {
+        const onSave = vi.fn();
+        const assignedTea = createTea('tea-1', 'Longjing', {
+            brand: 'Tea House',
+            type: 'Green',
+            subtype: 'Dragon Well',
+            region: 'Zhejiang',
+            subregion: 'Hangzhou',
+            season: 'Spring',
+            year: 2024,
+        });
+        render(
+            <TeaEditorModal
+                isOpen
+                selectedTea={assignedTea}
+                teas={[assignedTea]}
+                onCancel={vi.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        expect(screen.queryByRole('tab', { name: 'New Tea' })).toBeNull();
+        fireEvent.click(screen.getByRole('tab', { name: 'Edit Tea' }));
+
+        expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Longjing');
+        expect((screen.getByLabelText('Brand') as HTMLInputElement).value).toBe('Tea House');
+        expect((screen.getByLabelText('Type') as HTMLInputElement).value).toBe('Green');
+        expect((screen.getByLabelText('Subtype') as HTMLInputElement).value).toBe('Dragon Well');
+        expect((screen.getByLabelText('Region') as HTMLInputElement).value).toBe('Zhejiang');
+        expect((screen.getByLabelText('Subregion') as HTMLInputElement).value).toBe('Hangzhou');
+        expect((screen.getByLabelText('Season') as HTMLInputElement).value).toBe('Spring');
+        expect((screen.getByLabelText('Year') as HTMLInputElement).value).toBe('2024');
+
+        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Edited Longjing' } });
+        fireEvent.click(screen.getByText('Save'));
+
+        expect(onSave).toHaveBeenCalledWith({
+            action: 'edit',
+            tea: expect.objectContaining({ teaId: 'tea-1', name: 'Edited Longjing' }),
+        });
     });
 
     it('shows existing teas only in the search dropdown', () => {

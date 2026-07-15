@@ -36,6 +36,8 @@ const {
     clearSession,
     loadKnownTeas,
     saveTea,
+    updateSharedTea,
+    updateTea,
     deleteSession,
     presentToast,
 } = vi.hoisted(() => ({
@@ -56,6 +58,8 @@ const {
     clearSession: vi.fn(),
     loadKnownTeas: vi.fn().mockResolvedValue(undefined),
     saveTea: vi.fn(),
+    updateSharedTea: vi.fn(),
+    updateTea: vi.fn(),
     deleteSession: vi.fn().mockResolvedValue(undefined),
     presentToast: vi.fn(),
 }));
@@ -79,6 +83,7 @@ type BrewingZenHistorySeed = {
     knownTeas: Tea[];
     loadKnownTeas: (force?: boolean) => Promise<void>;
     saveTea: (tea: Tea) => Promise<Tea>;
+    updateSharedTea: (tea: Tea) => Promise<Tea>;
 };
 
 type ButtonProps = PropsWithChildren<{
@@ -123,7 +128,7 @@ vi.mock('../../services/brewing/BrewingSessionService', () => ({
         updateSavedInfusionNote,
         updateSessionNotes,
         clearSession,
-        updateTea: vi.fn(),
+        updateTea,
     },
 }));
 
@@ -191,6 +196,7 @@ describe('BrewingZen', () => {
         scaleStore.setState(initialScaleStoreState);
         historyStore.setState(initialHistoryStoreState);
         saveTea.mockImplementation(async (tea: Tea) => tea);
+        updateSharedTea.mockImplementation(async (tea: Tea) => tea);
 
         brewingStore.setState({
             activeSession: {
@@ -233,6 +239,7 @@ describe('BrewingZen', () => {
             knownTeas: [createTea('tea-1', 'ORT 2015 Gao Jia Shan'), createTea('tea-2', 'Morning Sencha')],
             loadKnownTeas,
             saveTea,
+            updateSharedTea,
             deleteSession,
             ...historyOverrides,
         });
@@ -758,7 +765,7 @@ describe('BrewingZen', () => {
         expect(deleteButton.compareDocumentPosition(startButton) & 4).toBe(4);
     });
 
-    it('uses the shared tea editor suggestions when saving a tea name', async () => {
+    it('selects an existing tea for only the active session', async () => {
         render(<BrewingZen />);
 
         fireEvent.click(screen.getByRole('button', { name: /Tea nameno tea selected/i }));
@@ -770,7 +777,57 @@ describe('BrewingZen', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
         await waitFor(() => {
-            expect(saveTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'ORT 2015 Gao Jia Shan' }));
+            expect(saveTea).not.toHaveBeenCalled();
+            expect(updateSharedTea).not.toHaveBeenCalled();
+            expect(updateTea).toHaveBeenCalledWith(expect.objectContaining({
+                teaId: 'tea-1',
+                name: 'ORT 2015 Gao Jia Shan',
+            }));
+        });
+    });
+
+    it('edits the assigned shared tea from the active session', async () => {
+        const assignedTea = createTea('tea-2', 'Morning Sencha');
+        brewingStore.setState({
+            activeSession: {
+                ...brewingStore.getState().activeSession!,
+                tea: assignedTea,
+                teaId: assignedTea.teaId,
+                teaName: assignedTea.name,
+            },
+            brewingPhase: BrewingPhase.SETUP,
+        });
+
+        render(<BrewingZen />);
+        fireEvent.click(screen.getByRole('button', { name: /Tea nameMorning Sencha/i }));
+        fireEvent.click(screen.getByRole('tab', { name: 'Edit Tea' }));
+        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Evening Sencha' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(updateSharedTea).toHaveBeenCalledWith(expect.objectContaining({
+                teaId: 'tea-2',
+                name: 'Evening Sencha',
+            }));
+            expect(saveTea).not.toHaveBeenCalled();
+            expect(updateTea).toHaveBeenCalledWith(expect.objectContaining({
+                teaId: 'tea-2',
+                name: 'Evening Sencha',
+            }));
+        });
+    });
+
+    it('creates a new tea before assigning it to the active session', async () => {
+        render(<BrewingZen />);
+        fireEvent.click(screen.getByRole('button', { name: /Tea nameno tea selected/i }));
+        fireEvent.click(screen.getByRole('tab', { name: 'New Tea' }));
+        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Silver Needle' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(saveTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'Silver Needle' }));
+            expect(updateSharedTea).not.toHaveBeenCalled();
+            expect(updateTea).toHaveBeenCalledWith(expect.objectContaining({ name: 'Silver Needle' }));
         });
     });
 });

@@ -31,6 +31,7 @@ export interface HistoryStoreActions {
   filterHistoryByTea: (teaName: string) => Promise<void>;
   updateSession: (session: BrewingSession) => Promise<void>;
   saveTea: (tea: Tea) => Promise<Tea>;
+  updateSharedTea: (tea: Tea) => Promise<Tea>;
 }
 
 export type HistoryStore = HistoryStoreState & HistoryStoreActions;
@@ -171,6 +172,11 @@ export const historyStore = createStore<HistoryStore>()((set, get) => ({
   },
   saveTea: async (tea) => {
     const savedTea = await teaRepository.saveTea(tea);
+    get().upsertKnownTea(savedTea);
+    return savedTea;
+  },
+  updateSharedTea: async (tea) => {
+    const savedTea = await teaRepository.updateSharedTea(tea);
     get().upsertKnownTea(savedTea);
     return savedTea;
   },

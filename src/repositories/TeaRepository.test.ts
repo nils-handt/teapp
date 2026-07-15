@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Tea } from '../entities/Tea.entity';
 import { teaRepository } from './TeaRepository';
 
+const repositoryMocks = vi.hoisted(() => ({
+    save: vi.fn(),
+    update: vi.fn(),
+    transaction: vi.fn(),
+}));
+
 vi.mock('../database/dataSource', () => ({
     AppDataSource: {
         getRepository: vi.fn().mockReturnValue({
@@ -12,6 +18,7 @@ vi.mock('../database/dataSource', () => ({
                 save: vi.fn(),
             })),
         }),
+        transaction: repositoryMocks.transaction,
     },
 }));
 
@@ -60,6 +67,37 @@ describe('TeaRepository', () => {
         const result = await teaRepository.getTeaById('tea-1');
 
         expect(findOneSpy).toHaveBeenCalledWith({ where: { teaId: 'tea-1' } });
+        expect(result).toBe(tea);
+    });
+
+    it('updates a shared tea and only linked session labels in one transaction', async () => {
+        const tea = Object.assign(new Tea(), {
+            teaId: 'tea-1',
+            name: 'Longjing',
+            brand: 'Tea House',
+            type: 'Green',
+            subtype: null,
+            region: null,
+            subregion: null,
+            year: 2024,
+            season: null,
+        });
+        repositoryMocks.save.mockResolvedValue(tea);
+        repositoryMocks.update.mockResolvedValue({ affected: 2 });
+        repositoryMocks.transaction.mockImplementation(async (work) => work({
+            getRepository: vi.fn()
+                .mockReturnValueOnce({ save: repositoryMocks.save })
+                .mockReturnValueOnce({ update: repositoryMocks.update }),
+        }));
+
+        const result = await teaRepository.updateSharedTea(tea);
+
+        expect(repositoryMocks.transaction).toHaveBeenCalledTimes(1);
+        expect(repositoryMocks.save).toHaveBeenCalledWith(tea);
+        expect(repositoryMocks.update).toHaveBeenCalledWith(
+            { teaId: 'tea-1' },
+            { teaName: '2024 Longjing Tea House Green' },
+        );
         expect(result).toBe(tea);
     });
 });

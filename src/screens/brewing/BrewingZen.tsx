@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import AppButton from '../../components/ui/AppButton';
 import InfusionNoteEditorModal from '../../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../../components/SessionSummaryView';
-import TeaEditorModal from '../../components/TeaEditorModal';
+import TeaEditorModal, { type TeaEditorSubmission } from '../../components/TeaEditorModal';
 import ModalFrame from '../../components/ui/ModalFrame';
 import { useBrewingControl } from '../../hooks/useBrewingControl';
 import { bluetoothScaleService } from '../../services/BluetoothScaleService';
@@ -49,7 +49,6 @@ import {
     formatZenWeight,
 } from './zenBrewingShared';
 import { formatTeaLabel } from '../../utils/teaSearch';
-import { Tea } from '../../entities/Tea.entity';
 
 type SetupField = 'vesselWeight' | 'lidWeight' | 'dryTeaLeavesWeight';
 type EditableField = SetupField | 'teaName' | 'brewingVesselName';
@@ -111,11 +110,12 @@ const BrewingZen: React.FC = () => {
         currentWeight: state.currentWeight,
         isMockMode: state.isMockMode,
     })));
-    const { knownTeas, loadKnownTeas, saveTea, deleteSession } = useHistoryStore(
+    const { knownTeas, loadKnownTeas, saveTea, updateSharedTea, deleteSession } = useHistoryStore(
         useShallow((state) => ({
             knownTeas: state.knownTeas,
             loadKnownTeas: state.loadKnownTeas,
             saveTea: state.saveTea,
+            updateSharedTea: state.updateSharedTea,
             deleteSession: state.deleteSession,
         }))
     );
@@ -467,9 +467,13 @@ const BrewingZen: React.FC = () => {
         </section>
     );
 
-    const handleTeaSave = async (tea: Tea) => {
-        const savedTea = await saveTea(tea);
-        brewingSessionService.updateTea(savedTea);
+    const handleTeaSave = async ({ action, tea }: TeaEditorSubmission) => {
+        const resolvedTea = action === 'select'
+            ? tea
+            : action === 'create'
+                ? await saveTea(tea)
+                : await updateSharedTea(tea);
+        brewingSessionService.updateTea(resolvedTea);
         closeEditor();
     };
 

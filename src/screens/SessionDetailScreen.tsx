@@ -14,12 +14,11 @@ import { useHistory, useParams } from 'react-router-dom';
 import AppButton from '../components/ui/AppButton';
 import InfusionNoteEditorModal from '../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../components/SessionSummaryView';
-import TeaEditorModal from '../components/TeaEditorModal';
+import TeaEditorModal, { type TeaEditorSubmission } from '../components/TeaEditorModal';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { useShallow } from 'zustand/react/shallow';
 import { useHistoryStore } from '../stores/useHistoryStore';
 import { zenPageShellClass } from '../styles/zen';
-import { Tea } from '../entities/Tea.entity';
 import { formatTeaLabel } from '../utils/teaSearch';
 import { APP_TOAST_POSITION } from '../constants/ui';
 
@@ -36,6 +35,7 @@ const SessionDetailScreen: React.FC = () => {
         knownTeas,
         loadKnownTeas,
         saveTea,
+        updateSharedTea,
     } = useHistoryStore(useShallow((state) => ({
         selectedSession: state.selectedSession,
         selectSession: state.selectSession,
@@ -44,6 +44,7 @@ const SessionDetailScreen: React.FC = () => {
         knownTeas: state.knownTeas,
         loadKnownTeas: state.loadKnownTeas,
         saveTea: state.saveTea,
+        updateSharedTea: state.updateSharedTea,
     })));
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [showTeaNameEditor, setShowTeaNameEditor] = useState(false);
@@ -72,24 +73,30 @@ const SessionDetailScreen: React.FC = () => {
         }
     };
 
-    const handleTeaSave = async (tea: Tea) => {
-        if (selectedSession) {
-            const savedTea = await saveTea(tea);
-            const updatedSession = {
-                ...selectedSession,
-                tea: savedTea,
-                teaId: savedTea.teaId,
-                teaName: formatTeaLabel(savedTea),
-            };
-            await updateSession(updatedSession);
-            setShowTeaNameEditor(false);
-            present({
-                ...APP_TOAST_POSITION,
-                message: 'Session updated',
-                duration: TOAST_DURATION,
-                color: 'success'
-            });
+    const handleTeaSave = async ({ action, tea }: TeaEditorSubmission) => {
+        if (!selectedSession) {
+            return;
         }
+
+        const resolvedTea = action === 'select'
+            ? tea
+            : action === 'create'
+                ? await saveTea(tea)
+                : await updateSharedTea(tea);
+        const updatedSession = {
+            ...selectedSession,
+            tea: resolvedTea,
+            teaId: resolvedTea.teaId,
+            teaName: formatTeaLabel(resolvedTea),
+        };
+        await updateSession(updatedSession);
+        setShowTeaNameEditor(false);
+        present({
+            ...APP_TOAST_POSITION,
+            message: 'Session updated',
+            duration: TOAST_DURATION,
+            color: 'success'
+        });
     };
 
     const openTeaNameEditor = () => {

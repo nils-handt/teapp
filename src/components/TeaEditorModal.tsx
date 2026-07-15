@@ -11,13 +11,18 @@ import ModalFrame from './ui/ModalFrame';
 import SuggestedInput from './ui/SuggestedInput';
 import { cn, zenInputClass } from '../styles/zen';
 
+export type TeaEditorSubmission = {
+    action: 'select' | 'create' | 'edit';
+    tea: Tea;
+};
+
 type TeaEditorModalProps = {
     isOpen: boolean;
     selectedTea: Tea | null;
     teas: Tea[];
     title?: string;
     onCancel: () => void;
-    onSave: (tea: Tea) => void;
+    onSave: (submission: TeaEditorSubmission) => void | Promise<void>;
 };
 
 type TeaDraft = Record<TeaTextAttribute, string> & {
@@ -34,6 +39,17 @@ const EMPTY_DRAFT: TeaDraft = {
     season: '',
     year: '',
 };
+
+const teaToDraft = (tea: Tea): TeaDraft => ({
+    name: tea.name,
+    brand: tea.brand ?? '',
+    type: tea.type ?? '',
+    subtype: tea.subtype ?? '',
+    region: tea.region ?? '',
+    subregion: tea.subregion ?? '',
+    season: tea.season ?? '',
+    year: tea.year === null || tea.year === undefined ? '' : String(tea.year),
+});
 
 const NEW_TEA_PRIMARY_FIELDS: Array<{ key: TeaTextAttribute; label: string }> = [
     { key: 'name', label: 'Name' },
@@ -100,10 +116,10 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
         setDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
     };
 
-    const openNewTeaTab = () => {
+    const openTeaFormTab = () => {
         setActiveTab('new');
-        setEditingTea(null);
-        setDraft(EMPTY_DRAFT);
+        setEditingTea(selectedTea);
+        setDraft(selectedTea ? teaToDraft(selectedTea) : EMPTY_DRAFT);
     };
 
     const openExistingTeaTab = () => {
@@ -123,7 +139,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
     const handleSave = () => {
         if (activeTab === 'existing') {
             if (editingTea) {
-                onSave(editingTea);
+                void onSave({ action: 'select', tea: editingTea });
             }
             return;
         }
@@ -139,7 +155,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
         }
 
         const tea = Object.assign(new Tea(), {
-            teaId: crypto.randomUUID(),
+            teaId: selectedTea?.teaId ?? crypto.randomUUID(),
             name,
             brand: trimToNullable(draft.brand),
             type: trimToNullable(draft.type),
@@ -150,7 +166,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
             year,
         });
 
-        onSave(tea);
+        void onSave({ action: selectedTea ? 'edit' : 'create', tea });
     };
 
     const header = (
@@ -177,7 +193,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                 type="button"
                 role="tab"
                 aria-selected={activeTab === 'new'}
-                onClick={openNewTeaTab}
+                onClick={openTeaFormTab}
                 className={cn(
                     'tea-mode-tab text-sm transition',
                     activeTab === 'new'
@@ -185,7 +201,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                         : 'text-zen-muted',
                 )}
             >
-                New Tea
+                {selectedTea ? 'Edit Tea' : 'New Tea'}
             </button>
         </div>
     );
