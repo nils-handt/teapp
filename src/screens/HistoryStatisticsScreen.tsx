@@ -25,8 +25,11 @@ import {
   zenListToolbarClass,
   zenMetricCardClass,
   zenPageShellClass,
+  zenPanelClass,
+  zenPanelStrongClass,
   zenSectionEyebrowClass,
   zenStackClass,
+  zenSummaryStatLabelClass,
 } from '../styles/zen';
 import {
   calculateHistoryStatistics,
@@ -173,20 +176,25 @@ const HistoryStatisticsScreen: React.FC = () => {
               </p>
             ) : statistics && (
               <>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className={zenMetricCardClass}>
+                <section className={zenPanelStrongClass}>
+                  <div>
                     <p className={zenSectionEyebrowClass}>Sessions</p>
-                    <strong>{statistics.sessionCount} {statistics.sessionCount === 1 ? 'session' : 'sessions'}</strong>
+                    <h2 className="mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text">
+                      {statistics.sessionCount} {statistics.sessionCount === 1 ? 'session' : 'sessions'}
+                    </h2>
                   </div>
-                  <div className={zenMetricCardClass}>
-                    <p className={zenSectionEyebrowClass}>Dry leaf</p>
-                    <strong>{formatStatisticWeight(statistics.totalDryLeafWeight)}</strong>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className={zenMetricCardClass}>
+                      <div className={zenSummaryStatLabelClass}>Dry leaf</div>
+                      <div>{formatStatisticWeight(statistics.totalDryLeafWeight)}</div>
+                    </div>
+                    <div className={zenMetricCardClass}>
+                      <div className={zenSummaryStatLabelClass}>Liquid</div>
+                      <div>{formatStatisticLiquid(statistics.totalLiquidWeight)}</div>
+                    </div>
                   </div>
-                  <div className={zenMetricCardClass}>
-                    <p className={zenSectionEyebrowClass}>Liquid</p>
-                    <strong>{formatStatisticLiquid(statistics.totalLiquidWeight)}</strong>
-                  </div>
-                </div>
+                </section>
 
                 {statistics.sessionCount === 0 && (
                   <p className="m-0 text-center text-zen-muted">No completed sessions match these filters.</p>
@@ -194,24 +202,46 @@ const HistoryStatisticsScreen: React.FC = () => {
 
                 <StatisticsBreakdownCard rankings={statistics.rankings} />
 
-                <section className={zenMetricCardClass}>
-                  <p className={zenSectionEyebrowClass}>Brewing averages</p>
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <span><strong>{formatStatisticWeight(statistics.averages.dryLeafWeight)}</strong><br />leaf per session</span>
-                    <span><strong>{formatStatisticLiquid(statistics.averages.liquidWeight)}</strong><br />liquid per session</span>
-                    <span><strong>{statistics.averages.infusionCount}</strong><br />infusions per session</span>
-                  </div>
-                </section>
+                <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2">
+                  <section className={zenPanelClass}>
+                    <p className={zenSectionEyebrowClass}>Brewing averages</p>
+                    <div className="mt-4 grid">
+                      {[
+                        { label: 'leaf per session', value: formatStatisticWeight(statistics.averages.dryLeafWeight) },
+                        { label: 'liquid per session', value: formatStatisticLiquid(statistics.averages.liquidWeight) },
+                        { label: 'infusions per session', value: statistics.averages.infusionCount },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-center justify-between gap-4 border-t border-zen-border py-3 first:border-t-0 first:pt-0 last:pb-0"
+                        >
+                          <span className="text-[0.9rem] text-zen-muted">{item.label}</span>
+                          <strong className="font-medium text-zen-text">{item.value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
 
-                <section className={zenMetricCardClass}>
-                  <p className={zenSectionEyebrowClass}>Tea exploration</p>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <span><strong>{statistics.exploration.teaCount}</strong><br />teas</span>
-                    <span><strong>{statistics.exploration.typeCount}</strong><br />types</span>
-                    <span><strong>{statistics.exploration.regionCount}</strong><br />regions</span>
-                    <span><strong>{statistics.exploration.subregionCount}</strong><br />subregions</span>
-                  </div>
-                </section>
+                  <section className={zenPanelClass}>
+                    <p className={zenSectionEyebrowClass}>Tea exploration</p>
+                    <div className="mt-4 grid">
+                      {[
+                        { label: 'teas', value: statistics.exploration.teaCount },
+                        { label: 'types', value: statistics.exploration.typeCount },
+                        { label: 'regions', value: statistics.exploration.regionCount },
+                        { label: 'subregions', value: statistics.exploration.subregionCount },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-center justify-between gap-4 border-t border-zen-border py-3 first:border-t-0 first:pt-0 last:pb-0"
+                        >
+                          <span className="text-[0.9rem] text-zen-muted">{item.label}</span>
+                          <strong className="font-medium text-zen-text">{item.value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
               </>
             )}
           </div>

@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { cn } from '../../styles/zen';
+import { cn, zenPanelClass, zenSectionEyebrowClass } from '../../styles/zen';
 import type { HistoryStatisticsResult } from '../../utils/HistoryStatistics';
 
 type BreakdownTab = 'types' | 'teas' | 'brands';
@@ -30,9 +30,13 @@ const StatisticsBreakdownCard: React.FC<StatisticsBreakdownCardProps> = ({ ranki
     };
 
     return (
-        <section className="overflow-hidden rounded-[18px] border border-zen-border bg-white/55">
-            <div role="tablist" aria-label="Statistics breakdown" className="grid grid-cols-3 bg-zen-accent-soft">
-                {TABS.map((tab) => {
+        <section className={cn(zenPanelClass, 'overflow-hidden')}>
+            <div
+                role="tablist"
+                aria-label="Statistics breakdown"
+                className="-mx-[22px] -mt-[22px] grid grid-cols-3 bg-[#f4f4f1]"
+            >
+                {TABS.map((tab, index) => {
                     const selected = activeTab === tab.key;
                     const tabId = `${id}-${tab.key}-tab`;
 
@@ -46,9 +50,10 @@ const StatisticsBreakdownCard: React.FC<StatisticsBreakdownCardProps> = ({ ranki
                             aria-controls={panelId}
                             onClick={() => selectTab(tab.key)}
                             className={cn(
-                                'min-h-11 px-2 text-sm transition',
+                                'tea-mode-tab text-sm transition',
+                                index < TABS.length - 1 && 'border-r-4 border-black',
                                 selected
-                                    ? 'rounded-t-2xl bg-[#fffdf8] font-medium text-zen-text'
+                                    ? 'bg-[#fffdf8] font-medium text-zen-text'
                                     : 'text-zen-muted',
                             )}
                         >
@@ -58,11 +63,19 @@ const StatisticsBreakdownCard: React.FC<StatisticsBreakdownCardProps> = ({ ranki
                 })}
             </div>
 
+            <div className="mt-5 mb-4 flex items-baseline justify-between gap-3">
+                <div>
+                    <p className={zenSectionEyebrowClass}>Breakdown</p>
+                    <h3 className="mt-2 mb-0 text-[1.1rem] font-medium text-zen-text">Tea profile</h3>
+                </div>
+                <span className="text-[0.82rem] text-zen-muted">by sessions</span>
+            </div>
+
             <div
                 id={panelId}
                 role="tabpanel"
                 aria-labelledby={`${id}-${activeTab}-tab`}
-                className="grid gap-3 p-4"
+                className="mt-4 grid gap-3"
             >
                 {visibleGroups.length === 0 ? (
                     <p className="m-0 text-sm text-zen-muted">No {activeDefinition.label} to display.</p>
