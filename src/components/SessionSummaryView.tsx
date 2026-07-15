@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import {
     formatZenDateTime,
@@ -71,7 +71,7 @@ const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, onClick, disa
             type="button"
             onClick={onClick}
             disabled={disabled}
-            className={className}
+            className={cn(className, 'pointer-events-auto')}
         >
             {content}
         </button>
@@ -89,6 +89,8 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     notesAction,
     footer,
 }) => {
+    const [isSetupExpanded, setIsSetupExpanded] = useState(false);
+    const [areInfusionsExpanded, setAreInfusionsExpanded] = useState(false);
     const teaLabel = formatTeaLabel(session.tea) || session.teaName?.trim() || '';
     const hasTeaName = Boolean(teaLabel);
     const hasBrewingVesselWeights = Boolean((session.vesselWeight ?? 0) > 0 && (session.lidWeight ?? 0) > 0);
@@ -97,8 +99,16 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
     const setupItems = [
         { label: 'Vessel', value: formatZenWeight(session.vesselWeight) },
         { label: 'Lid', value: formatZenWeight(session.lidWeight) },
-        { label: 'Tea', value: formatZenWeight(session.dryTeaLeavesWeight) },
     ];
+
+    const totalWaterAmount = (session.infusions ?? []).reduce(
+        (total, infusion) => total + (infusion.waterWeight ?? 0),
+        0,
+    );
+    const totalInfusionDuration = (session.infusions ?? []).reduce(
+        (total, infusion) => total + (infusion.duration ?? 0),
+        0,
+    );
 
     const timingItems = [
         { label: 'Started', value: formatZenDateTime(session.startTime) },
@@ -111,87 +121,119 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                 <p className={zenSectionEyebrowClass}>
                     {title}
                 </p>
-                <h2 className={hasTeaName
-                    ? 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text'
-                    : 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-muted'}>
-                    {teaLabel || 'No tea selected'}
-                </h2>
-            </section>
-
-            <section className={zenPanelClass}>
-                <div className={zenSummarySectionHeadingClass}>
-                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Setup</p>
-                </div>
-                <div className="mb-3">
-                    <SummaryField
-                        label="Tea name"
-                        value={teaLabel || 'No tea selected'}
+                {teaNameAction ? (
+                    <button
+                        type="button"
                         onClick={teaNameAction}
-                        highlighted={Boolean(teaNameAction) && !hasTeaName}
-                        valueMuted={!hasTeaName}
-                    />
-                </div>
-                <div className="mb-3">
+                        className="block w-full appearance-none border-0 bg-transparent p-0 text-left cursor-pointer"
+                    >
+                        <h2 className={hasTeaName
+                            ? 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text'
+                            : 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-muted'}>
+                            {teaLabel || 'No tea selected'}
+                        </h2>
+                    </button>
+                ) : (
+                    <h2 className={hasTeaName
+                        ? 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-text'
+                        : 'mt-[10px] mb-2 text-[1.9rem] font-normal text-zen-muted'}>
+                        {teaLabel || 'No tea selected'}
+                    </h2>
+                )}
+                <div className="mt-3">
                     <SummaryField
-                        label="Vessel name"
-                        value={brewingVesselLabel}
-                        onClick={brewingVesselAction}
-                        disabled={brewingVesselActionDisabled}
-                        highlighted={Boolean(brewingVesselAction) && !hasBrewingVesselName && hasBrewingVesselWeights}
+                        label="Notes"
+                        value={session.notes?.trim() || 'No notes'}
+                        onClick={notesAction}
+                        valueMuted={!session.notes?.trim()}
                     />
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {setupItems.map((item) => (
-                        <div key={item.label} className={zenMetricCardClass}>
-                            <div className={zenSummaryStatLabelClass}>{item.label}</div>
-                            <div>{item.value}</div>
-                        </div>
-                    ))}
                 </div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    {timingItems.map((item) => (
-                        <div key={item.label} className={zenMetricCardClass}>
-                            <div className={zenSummaryStatLabelClass}>{item.label}</div>
-                            <div>{item.value}</div>
-                        </div>
-                    ))}
+                    <div className={zenMetricCardClass}>
+                        <div className={zenSummaryStatLabelClass}>Water amount</div>
+                        <div>{formatZenWeight(totalWaterAmount)}</div>
+                    </div>
+                    <div className={zenMetricCardClass}>
+                        <div className={zenSummaryStatLabelClass}>Infusion duration</div>
+                        <div>{formatZenSeconds(totalInfusionDuration)}</div>
+                    </div>
                 </div>
             </section>
 
-            <section className={zenPanelClass}>
-                <div className={zenSummarySectionHeadingClass}>
-                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Information</p>
-                </div>
+            <section className={cn(zenPanelClass, 'relative pb-9')}>
                 <button
                     type="button"
-                    onClick={notesAction}
-                    disabled={!notesAction}
-                    className={cn(zenSummaryListItemClass, notesAction ? 'cursor-pointer' : 'cursor-default')}
+                    aria-label="Setup"
+                    aria-expanded={isSetupExpanded}
+                    aria-controls="session-summary-setup-details"
+                    onClick={() => setIsSetupExpanded((expanded) => !expanded)}
+                    className="absolute inset-0 z-0 cursor-pointer appearance-none border-0 bg-transparent p-0 text-zen-muted"
                 >
-                    <div className="mb-2 flex justify-between gap-3">
-                        <strong>Notes</strong>
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-[0.92rem] text-zen-muted">
-                        <span>{session.notes?.trim() || 'No notes'}</span>
-                    </div>
+                    <span aria-hidden="true" className={cn('absolute right-5 bottom-2 transition-transform', isSetupExpanded && 'rotate-180')}>⌄</span>
                 </button>
+                <div className={cn(zenSummarySectionHeadingClass, 'pointer-events-none relative z-10')}>
+                    <span role="heading" aria-level={3} className={zenSectionEyebrowClass}>Setup</span>
+                </div>
+                <div className={cn(zenMetricCardClass, 'pointer-events-none relative z-10')}>
+                    <div className={zenSummaryStatLabelClass}>Tea</div>
+                    <div>{formatZenWeight(session.dryTeaLeavesWeight)}</div>
+                </div>
+                {isSetupExpanded && (
+                    <div id="session-summary-setup-details" className="pointer-events-none relative z-10 mt-3">
+                        <div className="mb-3">
+                            <SummaryField
+                                label="Vessel name"
+                                value={brewingVesselLabel}
+                                onClick={brewingVesselAction}
+                                disabled={brewingVesselActionDisabled}
+                                highlighted={Boolean(brewingVesselAction) && !hasBrewingVesselName && hasBrewingVesselWeights}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {setupItems.map((item) => (
+                                <div key={item.label} className={zenMetricCardClass}>
+                                    <div className={zenSummaryStatLabelClass}>{item.label}</div>
+                                    <div>{item.value}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {timingItems.map((item) => (
+                                <div key={item.label} className={zenMetricCardClass}>
+                                    <div className={zenSummaryStatLabelClass}>{item.label}</div>
+                                    <div>{item.value}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </section>
 
-            <section className={zenPanelClass}>
-                <div className={zenSummarySectionHeadingClass}>
-                    <p role="heading" aria-level={3} className={zenSectionEyebrowClass}>Infusions</p>
+            <section className={cn(zenPanelClass, 'relative pb-9')}>
+                <button
+                    type="button"
+                    aria-label={`Infusions ${session.infusions?.length ?? 0} total`}
+                    aria-expanded={areInfusionsExpanded}
+                    aria-controls="session-summary-infusion-details"
+                    onClick={() => setAreInfusionsExpanded((expanded) => !expanded)}
+                    className="absolute inset-0 z-0 cursor-pointer appearance-none border-0 bg-transparent p-0 text-zen-muted"
+                >
+                    <span aria-hidden="true" className={cn('absolute right-5 bottom-2 transition-transform', areInfusionsExpanded && 'rotate-180')}>⌄</span>
+                </button>
+                <div className={cn(zenSummarySectionHeadingClass, 'pointer-events-none relative z-10')}>
+                    <span role="heading" aria-level={3} className={zenSectionEyebrowClass}>Infusions</span>
                     <span className="text-[0.9rem] text-zen-muted">{session.infusions?.length ?? 0} total</span>
                 </div>
 
-                {(session.infusions?.length ?? 0) > 0 ? (
-                    <div className={zenSummaryListClass}>
+                {areInfusionsExpanded && (session.infusions?.length ?? 0) > 0 ? (
+                    <div id="session-summary-infusion-details" className={cn(zenSummaryListClass, 'pointer-events-none relative z-10')}>
                         {session.infusions.map((infusion) => (
                             <button
                                 key={infusion.infusionId}
                                 type="button"
                                 onClick={() => onInfusionPress?.(infusion.infusionId, infusion.note ?? '')}
                                 disabled={!onInfusionPress}
-                                className={cn(zenSummaryListItemClass, onInfusionPress ? 'cursor-pointer' : 'cursor-default')}
+                                className={cn(zenSummaryListItemClass, onInfusionPress ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none cursor-default')}
                             >
                                 <div className="mb-2 flex justify-between gap-3">
                                     <strong>Infusion {infusion.infusionNumber}</strong>
@@ -213,9 +255,9 @@ const SessionSummaryView: React.FC<SessionSummaryViewProps> = ({
                             </button>
                         ))}
                     </div>
-                ) : (
-                    <p className="m-0 text-zen-muted">No infusions were recorded for this session.</p>
-                )}
+                ) : areInfusionsExpanded ? (
+                    <p id="session-summary-infusion-details" className="pointer-events-none relative z-10 m-0 text-zen-muted">No infusions were recorded for this session.</p>
+                ) : null}
             </section>
 
             {footer ? <section className={zenActionRowClass}>{footer}</section> : null}

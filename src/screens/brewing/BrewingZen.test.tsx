@@ -543,8 +543,9 @@ describe('BrewingZen', () => {
         render(<BrewingZen />);
 
         expect(screen.getByText('Session Summary')).toBeDefined();
-        expect(screen.getAllByText('Cloud Mist')).toHaveLength(2);
+        expect(screen.getAllByText('Cloud Mist')).toHaveLength(1);
         expect(screen.getByText('Setup')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Infusions 1 total/i }));
         expect(screen.getByText('Infusion 1')).toBeDefined();
         expect(screen.getByText(/Water 100.5 g/)).toBeDefined();
         expect(screen.getByRole('button', { name: 'Start New Session' })).toBeDefined();
@@ -704,6 +705,7 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Infusions 1 total/i }));
         fireEvent.click(screen.getByRole('button', { name: /Infusion 1/i }));
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'fruitier than before' } });
         fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
@@ -722,7 +724,7 @@ describe('BrewingZen', () => {
 
         render(<BrewingZen />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Notes first steep' }));
+        fireEvent.click(screen.getByRole('button', { name: /Notes\s*first steep/ }));
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'rounder after cooling' } });
         fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
 

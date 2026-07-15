@@ -139,10 +139,10 @@ describe('SessionDetailScreen', () => {
 
         const summaryHeadingClass = screen.getByText('Session Summary').className;
         expect(screen.getByRole('heading', { name: 'Setup' }).className).toBe(summaryHeadingClass);
-        expect(screen.getByRole('heading', { name: 'Information' }).className).toBe(summaryHeadingClass);
         expect(screen.getByRole('heading', { name: 'Infusions' }).className).toBe(summaryHeadingClass);
+        expect(screen.queryByRole('heading', { name: 'Information' })).toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: /Tea nameMorning Sencha/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Morning Sencha' }));
         expect(loadKnownTeas).toHaveBeenCalled();
 
         fireEvent.change(screen.getByLabelText('Search existing teas'), { target: { value: 'ort' } });
@@ -161,6 +161,7 @@ describe('SessionDetailScreen', () => {
     it('edits an infusion note by pressing the infusion box', async () => {
         render(<SessionDetailScreen />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Infusions 1 total/i }));
         expect(screen.getByText('Temp 185°')).toBeDefined();
 
         fireEvent.click(screen.getByRole('button', { name: /Infusion 1/i }));
@@ -174,21 +175,41 @@ describe('SessionDetailScreen', () => {
         });
     });
 
-    it('displays session notes in an infusion-style box before Infusions', () => {
+    it('moves notes and combined infusion totals into Session Summary', () => {
         render(<SessionDetailScreen />);
 
-        const informationHeading = screen.getByRole('heading', { name: 'Information' });
+        const notesBox = screen.getByRole('button', { name: /Notes\s*Bright and sweet/ });
         const infusionsHeading = screen.getByRole('heading', { name: 'Infusions' });
-        const informationBox = screen.getByRole('button', { name: 'Notes Bright and sweet' });
-        const infusionBox = screen.getByRole('button', { name: /Infusion 1/i });
 
-        expect(informationHeading.compareDocumentPosition(infusionsHeading) & 4).toBe(4);
-        expect(informationBox.className).toBe(infusionBox.className);
+        expect(notesBox.compareDocumentPosition(infusionsHeading) & 4).toBe(4);
+        expect(screen.getByText('Water amount').parentElement?.textContent).toBe('Water amount100.0 g');
+        expect(screen.getByText('Infusion duration').parentElement?.textContent).toBe('Infusion duration0:25');
+        expect(screen.queryByRole('heading', { name: 'Information' })).toBeNull();
+    });
+
+    it('keeps Setup and Infusions compact until expanded', () => {
+        render(<SessionDetailScreen />);
+
+        const setupToggle = screen.getByRole('button', { name: /Setup/i });
+        const infusionsToggle = screen.getByRole('button', { name: /Infusions 1 total/i });
+
+        expect(setupToggle.getAttribute('aria-expanded')).toBe('false');
+        expect(infusionsToggle.getAttribute('aria-expanded')).toBe('false');
+        expect(screen.getByText('Tea').parentElement?.textContent).toBe('Tea6.4 g');
+        expect(screen.queryByText('Vessel name')).toBeNull();
+        expect(screen.queryByRole('button', { name: /Infusion 1/i })).toBeNull();
+
+        fireEvent.click(setupToggle);
+        fireEvent.click(infusionsToggle);
+
+        expect(screen.getByText('Vessel name')).toBeDefined();
+        expect(screen.getByRole('button', { name: /Infusion 1/i })).toBeDefined();
     });
 
     it('keeps a non-editable vessel name visually non-interactive', () => {
         render(<SessionDetailScreen />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Setup/i }));
         const vesselName = screen.getByText('Vessel name');
 
         expect(vesselName.parentElement?.tagName).toBe('DIV');
@@ -196,14 +217,15 @@ describe('SessionDetailScreen', () => {
         expect(vesselName.parentElement?.className).not.toContain('cursor-pointer');
     });
 
-    it('uses one setup-metric column on mobile and three on larger screens', () => {
+    it('uses one expanded setup-metric column on mobile and two on larger screens', () => {
         render(<SessionDetailScreen />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Setup/i }));
         const vesselMetric = screen.getByText('Vessel');
         const setupMetricGrid = vesselMetric.parentElement?.parentElement;
 
         expect(setupMetricGrid?.className).toContain('grid-cols-1');
-        expect(setupMetricGrid?.className).toContain('sm:grid-cols-3');
+        expect(setupMetricGrid?.className).toContain('sm:grid-cols-2');
     });
 
     it('labels an unnamed session in muted text', () => {
@@ -222,10 +244,10 @@ describe('SessionDetailScreen', () => {
         expect(screen.getByTestId('session-title').getAttribute('style')).toContain('--color: var(--color-zen-muted)');
     });
 
-    it('edits session notes by pressing the Information field', async () => {
+    it('edits session notes from Session Summary', async () => {
         render(<SessionDetailScreen />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Notes Bright and sweet' }));
+        fireEvent.click(screen.getByRole('button', { name: /Notes\s*Bright and sweet/ }));
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'honey and grass' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
