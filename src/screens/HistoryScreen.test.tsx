@@ -42,6 +42,11 @@ type ButtonProps = PropsWithChildren<{
   'aria-label'?: string;
 }>;
 
+type BackButtonProps = {
+  defaultHref?: string;
+  'aria-label'?: string;
+};
+
 type DivProps = PropsWithChildren<{
   className?: string;
   'data-testid'?: string;
@@ -58,6 +63,8 @@ type InfiniteScrollProps = PropsWithChildren<{
 type ToastOptions = { buttons: Array<{ handler: () => void; text: string }>; duration: number; message: string };
 
 vi.mock('@ionic/react', () => ({
+  IonBackButton: ({ defaultHref, 'aria-label': ariaLabel }: BackButtonProps) => <a href={defaultHref} aria-label={ariaLabel}>Back</a>,
+  IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonContent: ({ children, className, 'data-testid': testId }: DivProps) => <div className={className} data-testid={testId}>{children}</div>,
   IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -178,6 +185,13 @@ describe('HistoryScreen', () => {
       .toBe('/tabs/history/statistics');
   });
 
+  it('uses the shared floating header surface', () => {
+    render(<HistoryScreen />);
+
+    expect(screen.getByTestId('history-header-surface').classList.contains('zen-history-header-surface')).toBe(true);
+    expect(screen.getByLabelText('Search teas')).toBeDefined();
+  });
+
   it('keeps shared Tea filters when history refreshes', async () => {
     render(<HistoryScreen />);
     fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'sencha' } });
@@ -294,6 +308,7 @@ describe('HistoryScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
     fireEvent.change(screen.getByLabelText('Filter Name'), { target: { value: 'sencha' } });
     expect(screen.getByRole('button', { name: 'Hide history filters (1 active)' })).toBeDefined();
+    expect(screen.getByTestId('history-active-filter-count').textContent).toBe('1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Hide history filters (1 active)' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));

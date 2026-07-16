@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEventHandler, PropsWithChildren } from 'react';
+import type { MouseEventHandler, PropsWithChildren } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionDetailScreen from './SessionDetailScreen';
@@ -36,10 +36,6 @@ type AlertProps = {
     isOpen?: boolean;
 };
 
-type TitleProps = PropsWithChildren<{
-    style?: CSSProperties;
-}>;
-
 vi.mock('react-router-dom', () => ({
     useHistory: () => ({ goBack }),
     useParams: () => ({ sessionId: 'session-1' }),
@@ -49,10 +45,9 @@ vi.mock('@ionic/react', () => ({
     IonContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonPage: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonTitle: ({ children, style }: TitleProps) => <div data-testid="session-title" style={style}>{children}</div>,
     IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
     IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonBackButton: () => null,
+    IonBackButton: ({ defaultHref }: { defaultHref?: string }) => <a href={defaultHref}>Back</a>,
     IonButton: ({ children, onClick }: ButtonProps) => <button onClick={onClick}>{children}</button>,
     IonIcon: () => null,
     IonAlert: ({ header, isOpen }: AlertProps) => (
@@ -288,11 +283,13 @@ describe('SessionDetailScreen', () => {
 
         render(<SessionDetailScreen />);
 
-        const summaryTitle = screen.getByRole('heading', { name: 'No tea selected' });
+        const summaryTitle = screen.getAllByRole('heading', { name: 'No tea selected' })
+            .find((heading) => heading.tagName === 'H2');
+        const headerTitle = screen.getByTestId('history-header-title');
 
-        expect(summaryTitle.className).toContain('text-zen-muted');
-        expect(screen.getByTestId('session-title').textContent).toBe('No tea selected');
-        expect(screen.getByTestId('session-title').getAttribute('style')).toContain('--color: var(--color-zen-muted)');
+        expect(summaryTitle?.className).toContain('text-zen-muted');
+        expect(headerTitle.textContent).toBe('No tea selected');
+        expect(headerTitle.className).toContain('text-zen-muted');
     });
 
     it('edits session notes from Session Summary', async () => {

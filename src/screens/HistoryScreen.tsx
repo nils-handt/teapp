@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonContent,
-  IonHeader,
   IonPage,
   IonList,
   IonItem,
@@ -27,6 +26,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { historyStore, useHistoryStore } from '../stores/useHistoryStore';
 import { useHistoryFiltersStore } from '../stores/useHistoryFiltersStore';
 import HistoryFilters from '../components/history/HistoryFilters';
+import HistoryHeaderShell from '../components/history/HistoryHeaderShell';
 import {
   zenListItemMetaClass,
   zenListItemTitleClass,
@@ -162,7 +162,7 @@ const HistoryScreen: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
+      <HistoryHeaderShell>
         <HistoryFilters
           knownTeas={knownTeas}
           areFiltersExpanded={areFiltersExpanded}
@@ -172,13 +172,13 @@ const HistoryScreen: React.FC = () => {
               routerLink="/tabs/history/statistics"
               fill="clear"
               aria-label="Open tea statistics"
-              className="m-0 h-11 w-11 shrink-0 rounded-2xl border border-zen-border text-zen-text"
+              className="m-0 h-11 w-11 shrink-0 rounded-[14px] border border-zen-border bg-white/60 text-zen-text"
             >
               <IonIcon icon={pieChartOutline} aria-hidden="true" />
             </IonButton>
           )}
         />
-      </IonHeader>
+      </HistoryHeaderShell>
       <IonContent fullscreen data-testid="history-page" className={zenListPageClass}>
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent />

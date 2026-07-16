@@ -33,7 +33,6 @@ export const zenStackClass = 'mx-auto flex w-full max-w-[720px] flex-col gap-[18
 export const zenPanelClass = 'rounded-[28px] border border-zen-border bg-zen-panel p-[22px] shadow-zen-panel backdrop-blur-[10px]';
 export const zenPanelStrongClass = cn(zenPanelClass, 'bg-zen-panel-strong bg-[image:var(--zen-background)]');
 export const zenListPageClass = 'zen-list-page';
-export const zenListToolbarClass = 'zen-list-toolbar';
 export const zenListSearchClass = 'zen-list-search';
 export const zenListSurfaceClass = 'zen-list-surface';
 export const zenListSectionHeaderClass = 'zen-list-section-header';

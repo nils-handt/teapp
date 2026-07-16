@@ -34,7 +34,7 @@ vi.mock('../services/logging', async (importOriginal) => ({
   createLogger: () => logger,
 }));
 vi.mock('@ionic/react', () => ({
-  IonBackButton: () => <a href="/tabs/history">Back</a>,
+  IonBackButton: ({ defaultHref }: { defaultHref?: string }) => <a href={defaultHref}>Back</a>,
   IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonContent: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
   IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -120,6 +120,15 @@ describe('HistoryStatisticsScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Last month' }));
     expect(settingsStore.getState().statisticsPeriod).toBe('lastMonth');
     expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({ statisticsPeriod: 'lastMonth' });
+  });
+
+  it('uses the shared dashboard header with back navigation and filters', () => {
+    render(<HistoryStatisticsScreen />);
+
+    expect(screen.getByTestId('history-header-surface').classList.contains('zen-history-header-surface')).toBe(true);
+    expect(screen.getByTestId('history-header-title').textContent).toBe('Tea statistics');
+    expect(screen.getByRole('link', { name: 'Back' }).getAttribute('href')).toBe('/tabs/history');
+    expect(screen.getByLabelText('Search teas')).toBeDefined();
   });
 
   it('keeps the loading state until the complete history query resolves', async () => {

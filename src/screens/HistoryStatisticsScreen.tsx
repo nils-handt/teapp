@@ -1,19 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IonBackButton,
-  IonButtons,
   IonContent,
-  IonHeader,
   IonPage,
   IonRefresher,
   IonRefresherContent,
-  IonTitle,
-  IonToolbar,
   useIonViewWillEnter,
 } from '@ionic/react';
 import { useShallow } from 'zustand/react/shallow';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import HistoryFilters from '../components/history/HistoryFilters';
+import HistoryHeaderShell from '../components/history/HistoryHeaderShell';
 import StatisticsBreakdownCard from '../components/history/StatisticsBreakdownCard';
 import { createLogger } from '../services/logging';
 import { useHistoryFiltersStore } from '../stores/useHistoryFiltersStore';
@@ -22,7 +18,6 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import {
   cn,
   zenListPageClass,
-  zenListToolbarClass,
   zenMetricCardClass,
   zenPageShellClass,
   zenPanelClass,
@@ -128,19 +123,13 @@ const HistoryStatisticsScreen: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar className={zenListToolbarClass}>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/tabs/history" />
-          </IonButtons>
-          <IonTitle>Tea statistics</IonTitle>
-        </IonToolbar>
+      <HistoryHeaderShell backHref="/tabs/history" title="Tea statistics">
         <HistoryFilters
           knownTeas={knownTeas}
           areFiltersExpanded={areFiltersExpanded}
           onToggleFilters={() => setAreFiltersExpanded((value) => !value)}
         />
-      </IonHeader>
+      </HistoryHeaderShell>
       <IonContent fullscreen className={zenListPageClass}>
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent />

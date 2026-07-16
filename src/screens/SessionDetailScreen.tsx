@@ -1,12 +1,7 @@
-import React, { useEffect, useState, type CSSProperties } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     IonContent,
-    IonHeader,
     IonPage,
-    IonTitle,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
     IonAlert,
     useIonToast
 } from '@ionic/react';
@@ -14,6 +9,7 @@ import { useHistory, useParams } from 'react-router-dom';
 import AppButton from '../components/ui/AppButton';
 import InfusionNoteEditorModal from '../components/InfusionNoteEditorModal';
 import SessionSummaryView from '../components/SessionSummaryView';
+import HistoryHeaderShell from '../components/history/HistoryHeaderShell';
 import TeaEditorModal, { type TeaEditorSubmission } from '../components/TeaEditorModal';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import { useShallow } from 'zustand/react/shallow';
@@ -174,14 +170,12 @@ const SessionDetailScreen: React.FC = () => {
     if (!selectedSession) {
         return (
             <IonPage>
-                <IonHeader>
-                    <IonToolbar>
-                        <IonButtons slot="start">
-                            <IonBackButton defaultHref="/tabs/history" />
-                        </IonButtons>
-                        <IonTitle>Session Details</IonTitle>
-                    </IonToolbar>
-                </IonHeader>
+                <HistoryHeaderShell
+                    backHref="/tabs/history"
+                    eyebrow="Session overview"
+                    title="Loading session…"
+                    titleMuted
+                />
                 <IonContent>
                     <div className="p-5">Loading...</div>
                 </IonContent>
@@ -196,20 +190,12 @@ const SessionDetailScreen: React.FC = () => {
 
     return (
         <IonPage>
-            <IonHeader>
-                <IonToolbar>
-                    <IonButtons slot="start">
-                        <IonBackButton defaultHref="/tabs/history" />
-                    </IonButtons>
-                    <IonTitle
-                        style={sessionTeaLabel
-                            ? undefined
-                            : { '--color': 'var(--color-zen-muted)' } as CSSProperties}
-                    >
-                        {sessionTeaLabel || 'No tea selected'}
-                    </IonTitle>
-                </IonToolbar>
-            </IonHeader>
+            <HistoryHeaderShell
+                backHref="/tabs/history"
+                eyebrow="Session overview"
+                title={sessionTeaLabel || 'No tea selected'}
+                titleMuted={!sessionTeaLabel}
+            />
             <IonContent fullscreen>
                 <div className={zenPageShellClass}>
                     <SessionSummaryView
