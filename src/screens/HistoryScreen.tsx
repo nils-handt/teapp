@@ -28,6 +28,7 @@ import { useHistoryFiltersStore } from '../stores/useHistoryFiltersStore';
 import HistoryFilters from '../components/history/HistoryFilters';
 import HistoryHeaderShell from '../components/history/HistoryHeaderShell';
 import {
+  zenHistoryHeaderButtonClass,
   zenListItemMetaClass,
   zenListItemTitleClass,
   zenListPageClass,
@@ -172,7 +173,7 @@ const HistoryScreen: React.FC = () => {
               routerLink="/tabs/history/statistics"
               fill="clear"
               aria-label="Open tea statistics"
-              className="m-0 h-11 w-11 shrink-0 rounded-[14px] border border-zen-border bg-white/60 text-zen-text"
+              className={zenHistoryHeaderButtonClass}
             >
               <IonIcon icon={pieChartOutline} aria-hidden="true" />
             </IonButton>

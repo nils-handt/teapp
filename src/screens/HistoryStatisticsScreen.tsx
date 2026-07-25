@@ -9,7 +9,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 import { BrewingSession } from '../entities/BrewingSession.entity';
 import HistoryFilters from '../components/history/HistoryFilters';
-import HistoryHeaderShell from '../components/history/HistoryHeaderShell';
+import HistoryHeaderShell, { HistoryHeaderBackButton } from '../components/history/HistoryHeaderShell';
 import StatisticsBreakdownCard from '../components/history/StatisticsBreakdownCard';
 import { createLogger } from '../services/logging';
 import { useHistoryFiltersStore } from '../stores/useHistoryFiltersStore';
@@ -123,11 +123,12 @@ const HistoryStatisticsScreen: React.FC = () => {
 
   return (
     <IonPage>
-      <HistoryHeaderShell backHref="/tabs/history" title="Tea statistics">
+      <HistoryHeaderShell>
         <HistoryFilters
           knownTeas={knownTeas}
           areFiltersExpanded={areFiltersExpanded}
           onToggleFilters={() => setAreFiltersExpanded((value) => !value)}
+          searchLeadingAction={<HistoryHeaderBackButton defaultHref="/tabs/history" />}
         />
       </HistoryHeaderShell>
       <IonContent fullscreen className={zenListPageClass}>

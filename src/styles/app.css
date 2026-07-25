@@ -114,23 +114,69 @@ ion-tab-bar {
   padding: 10px 12px;
 }
 
-.zen-history-header-back-wrap {
+.zen-history-header-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
   margin: 0;
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--color-zen-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.6);
+  color: var(--color-zen-text);
+  cursor: pointer;
+  line-height: 1;
+  transition: background-color 160ms ease;
+}
+
+.zen-history-header-button ion-icon {
+  font-size: 1.25rem;
+}
+
+.zen-history-header-button--active {
+  background: var(--color-zen-accent-soft);
+}
+
+ion-button.zen-history-header-button {
+  --background: rgba(255, 255, 255, 0.6);
+  --background-activated: var(--color-zen-accent-soft);
+  --background-hover: rgba(255, 255, 255, 0.88);
+  --border-radius: 16px;
+  --box-shadow: none;
+  --color: var(--color-zen-text);
+  --padding-end: 0;
+  --padding-start: 0;
+}
+
+@media (hover: hover) {
+  button.zen-history-header-button:hover {
+    background: rgba(255, 255, 255, 0.88);
+  }
+}
+
+.zen-history-header-back-wrap {
+  cursor: default;
 }
 
 .zen-history-header-back-button {
-  width: 44px;
-  height: 44px;
+  width: 100%;
+  height: 100%;
   margin: 0;
+  --background: transparent;
+  --background-activated: var(--color-zen-accent-soft);
+  --background-hover: rgba(255, 255, 255, 0.88);
+  --border-radius: 16px;
+  --box-shadow: none;
   --color: var(--color-zen-text);
-  --icon-font-size: 1.2rem;
+  --icon-font-size: 1.25rem;
   --padding-start: 0;
   --padding-end: 0;
 }
@@ -163,7 +209,7 @@ ion-tab-bar {
 }
 
 .zen-history-filter-deck {
-  padding: 12px;
+  padding: 8px;
 }
 
 .zen-list-search {

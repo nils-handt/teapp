@@ -1,10 +1,10 @@
 import React, { useId, useMemo } from 'react';
 import { IonIcon, IonSearchbar } from '@ionic/react';
-import { chevronDown } from 'ionicons/icons';
+import { closeOutline, optionsOutline } from 'ionicons/icons';
 import { useShallow } from 'zustand/react/shallow';
 import { Tea } from '../../entities/Tea.entity';
 import { useHistoryFiltersStore } from '../../stores/useHistoryFiltersStore';
-import { cn, zenListSearchClass } from '../../styles/zen';
+import { cn, zenHistoryHeaderButtonClass, zenListSearchClass } from '../../styles/zen';
 import { formatTeaLabel, getTeaAttributeSuggestions, getTeaSuggestions } from '../../utils/teaSearch';
 import type { HistoryTeaFilterDraft } from '../../utils/historyFilters';
 import SuggestionList from '../ui/SuggestionList';
@@ -14,6 +14,7 @@ type HistoryFiltersProps = {
   knownTeas: Tea[];
   areFiltersExpanded: boolean;
   onToggleFilters: () => void;
+  searchLeadingAction?: React.ReactNode;
   searchAction?: React.ReactNode;
 };
 
@@ -25,7 +26,7 @@ const FILTER_FIELDS: Array<{ key: Exclude<keyof HistoryTeaFilterDraft, 'year'>; 
 ];
 
 const HistoryFilters: React.FC<HistoryFiltersProps> = ({
-  knownTeas, areFiltersExpanded, onToggleFilters, searchAction,
+  knownTeas, areFiltersExpanded, onToggleFilters, searchLeadingAction, searchAction,
 }) => {
   const filterFieldsId = useId();
   const { searchText, filters, setSearchText, setFilter, clearFilters } = useHistoryFiltersStore(
@@ -48,7 +49,8 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
 
   return (
     <div className="zen-history-filter-deck">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5" data-testid="history-filter-row">
+        {searchLeadingAction}
         <IonSearchbar
           className={cn(zenListSearchClass, 'm-0 min-w-0 flex-1')}
           value={searchText}
@@ -56,6 +58,39 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
           placeholder="Search teas"
           debounce={500}
         />
+        <button
+          type="button"
+          aria-label={filterToggleLabel}
+          aria-expanded={areFiltersExpanded}
+          aria-controls={filterFieldsId}
+          onClick={onToggleFilters}
+          className={cn(
+            zenHistoryHeaderButtonClass,
+            'relative',
+            (areFiltersExpanded || activeFilterCount > 0) && 'zen-history-header-button--active',
+          )}
+        >
+          <IonIcon icon={optionsOutline} aria-hidden="true" />
+          {activeFilterCount > 0 && (
+            <span
+              aria-hidden="true"
+              data-testid="history-active-filter-count"
+              className="absolute top-0.5 right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#566b5b] px-1 text-[0.65rem] leading-none font-medium text-white"
+            >
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            aria-label="Clear filters"
+            onClick={clearFilters}
+            className={cn(zenHistoryHeaderButtonClass, 'text-zen-muted')}
+          >
+            <IonIcon icon={closeOutline} aria-hidden="true" />
+          </button>
+        )}
         {searchAction}
       </div>
       {!areFiltersExpanded && suggestions.length > 0 && (
@@ -63,40 +98,6 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
           <SuggestionList items={suggestions} onSelect={setSearchText} />
         </div>
       )}
-      <div className="mt-2 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={filterToggleLabel}
-          aria-expanded={areFiltersExpanded}
-          aria-controls={filterFieldsId}
-          onClick={onToggleFilters}
-          className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[14px] bg-zen-accent-soft px-4 text-zen-text transition-colors"
-        >
-          <span>Filters</span>
-          {activeFilterCount > 0 && (
-            <span
-              aria-hidden="true"
-              data-testid="history-active-filter-count"
-              className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[#566b5b] px-1.5 text-xs font-medium text-white"
-            >
-              {activeFilterCount}
-            </span>
-          )}
-          <IonIcon
-            icon={chevronDown}
-            className={cn('text-base transition-transform', areFiltersExpanded && 'rotate-180')}
-          />
-        </button>
-        {activeFilterCount > 0 && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="min-h-11 shrink-0 rounded-xl px-3 text-[0.9rem] text-zen-muted transition-colors hover:bg-white/60"
-          >
-            Clear filters
-          </button>
-        )}
-      </div>
       {areFiltersExpanded && (
         <div
           id={filterFieldsId}

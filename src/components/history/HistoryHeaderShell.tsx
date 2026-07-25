@@ -1,6 +1,6 @@
 import { IonBackButton, IonButtons, IonHeader } from '@ionic/react';
 import type { FC, ReactNode } from 'react';
-import { cn } from '../../styles/zen';
+import { cn, zenHistoryHeaderButtonClass } from '../../styles/zen';
 
 type HistoryHeaderShellProps = {
   backHref?: string;
@@ -9,6 +9,21 @@ type HistoryHeaderShellProps = {
   title?: string;
   titleMuted?: boolean;
 };
+
+type HistoryHeaderBackButtonProps = {
+  defaultHref: string;
+};
+
+export const HistoryHeaderBackButton: FC<HistoryHeaderBackButtonProps> = ({ defaultHref }) => (
+  <IonButtons className={cn(zenHistoryHeaderButtonClass, 'zen-history-header-back-wrap')}>
+    <IonBackButton
+      defaultHref={defaultHref}
+      text=""
+      aria-label="Back"
+      className="zen-history-header-back-button"
+    />
+  </IonButtons>
+);
 
 const HistoryHeaderShell: FC<HistoryHeaderShellProps> = ({
   backHref,
@@ -26,14 +41,7 @@ const HistoryHeaderShell: FC<HistoryHeaderShellProps> = ({
           {hasTitleRow && (
             <div className="zen-history-header-title-row">
               {backHref && (
-                <IonButtons className="zen-history-header-back-wrap">
-                  <IonBackButton
-                    defaultHref={backHref}
-                    text=""
-                    aria-label="Back"
-                    className="zen-history-header-back-button"
-                  />
-                </IonButtons>
+                <HistoryHeaderBackButton defaultHref={backHref} />
               )}
               <div className="min-w-0 flex-1">
                 {eyebrow && <div className="zen-history-header-eyebrow">{eyebrow}</div>}

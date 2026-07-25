@@ -37,6 +37,7 @@ type HistoryScreenStoreSeed = {
 };
 
 type ButtonProps = PropsWithChildren<{
+  className?: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
   routerLink?: string;
   'aria-label'?: string;
@@ -85,9 +86,9 @@ vi.mock('@ionic/react', () => ({
   IonItemSliding: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonItemOptions: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonItemOption: ({ children, onClick }: ButtonProps) => <button aria-label="Delete session" onClick={onClick}>{children}</button>,
-  IonButton: ({ children, routerLink, onClick, 'aria-label': ariaLabel }: ButtonProps) => routerLink
-    ? <a href={routerLink} aria-label={ariaLabel}>{children}</a>
-    : <button onClick={onClick} aria-label={ariaLabel}>{children}</button>,
+  IonButton: ({ children, className, routerLink, onClick, 'aria-label': ariaLabel }: ButtonProps) => routerLink
+    ? <a href={routerLink} className={className} aria-label={ariaLabel}>{children}</a>
+    : <button onClick={onClick} className={className} aria-label={ariaLabel}>{children}</button>,
   IonIcon: () => null,
   IonSearchbar: ({ value, onIonInput, placeholder }: SearchbarProps) => (
     <input
@@ -188,8 +189,15 @@ describe('HistoryScreen', () => {
   it('uses the shared floating header surface', () => {
     render(<HistoryScreen />);
 
+    const controlRow = screen.getByTestId('history-filter-row');
     expect(screen.getByTestId('history-header-surface').classList.contains('zen-history-header-surface')).toBe(true);
-    expect(screen.getByLabelText('Search teas')).toBeDefined();
+    expect(controlRow.contains(screen.getByLabelText('Search teas'))).toBe(true);
+    const filterButton = screen.getByRole('button', { name: 'Show history filters' });
+    const statisticsButton = screen.getByRole('link', { name: 'Open tea statistics' });
+    expect(controlRow.contains(filterButton)).toBe(true);
+    expect(controlRow.contains(statisticsButton)).toBe(true);
+    expect(filterButton.classList.contains('zen-history-header-button')).toBe(true);
+    expect(statisticsButton.classList.contains('zen-history-header-button')).toBe(true);
   });
 
   it('keeps shared Tea filters when history refreshes', async () => {
@@ -309,6 +317,7 @@ describe('HistoryScreen', () => {
     fireEvent.change(screen.getByLabelText('Filter Name'), { target: { value: 'sencha' } });
     expect(screen.getByRole('button', { name: 'Hide history filters (1 active)' })).toBeDefined();
     expect(screen.getByTestId('history-active-filter-count').textContent).toBe('1');
+    expect(screen.getByRole('button', { name: 'Clear filters' }).classList.contains('zen-history-header-button')).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Hide history filters (1 active)' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));

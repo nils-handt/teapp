@@ -35,7 +35,7 @@ vi.mock('../services/logging', async (importOriginal) => ({
 }));
 vi.mock('@ionic/react', () => ({
   IonBackButton: ({ defaultHref }: { defaultHref?: string }) => <a href={defaultHref}>Back</a>,
-  IonButtons: ({ children }: PropsWithChildren) => <div>{children}</div>,
+  IonButtons: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
   IonContent: ({ children, className }: DivProps) => <div className={className}>{children}</div>,
   IonHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
   IonIcon: () => null,
@@ -125,10 +125,14 @@ describe('HistoryStatisticsScreen', () => {
   it('uses the shared dashboard header with back navigation and filters', () => {
     render(<HistoryStatisticsScreen />);
 
+    const controlRow = screen.getByTestId('history-filter-row');
     expect(screen.getByTestId('history-header-surface').classList.contains('zen-history-header-surface')).toBe(true);
-    expect(screen.getByTestId('history-header-title').textContent).toBe('Tea statistics');
+    expect(screen.queryByTestId('history-header-title')).toBeNull();
+    expect(controlRow.contains(screen.getByRole('link', { name: 'Back' }))).toBe(true);
     expect(screen.getByRole('link', { name: 'Back' }).getAttribute('href')).toBe('/tabs/history');
-    expect(screen.getByLabelText('Search teas')).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Back' }).parentElement?.classList.contains('zen-history-header-button')).toBe(true);
+    expect(controlRow.contains(screen.getByLabelText('Search teas'))).toBe(true);
+    expect(controlRow.contains(screen.getByRole('button', { name: 'Show history filters' }))).toBe(true);
   });
 
   it('keeps the loading state until the complete history query resolves', async () => {

@@ -18,6 +18,7 @@ describe('app header layout', () => {
   it('uses a shared floating Zen surface for History header variants', () => {
     const surfaceRule = appCss.match(/\.zen-history-header-surface\s*{([^}]*)}/)?.[1] ?? '';
     const frameRule = appCss.match(/\.zen-history-header-frame\s*{([^}]*)}/)?.[1] ?? '';
+    const buttonRule = appCss.match(/\.zen-history-header-button\s*{([^}]*)}/)?.[1] ?? '';
 
     expect(surfaceRule).toMatch(/max-width\s*:\s*900px/);
     expect(surfaceRule).toMatch(/max-height\s*:\s*calc\(100dvh/);
@@ -26,5 +27,10 @@ describe('app header layout', () => {
     expect(surfaceRule).toMatch(/background\s*:\s*var\(--color-zen-panel-strong\)/);
     expect(surfaceRule).toMatch(/box-shadow\s*:\s*0 12px 28px/);
     expect(frameRule).toMatch(/var\(--ion-safe-area-top/);
+    expect(buttonRule).toMatch(/width\s*:\s*44px/);
+    expect(buttonRule).toMatch(/height\s*:\s*44px/);
+    expect(buttonRule).toMatch(/border\s*:\s*1px solid var\(--color-zen-border\)/);
+    expect(buttonRule).toMatch(/border-radius\s*:\s*16px/);
+    expect(buttonRule).toMatch(/background\s*:\s*rgba\(255, 255, 255, 0\.6\)/);
   });
 });

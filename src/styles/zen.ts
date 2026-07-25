@@ -34,6 +34,7 @@ export const zenPanelClass = 'rounded-[28px] border border-zen-border bg-zen-pan
 export const zenPanelStrongClass = cn(zenPanelClass, 'bg-zen-panel-strong bg-[image:var(--zen-background)]');
 export const zenListPageClass = 'zen-list-page';
 export const zenListSearchClass = 'zen-list-search';
+export const zenHistoryHeaderButtonClass = 'zen-history-header-button';
 export const zenListSurfaceClass = 'zen-list-surface';
 export const zenListSectionHeaderClass = 'zen-list-section-header';
 export const zenListItemTitleClass = 'text-[0.98rem] font-medium text-zen-text';
