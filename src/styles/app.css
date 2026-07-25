@@ -141,14 +141,10 @@ ion-tab-bar {
   font-size: 1.25rem;
 }
 
-.zen-history-header-button--active {
-  background: var(--color-zen-accent-soft);
-}
-
 ion-button.zen-history-header-button {
-  --background: rgba(255, 255, 255, 0.6);
-  --background-activated: var(--color-zen-accent-soft);
-  --background-hover: rgba(255, 255, 255, 0.88);
+  --background: transparent;
+  --background-activated: transparent;
+  --background-hover: transparent;
   --border-radius: 16px;
   --box-shadow: none;
   --color: var(--color-zen-text);
@@ -157,9 +153,15 @@ ion-button.zen-history-header-button {
 }
 
 @media (hover: hover) {
-  button.zen-history-header-button:hover {
+  .zen-history-header-button:hover {
     background: rgba(255, 255, 255, 0.88);
   }
+}
+
+.zen-history-header-button:active,
+.zen-history-header-button--active,
+.zen-history-header-button--active:hover {
+  background: var(--color-zen-accent-soft);
 }
 
 .zen-history-header-back-wrap {
@@ -171,8 +173,8 @@ ion-button.zen-history-header-button {
   height: 100%;
   margin: 0;
   --background: transparent;
-  --background-activated: var(--color-zen-accent-soft);
-  --background-hover: rgba(255, 255, 255, 0.88);
+  --background-activated: transparent;
+  --background-hover: transparent;
   --border-radius: 16px;
   --box-shadow: none;
   --color: var(--color-zen-text);

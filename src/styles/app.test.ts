@@ -19,6 +19,7 @@ describe('app header layout', () => {
     const surfaceRule = appCss.match(/\.zen-history-header-surface\s*{([^}]*)}/)?.[1] ?? '';
     const frameRule = appCss.match(/\.zen-history-header-frame\s*{([^}]*)}/)?.[1] ?? '';
     const buttonRule = appCss.match(/\.zen-history-header-button\s*{([^}]*)}/)?.[1] ?? '';
+    const ionicButtonRule = appCss.match(/ion-button\.zen-history-header-button\s*{([^}]*)}/)?.[1] ?? '';
 
     expect(surfaceRule).toMatch(/max-width\s*:\s*900px/);
     expect(surfaceRule).toMatch(/max-height\s*:\s*calc\(100dvh/);
@@ -32,5 +33,7 @@ describe('app header layout', () => {
     expect(buttonRule).toMatch(/border\s*:\s*1px solid var\(--color-zen-border\)/);
     expect(buttonRule).toMatch(/border-radius\s*:\s*16px/);
     expect(buttonRule).toMatch(/background\s*:\s*rgba\(255, 255, 255, 0\.6\)/);
+    expect(ionicButtonRule).toMatch(/--background\s*:\s*transparent/);
+    expect(ionicButtonRule).toMatch(/--background-hover\s*:\s*transparent/);
   });
 });
