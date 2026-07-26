@@ -1,4 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { BrewingSession } from './BrewingSession.entity';
 
 @Entity('teas')
@@ -31,5 +32,5 @@ export class Tea {
     season!: string | null;
 
     @OneToMany(() => BrewingSession, (session) => session.tea)
-    sessions!: BrewingSession[];
+    sessions!: Relation<BrewingSession[]>;
 }

@@ -169,12 +169,13 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{html,js,css,png,svg,wasm,woff2}'],
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
           navigateFallback: '/teapp/index.html',
           navigateFallbackDenylist: [/^\/teapp\/assets\//],
         },
       }),
     ],
-    esbuild: isTestMode ? false : undefined,
+    oxc: isTestMode ? false : undefined,
     resolve: {
       alias: {
         '@': path.resolve(rootDir, './src'),

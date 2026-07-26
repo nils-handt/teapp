@@ -49,7 +49,7 @@ describe('SessionRepository', () => {
 
         expect(findSpy).toHaveBeenCalledWith({
             order: { startTime: 'DESC' },
-            relations: ['infusions', 'brewingVessel', 'tea'],
+            relations: { infusions: true, brewingVessel: true, tea: true },
         });
         expect(result).toBe(mockSessions);
     });
@@ -63,7 +63,7 @@ describe('SessionRepository', () => {
 
         expect(findSpy).toHaveBeenCalledWith({
             order: { startTime: 'DESC' },
-            relations: ['infusions', 'tea'],
+            relations: { infusions: true, tea: true },
             skip: 0,
             take: 51,
         });
@@ -81,14 +81,14 @@ describe('SessionRepository', () => {
 
         expect(findSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({
             order: { startTime: 'DESC' },
-            relations: ['infusions', 'tea'],
+            relations: { infusions: true, tea: true },
             skip: 50,
             take: 51,
             where: expect.objectContaining({ teaId: expect.objectContaining({ _value: ['tea-1'] }) }),
         }));
         expect(findSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({
             order: { startTime: 'DESC' },
-            relations: ['infusions', 'tea'],
+            relations: { infusions: true, tea: true },
             where: expect.objectContaining({ teaId: expect.objectContaining({ _value: ['tea-1'] }) }),
         }));
         expect(page).toEqual({ sessions: mockSessions, hasMore: false });
@@ -117,7 +117,7 @@ describe('SessionRepository', () => {
         expect(findOneSpy).toHaveBeenCalledWith({
             where: { status: 'active' },
             order: { startTime: 'DESC' },
-            relations: ['infusions', 'brewingVessel', 'tea'],
+            relations: { infusions: true, brewingVessel: true, tea: true },
         });
         expect(result).toBe(mockSession);
     });
@@ -131,7 +131,7 @@ describe('SessionRepository', () => {
 
         expect(findOneSpy).toHaveBeenCalledWith({
             where: { sessionId: '123' },
-            relations: ['infusions', 'brewingVessel', 'tea'],
+            relations: { infusions: true, brewingVessel: true, tea: true },
         });
         expect(result).toBe(mockSession);
     });
@@ -146,7 +146,7 @@ describe('SessionRepository', () => {
         expect(findSpy).toHaveBeenCalledWith({
             where: { teaName: Like('%Oolong%') },
             order: { startTime: 'DESC' },
-            relations: ['infusions', 'brewingVessel', 'tea'],
+            relations: { infusions: true, brewingVessel: true, tea: true },
         });
         expect(result).toBe(mockSessions);
     });

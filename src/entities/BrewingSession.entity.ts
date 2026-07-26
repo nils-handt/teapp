@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { Infusion } from './Infusion.entity.ts';
 import { BrewingVessel } from './BrewingVessel.entity';
 import { Tea } from './Tea.entity';
@@ -46,12 +47,12 @@ export class BrewingSession {
 
     @ManyToOne(() => BrewingVessel, (brewingVessel) => brewingVessel.sessions, { nullable: true })
     @JoinColumn({ name: 'brewingVesselId', referencedColumnName: 'vesselId' })
-    brewingVessel!: BrewingVessel | null;
+    brewingVessel!: Relation<BrewingVessel> | null;
 
     @ManyToOne(() => Tea, (tea) => tea.sessions, { nullable: true })
     @JoinColumn({ name: 'teaId', referencedColumnName: 'teaId' })
-    tea!: Tea | null;
+    tea!: Relation<Tea> | null;
 
     @OneToMany(() => Infusion, (infusion) => infusion.session, { cascade: true })
-    infusions!: Infusion[];
+    infusions!: Relation<Infusion[]>;
 }
