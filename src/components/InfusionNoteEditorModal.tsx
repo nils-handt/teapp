@@ -41,6 +41,7 @@ const InfusionNoteEditorModal: React.FC<InfusionNoteEditorModalProps> = ({
         >
             <textarea
                 autoFocus
+                autoComplete="off"
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 rows={4}

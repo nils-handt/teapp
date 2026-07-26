@@ -53,6 +53,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
         {searchLeadingAction}
         <IonSearchbar
           className={cn(zenListSearchClass, 'm-0 min-w-0 flex-1')}
+          autocomplete="off"
           value={searchText}
           onIonInput={(event) => setSearchText(event.detail.value || '')}
           placeholder="Search teas"

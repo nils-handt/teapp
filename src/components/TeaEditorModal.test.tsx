@@ -34,7 +34,7 @@ describe('TeaEditorModal', () => {
         expect(screen.getByRole('tab', { name: 'Existing Tea' }).className).toContain('bg-[#fffdf8]');
         expect(screen.getByRole('tablist', { name: 'Tea mode' }).className).not.toContain('border-b-4');
         expect(screen.queryByRole('heading', { name: 'Tea' })).toBeNull();
-        expect(screen.getByLabelText('Search existing teas')).toBeDefined();
+        expect(screen.getByLabelText('Search existing teas').getAttribute('autocomplete')).toBe('off');
         expect(screen.queryByLabelText('Name')).toBeNull();
         const panel = screen.getByRole('dialog').firstElementChild as HTMLElement;
         expect(panel.className).toContain('h-[520px]');
@@ -55,6 +55,8 @@ describe('TeaEditorModal', () => {
         expect(screen.getByLabelText('Subtype')).toBeDefined();
         expect(screen.getByLabelText('Season')).toBeDefined();
         expect(screen.getByLabelText('Year')).toBeDefined();
+        expect(screen.getAllByRole('textbox').every((input) => input.getAttribute('autocomplete') === 'off')).toBe(true);
+        expect(screen.getByRole('spinbutton').getAttribute('autocomplete')).toBe('off');
     });
 
     it('saves a selected existing tea without forcing it through the new tea fields', () => {

@@ -42,6 +42,7 @@ const RecordingSaveModal = ({
           <span className="text-[0.76rem] uppercase text-zen-muted">Session Name</span>
           <input
             autoFocus
+            autoComplete="off"
             aria-label="Session Name"
             value={sessionName}
             onChange={(event) => setSessionName(event.target.value)}
@@ -51,6 +52,7 @@ const RecordingSaveModal = ({
         <label className="grid gap-1">
           <span className="text-[0.76rem] uppercase text-zen-muted">Notes (optional)</span>
           <textarea
+            autoComplete="off"
             aria-label="Notes (optional)"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}

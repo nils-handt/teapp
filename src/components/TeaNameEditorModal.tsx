@@ -55,6 +55,7 @@ const TeaNameEditorModal: React.FC<TeaNameEditorModalProps> = ({
             <input
                 autoFocus
                 type="text"
+                autoComplete="off"
                 value={value}
                 placeholder={placeholder}
                 onChange={(event) => onChange(event.target.value)}

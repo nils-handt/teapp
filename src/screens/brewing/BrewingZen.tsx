@@ -770,6 +770,7 @@ const BrewingZen: React.FC = () => {
                         <input
                             autoFocus
                             type={alertState.inputType}
+                            autoComplete="off"
                             value={draftValue}
                             onChange={(event) => setDraftValue(event.target.value)}
                             className={`${zenInputClass} mb-4`}
@@ -795,6 +796,7 @@ const BrewingZen: React.FC = () => {
                         <input
                             autoFocus
                             type="number"
+                            autoComplete="off"
                             value={temperatureDraft}
                             onChange={(event) => {
                                 setTemperatureDraft(event.target.value);

@@ -62,6 +62,7 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
       <div className="relative">
         <input
           type={type}
+          autoComplete="off"
           value={value}
           placeholder={placeholder}
           min={min}
