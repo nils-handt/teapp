@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ModalFrame from './ModalFrame';
 
@@ -90,5 +90,47 @@ describe('ModalFrame keyboard avoidance', () => {
 
     expect(removeEventListener).toHaveBeenCalledWith('ionKeyboardDidShow', expect.any(Function));
     expect(removeEventListener).toHaveBeenCalledWith('ionKeyboardDidHide', expect.any(Function));
+  });
+});
+
+describe('ModalFrame Enter navigation', () => {
+  it('moves through fields and submits from the final single-line input', () => {
+    const onSubmit = vi.fn();
+    render(
+      <ModalFrame isOpen title="Edit values" onSubmit={onSubmit}>
+        <input aria-label="First value" />
+        <input aria-label="Second value" />
+      </ModalFrame>,
+    );
+
+    const firstInput = screen.getByRole('textbox', { name: 'First value' });
+    const secondInput = screen.getByRole('textbox', { name: 'Second value' });
+    firstInput.focus();
+
+    fireEvent.keyDown(firstInput, { key: 'Enter' });
+    expect(document.activeElement).toBe(secondInput);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(secondInput, { key: 'Enter' });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves into a following textarea but preserves Enter for multiline editing', () => {
+    const onSubmit = vi.fn();
+    render(
+      <ModalFrame isOpen title="Edit values" onSubmit={onSubmit}>
+        <input aria-label="Title" />
+        <textarea aria-label="Notes" />
+      </ModalFrame>,
+    );
+
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const notesInput = screen.getByRole('textbox', { name: 'Notes' });
+
+    fireEvent.keyDown(titleInput, { key: 'Enter' });
+    expect(document.activeElement).toBe(notesInput);
+
+    fireEvent.keyDown(notesInput, { key: 'Enter' });
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

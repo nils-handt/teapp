@@ -691,7 +691,7 @@ describe('BrewingZen', () => {
         expect(updateEditableInfusionTemperature).not.toHaveBeenCalled();
 
         fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '185' } });
-        fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+        fireEvent.keyDown(screen.getByRole('spinbutton'), { key: 'Enter' });
 
         expect(updateEditableInfusionTemperature).toHaveBeenCalledWith(185);
     });

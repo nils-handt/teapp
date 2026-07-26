@@ -41,6 +41,7 @@ const TeaNameEditorModal: React.FC<TeaNameEditorModalProps> = ({
         <ModalFrame
             isOpen={isOpen}
             title={title}
+            onSubmit={onSave}
             actions={(
                 <>
                     <AppButton variant="soft" onClick={onCancel}>
@@ -56,14 +57,10 @@ const TeaNameEditorModal: React.FC<TeaNameEditorModalProps> = ({
                 autoFocus
                 type="text"
                 autoComplete="off"
+                enterKeyHint="done"
                 value={value}
                 placeholder={placeholder}
                 onChange={(event) => onChange(event.target.value)}
-                onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                        onSave();
-                    }
-                }}
                 className={`${zenInputClass} ${suggestions.length > 0 ? 'mb-3' : 'mb-4'}`}
             />
 

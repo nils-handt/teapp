@@ -756,6 +756,7 @@ const BrewingZen: React.FC = () => {
                     <ModalFrame
                         isOpen={true}
                         title={alertState.header}
+                        onSubmit={handleAlertSave}
                         actions={(
                             <>
                                 <AppButton variant="soft" onClick={closeEditor}>
@@ -771,6 +772,7 @@ const BrewingZen: React.FC = () => {
                             autoFocus
                             type={alertState.inputType}
                             autoComplete="off"
+                            enterKeyHint="done"
                             value={draftValue}
                             onChange={(event) => setDraftValue(event.target.value)}
                             className={`${zenInputClass} mb-4`}
@@ -782,6 +784,7 @@ const BrewingZen: React.FC = () => {
                         isOpen={true}
                         title="Infusion Temperature"
                         overlayClassName={zenModalOverlayClass}
+                        onSubmit={handleTemperatureSave}
                         actions={(
                             <>
                                 <AppButton variant="soft" onClick={closeTemperatureEditor}>
@@ -797,6 +800,7 @@ const BrewingZen: React.FC = () => {
                             autoFocus
                             type="number"
                             autoComplete="off"
+                            enterKeyHint="done"
                             value={temperatureDraft}
                             onChange={(event) => {
                                 setTemperatureDraft(event.target.value);

@@ -91,6 +91,22 @@ describe('useBrewingControl recording save dialog', () => {
     expect(stopRecording).toHaveBeenCalledWith('Afternoon gongfu', 'Sweet and floral');
   });
 
+  it('moves from the recording name into notes without submitting multiline notes', async () => {
+    render(<Harness />);
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'End session' }).click();
+    });
+
+    const sessionName = screen.getByRole('textbox', { name: 'Session Name' });
+    const notes = screen.getByRole('textbox', { name: 'Notes (optional)' });
+    fireEvent.keyDown(sessionName, { key: 'Enter' });
+    expect(document.activeElement).toBe(notes);
+
+    fireEvent.keyDown(notes, { key: 'Enter' });
+    expect(stopRecording).not.toHaveBeenCalled();
+  });
+
   it('discards the recording when the shared dialog is cancelled', async () => {
     render(<Harness />);
 

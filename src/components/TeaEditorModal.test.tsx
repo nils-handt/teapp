@@ -104,6 +104,55 @@ describe('TeaEditorModal', () => {
         });
     });
 
+    it('moves to the next tea field on Enter and saves from the final field', () => {
+        const onSave = vi.fn();
+        render(
+            <TeaEditorModal
+                isOpen
+                selectedTea={null}
+                teas={[]}
+                onCancel={vi.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('tab', { name: 'New Tea' }));
+        const nameInput = screen.getByLabelText('Name');
+        const brandInput = screen.getByLabelText('Brand');
+        fireEvent.change(nameInput, { target: { value: 'Silver Needle' } });
+
+        fireEvent.keyDown(nameInput, { key: 'Enter' });
+        expect(document.activeElement).toBe(brandInput);
+
+        fireEvent.keyDown(screen.getByLabelText('Year'), { key: 'Enter' });
+        expect(onSave).toHaveBeenCalledWith({
+            action: 'create',
+            tea: expect.objectContaining({ name: 'Silver Needle' }),
+        });
+    });
+
+    it('finishes existing-tea search on Enter after a tea is selected', () => {
+        const onSave = vi.fn();
+        render(
+            <TeaEditorModal
+                isOpen
+                selectedTea={null}
+                teas={[createTea('tea-1', 'Longjing')]}
+                onCancel={vi.fn()}
+                onSave={onSave}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Show Search existing teas suggestions' }));
+        fireEvent.click(screen.getByRole('option', { name: 'Longjing' }));
+        fireEvent.keyDown(screen.getByLabelText('Search existing teas'), { key: 'Enter' });
+
+        expect(onSave).toHaveBeenCalledWith({
+            action: 'select',
+            tea: expect.objectContaining({ teaId: 'tea-1' }),
+        });
+    });
+
     it('prefills Edit Tea for the assigned shared tea and preserves its id', () => {
         const onSave = vi.fn();
         const assignedTea = createTea('tea-1', 'Longjing', {

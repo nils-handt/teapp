@@ -28,6 +28,7 @@ const InfusionNoteEditorModal: React.FC<InfusionNoteEditorModalProps> = ({
         <ModalFrame
             isOpen={isOpen}
             title={title}
+            onSubmit={onSave}
             actions={(
                 <>
                     <AppButton variant="soft" onClick={onCancel}>

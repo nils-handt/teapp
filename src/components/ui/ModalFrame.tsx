@@ -8,6 +8,10 @@ import {
 } from '../../styles/zen';
 import { useModalKeyboardAvoidance } from '../../hooks/useModalKeyboardAvoidance';
 
+const SINGLE_LINE_INPUT_TYPES = new Set([
+  'date', 'datetime-local', 'email', 'month', 'number', 'password', 'search', 'tel', 'text', 'time', 'url', 'week',
+]);
+
 type ModalFrameProps = {
   isOpen: boolean;
   title?: string;
@@ -15,6 +19,7 @@ type ModalFrameProps = {
   ariaLabel?: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  onSubmit?: () => void;
   overlayClassName?: string;
   panelClassName?: string;
   headerClassName?: string;
@@ -28,6 +33,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
   ariaLabel,
   children,
   actions,
+  onSubmit,
   overlayClassName,
   panelClassName,
   headerClassName,
@@ -40,6 +46,47 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
   if (!isOpen) {
     return null;
   }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (
+      event.key !== 'Enter'
+      || event.defaultPrevented
+      || event.repeat
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.shiftKey
+      || event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !SINGLE_LINE_INPUT_TYPES.has(target.type)) {
+      return;
+    }
+
+    const fields = Array.from(
+      event.currentTarget.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea'),
+    ).filter((field) => (
+      !field.disabled
+      && !field.readOnly
+      && (field instanceof HTMLTextAreaElement || SINGLE_LINE_INPUT_TYPES.has(field.type))
+    ));
+    const currentIndex = fields.indexOf(target);
+    const nextField = currentIndex >= 0 ? fields[currentIndex + 1] : undefined;
+
+    if (nextField) {
+      event.preventDefault();
+      nextField.focus();
+      return;
+    }
+
+    if (onSubmit) {
+      event.preventDefault();
+      onSubmit();
+    }
+  };
 
   return (
     <div
@@ -66,6 +113,7 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
         ) : null}
         <div
           ref={bodyRef}
+          onKeyDownCapture={handleKeyDown}
           onFocusCapture={scrollFocusedFieldIntoView}
           className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5"
         >

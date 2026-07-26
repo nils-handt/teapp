@@ -1,4 +1,4 @@
-import type { ChangeEvent, MouseEventHandler, PropsWithChildren } from 'react';
+import type { ChangeEvent, HTMLAttributes, KeyboardEventHandler, MouseEventHandler, PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
@@ -55,7 +55,13 @@ type DivProps = PropsWithChildren<{
 }>;
 
 type SearchbarInputEvent = { detail: { value?: string } };
-type SearchbarProps = { onIonInput?: (event: SearchbarInputEvent) => void; placeholder?: string; value?: string };
+type SearchbarProps = {
+  enterkeyhint?: HTMLAttributes<HTMLInputElement>['enterKeyHint'];
+  onIonInput?: (event: SearchbarInputEvent) => void;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  placeholder?: string;
+  value?: string;
+};
 type RefresherProps = PropsWithChildren<{ onIonRefresh?: (event: CustomEvent) => Promise<void> }>;
 type InfiniteScrollProps = PropsWithChildren<{
   disabled?: boolean;
@@ -90,11 +96,13 @@ vi.mock('@ionic/react', () => ({
     ? <a href={routerLink} className={className} aria-label={ariaLabel}>{children}</a>
     : <button onClick={onClick} className={className} aria-label={ariaLabel}>{children}</button>,
   IonIcon: () => null,
-  IonSearchbar: ({ value, onIonInput, placeholder }: SearchbarProps) => (
+  IonSearchbar: ({ value, onIonInput, onKeyDown, placeholder, enterkeyhint }: SearchbarProps) => (
     <input
       aria-label={placeholder}
+      enterKeyHint={enterkeyhint}
       value={value}
       onChange={(event: ChangeEvent<HTMLInputElement>) => onIonInput?.({ detail: { value: event.target.value } })}
+      onKeyDown={onKeyDown}
     />
   ),
   IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -308,6 +316,26 @@ describe('HistoryScreen', () => {
     expect(screen.getByLabelText('Filter Name')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Hide history filters' }));
     expect(screen.queryByLabelText('Filter Name')).toBeNull();
+  });
+
+  it('moves Enter through expanded search filters and finishes on the last filter', () => {
+    render(<HistoryScreen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
+
+    const searchInput = screen.getByLabelText('Search teas');
+    const nameFilter = screen.getByLabelText('Filter Name');
+    const brandFilter = screen.getByLabelText('Filter Brand');
+    const yearFilter = screen.getByLabelText('Filter Year');
+
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+    expect(document.activeElement).toBe(nameFilter);
+
+    fireEvent.keyDown(nameFilter, { key: 'Enter' });
+    expect(document.activeElement).toBe(brandFilter);
+
+    yearFilter.focus();
+    fireEvent.keyDown(yearFilter, { key: 'Enter' });
+    expect(document.activeElement).not.toBe(yearFilter);
   });
 
   it('shows active filter state and can clear all filters', () => {

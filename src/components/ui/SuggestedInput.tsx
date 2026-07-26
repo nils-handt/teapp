@@ -12,6 +12,7 @@ type SuggestedInputProps = {
   min?: string;
   step?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  enterKeyHint?: React.HTMLAttributes<HTMLInputElement>['enterKeyHint'];
   className?: string;
   inputClassName?: string;
   inlineSuggestions?: boolean;
@@ -29,6 +30,7 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
   min,
   step,
   inputMode,
+  enterKeyHint,
   className,
   inputClassName,
   inlineSuggestions = false,
@@ -68,6 +70,7 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
           min={min}
           step={step}
           inputMode={inputMode}
+          enterKeyHint={enterKeyHint}
           aria-label={ariaLabel}
           aria-expanded={hasSuggestions ? isOpen : undefined}
           aria-controls={hasSuggestions ? listId : undefined}

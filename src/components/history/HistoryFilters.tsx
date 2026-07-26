@@ -1,4 +1,4 @@
-import React, { useId, useMemo } from 'react';
+import React, { useId, useMemo, useRef } from 'react';
 import { IonIcon, IonSearchbar } from '@ionic/react';
 import { closeOutline, optionsOutline } from 'ionicons/icons';
 import { useShallow } from 'zustand/react/shallow';
@@ -29,6 +29,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
   knownTeas, areFiltersExpanded, onToggleFilters, searchLeadingAction, searchAction,
 }) => {
   const filterFieldsId = useId();
+  const filterFieldsRef = useRef<HTMLDivElement>(null);
   const { searchText, filters, setSearchText, setFilter, clearFilters } = useHistoryFiltersStore(
     useShallow((state) => ({
       searchText: state.searchText,
@@ -47,6 +48,41 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
     activeFilterCount ? ` (${activeFilterCount} active)` : ''
   }`;
 
+  const handleSearchEnter = (event: React.KeyboardEvent<HTMLIonSearchbarElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    const firstFilter = filterFieldsRef.current?.querySelector<HTMLInputElement>('input');
+    if (areFiltersExpanded && firstFilter) {
+      firstFilter.focus();
+      return;
+    }
+
+    void event.currentTarget.getInputElement().then((input) => input.blur());
+  };
+
+  const handleFilterEnter = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    const inputs = Array.from(event.currentTarget.querySelectorAll<HTMLInputElement>('input'));
+    const nextInput = inputs[inputs.indexOf(target) + 1];
+    if (nextInput) {
+      nextInput.focus();
+    } else {
+      target.blur();
+    }
+  };
+
   return (
     <div className="zen-history-filter-deck">
       <div className="flex items-center gap-1.5" data-testid="history-filter-row">
@@ -54,8 +90,10 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
         <IonSearchbar
           className={cn(zenListSearchClass, 'm-0 min-w-0 flex-1')}
           autocomplete="off"
+          enterkeyhint={areFiltersExpanded ? 'next' : 'search'}
           value={searchText}
           onIonInput={(event) => setSearchText(event.detail.value || '')}
+          onKeyDown={handleSearchEnter}
           placeholder="Search teas"
           debounce={500}
         />
@@ -102,12 +140,15 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
       {areFiltersExpanded && (
         <div
           id={filterFieldsId}
+          ref={filterFieldsRef}
+          onKeyDownCapture={handleFilterEnter}
           className="zen-history-filter-fields mt-3 grid gap-2 border-t border-zen-border pt-3 sm:grid-cols-2"
         >
           {FILTER_FIELDS.map((field) => (
             <label key={field.key} className="grid gap-1 text-[0.82rem] text-zen-muted">
               {field.label}
               <SuggestedInput ariaLabel={`Filter ${field.label}`} value={filters[field.key]}
+                enterKeyHint="next"
                 suggestions={getTeaAttributeSuggestions(knownTeas, field.key, filters[field.key], 8)}
                 onChange={(value) => setFilter(field.key, value)} />
             </label>
@@ -115,6 +156,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
           <label className="grid gap-1 text-[0.82rem] text-zen-muted">
             Year
             <SuggestedInput ariaLabel="Filter Year" type="number" inputMode="numeric"
+              enterKeyHint="done"
               value={filters.year} suggestions={getTeaAttributeSuggestions(knownTeas, 'year', filters.year, 24)}
               onChange={(value) => setFilter('year', value)} />
           </label>

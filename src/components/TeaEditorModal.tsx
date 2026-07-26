@@ -214,6 +214,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
             panelClassName="h-[520px]"
             expandToAvailableHeightOnKeyboard
             ariaLabel="Tea"
+            onSubmit={handleSave}
             actions={(
                 <>
                     <AppButton variant="soft" onClick={onCancel}>
@@ -231,6 +232,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                         ariaLabel="Search existing teas"
                         value={searchQuery}
                         placeholder="Search existing teas"
+                        enterKeyHint="done"
                         suggestions={teaSuggestions.map(formatTeaLabel)}
                         onChange={setSearchQuery}
                         onSelectSuggestion={applyTea}
@@ -248,6 +250,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                             <SuggestedInput
                                 ariaLabel={field.label}
                                 value={draft[field.key]}
+                                enterKeyHint="next"
                                 suggestions={getTeaAttributeSuggestions(teas, field.key, draft[field.key], 8)}
                                 onChange={(value) => updateDraft(field.key, value)}
                                 inputClassName={cn(zenInputClass, 'px-3 py-3')}
@@ -269,6 +272,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                                             ariaLabel={field.label}
                                             type={isYear ? 'number' : 'text'}
                                             inputMode={isYear ? 'numeric' : undefined}
+                                            enterKeyHint={isYear ? 'done' : 'next'}
                                             min={isYear ? '0' : undefined}
                                             step={isYear ? '1' : undefined}
                                             value={draft[field.key]}

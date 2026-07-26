@@ -30,6 +30,7 @@ const RecordingSaveModal = ({
     <ModalFrame
       isOpen={isOpen}
       title="Save Recording"
+      onSubmit={() => onSave(sessionName, notes)}
       actions={(
         <>
           <AppButton variant="soft" onClick={onCancel}>Cancel</AppButton>
@@ -43,6 +44,7 @@ const RecordingSaveModal = ({
           <input
             autoFocus
             autoComplete="off"
+            enterKeyHint="next"
             aria-label="Session Name"
             value={sessionName}
             onChange={(event) => setSessionName(event.target.value)}
