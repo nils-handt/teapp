@@ -66,7 +66,9 @@ export default defineConfig([{
         "@typescript-eslint/no-unused-vars": [
             "error",
             { "argsIgnorePattern": "^_" }
-        ]
+        ],
+        "react-hooks/refs": "off",
+        "react-hooks/set-state-in-effect": "off"
     },
 }, {
     files: ['scripts/**/*.mjs'],

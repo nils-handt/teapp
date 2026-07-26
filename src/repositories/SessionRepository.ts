@@ -1,9 +1,16 @@
 import { AppDataSource } from '../database/dataSource';
 import { BrewingSession } from '../entities/BrewingSession.entity';
-import { In, Like } from 'typeorm';
+import { FindOptionsRelations, In, Like } from 'typeorm';
 
-const DETAIL_SESSION_RELATIONS = ['infusions', 'brewingVessel', 'tea'];
-const HISTORY_SESSION_RELATIONS = ['infusions', 'tea'];
+const DETAIL_SESSION_RELATIONS: FindOptionsRelations<BrewingSession> = {
+    infusions: true,
+    brewingVessel: true,
+    tea: true,
+};
+const HISTORY_SESSION_RELATIONS: FindOptionsRelations<BrewingSession> = {
+    infusions: true,
+    tea: true,
+};
 
 export const HISTORY_PAGE_SIZE = 50;
 

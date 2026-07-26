@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { BrewingSession } from './BrewingSession.entity.ts';
 
 @Entity('infusions')
@@ -32,7 +33,7 @@ export class Infusion {
 
     @ManyToOne(() => BrewingSession, (session) => session.infusions, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'sessionId' })
-    session!: BrewingSession;
+    session!: Relation<BrewingSession>;
 
     @Column('text')
     sessionId!: string;
