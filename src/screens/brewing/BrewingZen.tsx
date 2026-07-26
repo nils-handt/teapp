@@ -627,10 +627,7 @@ const BrewingZen: React.FC = () => {
                 </section>
             )}
 
-            <section className={cn(
-                zenActionRowClass,
-                '[&>ion-button:only-child]:col-span-2 [&>ion-button:only-child]:max-w-[calc(50%-0.375rem)] [&>ion-button:only-child]:justify-self-center',
-            )}>
+            <section className={zenActionRowClass}>
                 <AppButton
                     expand="block"
                     onClick={handleEndSessionWithUndo}

@@ -40,7 +40,7 @@ export const zenListSectionHeaderClass = 'zen-list-section-header';
 export const zenListItemTitleClass = 'text-[0.98rem] font-medium text-zen-text';
 export const zenListItemMetaClass = 'text-[0.82rem] text-zen-muted';
 export const zenMetricCardClass = 'rounded-[18px] border border-zen-border bg-white/55 px-4 py-[14px]';
-export const zenActionRowClass = 'grid grid-cols-2 gap-3 [&>ion-button]:m-0 [&>ion-button]:min-h-11 [&>ion-button]:w-full';
+export const zenActionRowClass = 'grid grid-cols-2 gap-3 [&>ion-button]:m-0 [&>ion-button]:min-h-11 [&>ion-button]:w-full [&>ion-button:only-child]:col-span-2 [&>ion-button:only-child]:max-w-[calc(50%-0.375rem)] [&>ion-button:only-child]:justify-self-center';
 export const zenHeroButtonClass = cn(
   'zen-hero-button',
 );

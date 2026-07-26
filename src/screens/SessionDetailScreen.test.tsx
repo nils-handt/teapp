@@ -309,7 +309,14 @@ describe('SessionDetailScreen', () => {
     it('opens the delete confirmation from the bottom action', () => {
         render(<SessionDetailScreen />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Delete session' }));
+        const deleteButton = screen.getByRole('button', { name: 'Delete session' });
+        const actionRow = deleteButton.parentElement;
+
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:col-span-2');
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:justify-self-center');
+        expect(actionRow?.className).toContain('[&>ion-button:only-child]:max-w-[calc(50%-0.375rem)]');
+
+        fireEvent.click(deleteButton);
 
         expect(screen.getByTestId('delete-session-alert').getAttribute('data-open')).toBe('true');
     });
