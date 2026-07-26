@@ -191,6 +191,7 @@ export default defineConfig(({ mode }) => {
     base: isPwaMode ? '/teapp/' : './',
     build: {
       sourcemap: true,
+      chunkSizeWarningLimit: 1800,
     },
     optimizeDeps: {
       entries: ['index.html'],
