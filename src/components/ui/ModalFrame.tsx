@@ -66,6 +66,10 @@ const ModalFrame: React.FC<ModalFrameProps> = ({
       return;
     }
 
+    if (target.getAttribute('role') === 'combobox' && target.getAttribute('aria-expanded') === 'true') {
+      return;
+    }
+
     const fields = Array.from(
       event.currentTarget.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea'),
     ).filter((field) => (

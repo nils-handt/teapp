@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { IonIcon, IonSearchbar } from '@ionic/react';
 import { closeOutline, optionsOutline } from 'ionicons/icons';
 import { useShallow } from 'zustand/react/shallow';
@@ -7,7 +7,7 @@ import { useHistoryFiltersStore } from '../../stores/useHistoryFiltersStore';
 import { cn, zenHistoryHeaderButtonClass, zenListSearchClass } from '../../styles/zen';
 import { formatTeaLabel, getTeaAttributeSuggestions, getTeaSuggestions } from '../../utils/teaSearch';
 import type { HistoryTeaFilterDraft } from '../../utils/historyFilters';
-import SuggestionList from '../ui/SuggestionList';
+import SuggestionDropdown from '../ui/SuggestionDropdown';
 import SuggestedInput from '../ui/SuggestedInput';
 
 type HistoryFiltersProps = {
@@ -16,6 +16,12 @@ type HistoryFiltersProps = {
   onToggleFilters: () => void;
   searchLeadingAction?: React.ReactNode;
   searchAction?: React.ReactNode;
+};
+
+type SearchKeyEvent = {
+  key: string;
+  isComposing: boolean;
+  preventDefault: () => void;
 };
 
 const FILTER_FIELDS: Array<{ key: Exclude<keyof HistoryTeaFilterDraft, 'year'>; label: string }> = [
@@ -29,7 +35,23 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
   knownTeas, areFiltersExpanded, onToggleFilters, searchLeadingAction, searchAction,
 }) => {
   const filterFieldsId = useId();
+  const searchListId = useId();
   const filterFieldsRef = useRef<HTMLDivElement>(null);
+  const searchbarRef = useRef<HTMLIonSearchbarElement>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [isSearchSuggestionsOpen, setIsSearchSuggestionsOpen] = useState(false);
+  const [activeSearchSuggestionIndex, setActiveSearchSuggestionIndex] = useState<number | null>(null);
+  const searchInteractionStateRef = useRef({
+    activeIndex: activeSearchSuggestionIndex,
+    areFiltersExpanded,
+    isOpen: isSearchSuggestionsOpen,
+    suggestions: [] as string[],
+  });
+  const searchAriaStateRef = useRef({
+    activeIndex: activeSearchSuggestionIndex,
+    isOpen: isSearchSuggestionsOpen,
+    suggestionsLength: 0,
+  });
   const { searchText, filters, setSearchText, setFilter, clearFilters } = useHistoryFiltersStore(
     useShallow((state) => ({
       searchText: state.searchText,
@@ -43,25 +65,163 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
     () => searchText.trim() ? getTeaSuggestions(knownTeas, searchText).map(formatTeaLabel) : [],
     [knownTeas, searchText],
   );
+  searchAriaStateRef.current = {
+    activeIndex: activeSearchSuggestionIndex,
+    isOpen: isSearchSuggestionsOpen,
+    suggestionsLength: suggestions.length,
+  };
+  searchInteractionStateRef.current = {
+    activeIndex: activeSearchSuggestionIndex,
+    areFiltersExpanded,
+    isOpen: isSearchSuggestionsOpen,
+    suggestions,
+  };
   const activeFilterCount = Object.values(filters).filter((value) => value.trim()).length;
   const filterToggleLabel = `${areFiltersExpanded ? 'Hide' : 'Show'} history filters${
     activeFilterCount ? ` (${activeFilterCount} active)` : ''
   }`;
 
-  const handleSearchEnter = (event: React.KeyboardEvent<HTMLIonSearchbarElement>) => {
-    if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
-      return;
+  const closeSearchSuggestions = useCallback(() => {
+    setIsSearchSuggestionsOpen(false);
+    setActiveSearchSuggestionIndex(null);
+  }, []);
+
+  const selectSearchSuggestion = useCallback((suggestion: string) => {
+    setSearchText(suggestion);
+    closeSearchSuggestions();
+  }, [closeSearchSuggestions, setSearchText]);
+
+  const handleSearchKey = useCallback((event: SearchKeyEvent, blurSearch: () => void) => {
+    const {
+      activeIndex,
+      areFiltersExpanded: filtersExpanded,
+      isOpen,
+      suggestions: currentSuggestions,
+    } = searchInteractionStateRef.current;
+
+    if (event.isComposing) {
+      return false;
+    }
+
+    if (event.key === 'ArrowDown' && currentSuggestions.length > 0) {
+      event.preventDefault();
+      setIsSearchSuggestionsOpen(true);
+      setActiveSearchSuggestionIndex((currentIndex) => (
+        currentIndex === null ? 0 : Math.min(currentIndex + 1, currentSuggestions.length - 1)
+      ));
+      return true;
+    }
+
+    if (event.key === 'ArrowUp' && currentSuggestions.length > 0) {
+      event.preventDefault();
+      setIsSearchSuggestionsOpen(true);
+      setActiveSearchSuggestionIndex((currentIndex) => (
+        currentIndex === null ? currentSuggestions.length - 1 : Math.max(currentIndex - 1, 0)
+      ));
+      return true;
+    }
+
+    if (event.key === 'Escape' && isOpen) {
+      event.preventDefault();
+      setIsSearchSuggestionsOpen(false);
+      setActiveSearchSuggestionIndex(null);
+      return true;
+    }
+
+    if (event.key !== 'Enter') {
+      return false;
+    }
+
+    if (isOpen) {
+      event.preventDefault();
+      if (activeIndex !== null) {
+        setSearchText(currentSuggestions[activeIndex]);
+        setIsSearchSuggestionsOpen(false);
+        setActiveSearchSuggestionIndex(null);
+      }
+      return true;
     }
 
     event.preventDefault();
     const firstFilter = filterFieldsRef.current?.querySelector<HTMLInputElement>('input');
-    if (areFiltersExpanded && firstFilter) {
+    if (filtersExpanded && firstFilter) {
       firstFilter.focus();
+      return true;
+    }
+
+    blurSearch();
+    return true;
+  }, [setSearchText]);
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLIonSearchbarElement>) => {
+    handleSearchKey({
+      key: event.key,
+      isComposing: event.nativeEvent.isComposing,
+      preventDefault: () => event.preventDefault(),
+    }, () => {
+      void event.currentTarget.getInputElement().then((input) => input.blur());
+    });
+  };
+
+  const updateSearchInputAria = useCallback((input: HTMLInputElement) => {
+    const { activeIndex, isOpen, suggestionsLength } = searchAriaStateRef.current;
+    input.setAttribute('aria-expanded', String(suggestionsLength > 0 && isOpen));
+
+    if (suggestionsLength > 0) {
+      input.setAttribute('aria-controls', searchListId);
+    } else {
+      input.removeAttribute('aria-controls');
+    }
+
+    if (isOpen && activeIndex !== null) {
+      input.setAttribute('aria-activedescendant', `${searchListId}-option-${activeIndex}`);
+    } else {
+      input.removeAttribute('aria-activedescendant');
+    }
+  }, [searchListId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleNativeKeyDown = (event: KeyboardEvent) => {
+      const handled = handleSearchKey({
+        key: event.key,
+        isComposing: event.isComposing,
+        preventDefault: () => event.preventDefault(),
+      }, () => searchInputRef.current?.blur());
+
+      if (handled) {
+        event.stopPropagation();
+      }
+    };
+
+    void searchbarRef.current?.getInputElement().then((searchInput) => {
+      if (cancelled) {
+        return;
+      }
+
+      searchInputRef.current = searchInput;
+      searchInput.setAttribute('role', 'combobox');
+      searchInput.setAttribute('aria-autocomplete', 'list');
+      updateSearchInputAria(searchInput);
+      searchInput.addEventListener('keydown', handleNativeKeyDown);
+    });
+
+    return () => {
+      cancelled = true;
+      searchInputRef.current?.removeEventListener('keydown', handleNativeKeyDown);
+      searchInputRef.current = null;
+    };
+  }, [handleSearchKey, updateSearchInputAria]);
+
+  useEffect(() => {
+    const input = searchInputRef.current;
+    if (!input) {
       return;
     }
 
-    void event.currentTarget.getInputElement().then((input) => input.blur());
-  };
+    updateSearchInputAria(input);
+  }, [activeSearchSuggestionIndex, isSearchSuggestionsOpen, suggestions.length, updateSearchInputAria]);
 
   const handleFilterEnter = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
@@ -70,6 +230,10 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
 
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (target.getAttribute('role') === 'combobox' && target.getAttribute('aria-expanded') === 'true') {
       return;
     }
 
@@ -88,12 +252,20 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
       <div className="flex items-center gap-1.5" data-testid="history-filter-row">
         {searchLeadingAction}
         <IonSearchbar
+          ref={searchbarRef}
           className={cn(zenListSearchClass, 'm-0 min-w-0 flex-1')}
           autocomplete="off"
           enterkeyhint={areFiltersExpanded ? 'next' : 'search'}
           value={searchText}
-          onIonInput={(event) => setSearchText(event.detail.value || '')}
-          onKeyDown={handleSearchEnter}
+          onIonInput={(event) => {
+            const value = event.detail.value || '';
+            setSearchText(value);
+            setActiveSearchSuggestionIndex(null);
+            setIsSearchSuggestionsOpen(Boolean(value.trim()));
+          }}
+          onIonFocus={() => setIsSearchSuggestionsOpen(suggestions.length > 0)}
+          onIonBlur={() => window.setTimeout(closeSearchSuggestions, 120)}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Search teas"
           debounce={500}
         />
@@ -132,10 +304,15 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
         )}
         {searchAction}
       </div>
-      {!areFiltersExpanded && suggestions.length > 0 && (
-        <div className="mt-2">
-          <SuggestionList items={suggestions} onSelect={setSearchText} />
-        </div>
+      {!areFiltersExpanded && suggestions.length > 0 && isSearchSuggestionsOpen && (
+        <SuggestionDropdown
+          id={searchListId}
+          items={suggestions}
+          activeIndex={activeSearchSuggestionIndex}
+          onActiveIndexChange={setActiveSearchSuggestionIndex}
+          onSelect={selectSearchSuggestion}
+          className="relative max-h-56"
+        />
       )}
       {areFiltersExpanded && (
         <div

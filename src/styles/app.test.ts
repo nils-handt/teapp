@@ -36,4 +36,14 @@ describe('app header layout', () => {
     expect(ionicButtonRule).toMatch(/--background\s*:\s*transparent/);
     expect(ionicButtonRule).toMatch(/--background-hover\s*:\s*transparent/);
   });
+
+  it('lets autocomplete menus inherit the color of their parent surface', () => {
+    const modalRule = appCss.match(/\.zen-modal-panel\s*{([^}]*)}/)?.[1] ?? '';
+    const historyRule = appCss.match(/\.zen-history-header-surface\s*{([^}]*)}/)?.[1] ?? '';
+    const menuRule = appCss.match(/\.zen-autocomplete-menu\s*{([^}]*)}/)?.[1] ?? '';
+
+    expect(modalRule).toMatch(/--zen-autocomplete-background\s*:\s*#fffdf8/);
+    expect(historyRule).toMatch(/--zen-autocomplete-background\s*:\s*var\(--color-zen-panel-strong\)/);
+    expect(menuRule).toMatch(/background\s*:\s*var\(--zen-autocomplete-background, #fffdf8\)/);
+  });
 });

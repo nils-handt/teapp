@@ -40,6 +40,7 @@
 }
 
 .zen-modal-panel {
+  --zen-autocomplete-background: #fffdf8;
   transition: height var(--zen-modal-keyboard-transition);
 }
 
@@ -90,6 +91,7 @@ ion-tab-bar {
 }
 
 .zen-history-header-surface {
+  --zen-autocomplete-background: var(--color-zen-panel-strong);
   width: 100%;
   max-width: 900px;
   max-height: calc(100vh - var(--ion-safe-area-top, 0px) - 76px);
@@ -222,6 +224,32 @@ ion-button.zen-history-header-button {
   --box-shadow: none;
   --color: var(--color-zen-text);
   --placeholder-color: var(--color-zen-muted);
+}
+
+.zen-autocomplete-menu {
+  background: var(--zen-autocomplete-background, #fffdf8);
+}
+
+.zen-autocomplete-option {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-zen-text);
+  cursor: pointer;
+  line-height: 1.5;
+  text-align: left;
+  transition: background-color 160ms ease;
+}
+
+.zen-autocomplete-option:hover,
+.zen-autocomplete-option--active {
+  background: var(--color-zen-accent-soft);
 }
 
 @keyframes zen-history-filter-reveal {

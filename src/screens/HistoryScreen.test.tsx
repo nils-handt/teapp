@@ -1,4 +1,4 @@
-import type { ChangeEvent, HTMLAttributes, KeyboardEventHandler, MouseEventHandler, PropsWithChildren } from 'react';
+import { forwardRef, useImperativeHandle, useRef, type ChangeEvent, type HTMLAttributes, type KeyboardEventHandler, type MouseEventHandler, type PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
@@ -56,10 +56,17 @@ type DivProps = PropsWithChildren<{
 
 type SearchbarInputEvent = { detail: { value?: string } };
 type SearchbarProps = {
+  'aria-activedescendant'?: string;
+  'aria-controls'?: string;
+  'aria-expanded'?: boolean;
+  'aria-autocomplete'?: 'list';
   enterkeyhint?: HTMLAttributes<HTMLInputElement>['enterKeyHint'];
+  onIonBlur?: () => void;
+  onIonFocus?: () => void;
   onIonInput?: (event: SearchbarInputEvent) => void;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   placeholder?: string;
+  role?: HTMLAttributes<HTMLInputElement>['role'];
   value?: string;
 };
 type RefresherProps = PropsWithChildren<{ onIonRefresh?: (event: CustomEvent) => Promise<void> }>;
@@ -96,15 +103,43 @@ vi.mock('@ionic/react', () => ({
     ? <a href={routerLink} className={className} aria-label={ariaLabel}>{children}</a>
     : <button onClick={onClick} className={className} aria-label={ariaLabel}>{children}</button>,
   IonIcon: () => null,
-  IonSearchbar: ({ value, onIonInput, onKeyDown, placeholder, enterkeyhint }: SearchbarProps) => (
+  IonSearchbar: forwardRef<HTMLIonSearchbarElement, SearchbarProps>(function MockIonSearchbar({
+    value,
+    onIonInput,
+    onIonFocus,
+    onIonBlur,
+    onKeyDown,
+    placeholder,
+    enterkeyhint,
+    role,
+    'aria-autocomplete': ariaAutocomplete,
+    'aria-expanded': ariaExpanded,
+    'aria-controls': ariaControls,
+    'aria-activedescendant': ariaActiveDescendant,
+  }: SearchbarProps, ref) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    useImperativeHandle(ref, () => ({
+      getInputElement: async () => inputRef.current as HTMLInputElement,
+    }) as HTMLIonSearchbarElement);
+
+    return (
     <input
+      ref={inputRef}
       aria-label={placeholder}
+      aria-activedescendant={ariaActiveDescendant}
+      aria-autocomplete={ariaAutocomplete}
+      aria-controls={ariaControls}
+      aria-expanded={ariaExpanded}
       enterKeyHint={enterkeyhint}
+      role={role}
       value={value}
       onChange={(event: ChangeEvent<HTMLInputElement>) => onIonInput?.({ detail: { value: event.target.value } })}
+      onFocus={onIonFocus}
+      onBlur={onIonBlur}
       onKeyDown={onKeyDown}
     />
-  ),
+    );
+  }),
   IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
   useIonToast: () => [presentToast],
   useIonViewWillEnter: (callback: () => void) => {
@@ -303,9 +338,30 @@ describe('HistoryScreen', () => {
     render(<HistoryScreen />);
 
     fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'ort' } });
-    fireEvent.click(screen.getByRole('button', { name: 'ORT 2015 Gao Jia Shan' }));
+    const listbox = screen.getByRole('listbox');
+    const option = screen.getByRole('option', { name: 'ORT 2015 Gao Jia Shan' });
+    expect(listbox.className).toContain('rounded-2xl');
+    expect(listbox.className).toContain('zen-autocomplete-menu');
+    expect(option.className).toContain('zen-autocomplete-option');
+    fireEvent.click(option);
 
     expect((screen.getByLabelText('Search teas') as HTMLInputElement).value).toBe('ORT 2015 Gao Jia Shan');
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('navigates and selects search suggestions with the arrow keys', async () => {
+    render(<HistoryScreen />);
+    const searchInput = screen.getByLabelText('Search teas');
+
+    fireEvent.change(searchInput, { target: { value: 'a' } });
+    fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
+    const firstOption = screen.getAllByRole('option')[0];
+    await waitFor(() => expect(searchInput.getAttribute('aria-activedescendant')).toBe(firstOption.id));
+
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+
+    expect((searchInput as HTMLInputElement).value).toBe(firstOption.textContent);
+    expect(screen.queryByRole('listbox')).toBeNull();
   });
 
   it('expands filters only from the explicit Filters control', () => {
@@ -330,12 +386,29 @@ describe('HistoryScreen', () => {
     fireEvent.keyDown(searchInput, { key: 'Enter' });
     expect(document.activeElement).toBe(nameFilter);
 
+    fireEvent.keyDown(nameFilter, { key: 'Escape' });
     fireEvent.keyDown(nameFilter, { key: 'Enter' });
     expect(document.activeElement).toBe(brandFilter);
 
     yearFilter.focus();
     fireEvent.keyDown(yearFilter, { key: 'Enter' });
     expect(document.activeElement).not.toBe(yearFilter);
+  });
+
+  it('selects an active filter suggestion before moving to the next filter', () => {
+    render(<HistoryScreen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show history filters' }));
+
+    const nameFilter = screen.getByLabelText('Filter Name');
+    const brandFilter = screen.getByLabelText('Filter Brand');
+    nameFilter.focus();
+
+    fireEvent.keyDown(nameFilter, { key: 'ArrowDown' });
+    fireEvent.keyDown(nameFilter, { key: 'Enter' });
+
+    expect((nameFilter as HTMLInputElement).value).toBe('ORT 2015 Gao Jia Shan');
+    expect(document.activeElement).toBe(nameFilter);
+    expect(document.activeElement).not.toBe(brandFilter);
   });
 
   it('shows active filter state and can clear all filters', () => {

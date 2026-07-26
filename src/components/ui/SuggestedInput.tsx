@@ -1,5 +1,6 @@
-import React, { useId, useMemo, useState } from 'react';
+import React, { useId, useMemo, useRef, useState } from 'react';
 import { cn } from '../../styles/zen';
+import SuggestionDropdown from './SuggestionDropdown';
 
 type SuggestedInputProps = {
   ariaLabel: string;
@@ -37,7 +38,9 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
   inlineSuggestionsFill = false,
 }) => {
   const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const visibleSuggestions = useMemo(
     () => suggestions.filter((suggestion) => suggestion.trim()),
     [suggestions],
@@ -49,20 +52,85 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
       ? 'relative min-h-0 flex-1'
       : 'relative max-h-56';
 
+  const matchingSuggestionIndex = () => visibleSuggestions.findIndex((suggestion) => suggestion === value);
+
+  const openSuggestions = () => {
+    if (!hasSuggestions) {
+      return;
+    }
+
+    setIsOpen(true);
+    const matchingIndex = matchingSuggestionIndex();
+    setActiveIndex(matchingIndex >= 0 ? matchingIndex : null);
+  };
+
+  const closeSuggestions = () => {
+    setIsOpen(false);
+    setActiveIndex(null);
+  };
+
   const closeSoon = () => {
-    window.setTimeout(() => setIsOpen(false), 120);
+    window.setTimeout(closeSuggestions, 120);
   };
 
   const selectSuggestion = (suggestion: string) => {
     onChange(suggestion);
     onSelectSuggestion?.(suggestion);
-    setIsOpen(false);
+    closeSuggestions();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!hasSuggestions || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setIsOpen(true);
+      setActiveIndex((currentIndex) => {
+        if (!isOpen) {
+          const matchingIndex = matchingSuggestionIndex();
+          return matchingIndex >= 0 ? matchingIndex : 0;
+        }
+        return currentIndex === null ? 0 : Math.min(currentIndex + 1, visibleSuggestions.length - 1);
+      });
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setIsOpen(true);
+      setActiveIndex((currentIndex) => {
+        if (!isOpen) {
+          const matchingIndex = matchingSuggestionIndex();
+          return matchingIndex >= 0 ? matchingIndex : visibleSuggestions.length - 1;
+        }
+        return currentIndex === null ? visibleSuggestions.length - 1 : Math.max(currentIndex - 1, 0);
+      });
+      return;
+    }
+
+    if (event.key === 'Enter' && isOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (activeIndex !== null) {
+        selectSuggestion(visibleSuggestions[activeIndex]);
+      }
+      return;
+    }
+
+    if (event.key === 'Escape' && isOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSuggestions();
+    }
   };
 
   return (
     <div className={cn('relative', className)}>
       <div className="relative">
         <input
+          ref={inputRef}
           type={type}
           autoComplete="off"
           value={value}
@@ -72,15 +140,20 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
           inputMode={inputMode}
           enterKeyHint={enterKeyHint}
           aria-label={ariaLabel}
+          role="combobox"
+          aria-autocomplete="list"
           aria-expanded={hasSuggestions ? isOpen : undefined}
           aria-controls={hasSuggestions ? listId : undefined}
           aria-haspopup={hasSuggestions ? 'listbox' : undefined}
-          onFocus={() => setIsOpen(hasSuggestions)}
+          aria-activedescendant={isOpen && activeIndex !== null ? `${listId}-option-${activeIndex}` : undefined}
+          onFocus={openSuggestions}
           onBlur={closeSoon}
           onChange={(event) => {
             onChange(event.target.value);
-            setIsOpen(hasSuggestions);
+            setActiveIndex(null);
+            setIsOpen(true);
           }}
+          onKeyDown={handleKeyDown}
           className={cn(
             'w-full rounded border border-[#d9dbd2] bg-white px-3 py-2 text-zen-text outline-none transition focus:border-[#c59a2e]',
             hasSuggestions && 'pr-9',
@@ -92,7 +165,17 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
             type="button"
             aria-label={`Show ${ariaLabel} suggestions`}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setIsOpen((current) => !current)}
+            onClick={() => {
+              const shouldOpen = !isOpen;
+              if (shouldOpen) {
+                const matchingIndex = matchingSuggestionIndex();
+                setActiveIndex(matchingIndex >= 0 ? matchingIndex : null);
+              } else {
+                setActiveIndex(null);
+              }
+              setIsOpen(shouldOpen);
+              inputRef.current?.focus();
+            }}
             className="absolute top-0 right-0 flex h-full w-9 items-center justify-center text-zen-muted"
           >
             <span className="h-0 w-0 border-x-[4px] border-t-[6px] border-x-transparent border-t-current" />
@@ -100,28 +183,14 @@ const SuggestedInput: React.FC<SuggestedInputProps> = ({
         ) : null}
       </div>
       {hasSuggestions && isOpen ? (
-        <div
+        <SuggestionDropdown
           id={listId}
-          role="listbox"
-          className={cn(
-            'left-0 z-[1100] mt-1 w-full overflow-y-auto border-t-[6px] border-t-[#bfd2f5] bg-white py-1 shadow-[0_2px_12px_rgba(0,0,0,0.24)]',
-            suggestionPositionClass,
-          )}
-        >
-          {visibleSuggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              role="option"
-              aria-selected={suggestion === value}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => selectSuggestion(suggestion)}
-              className="block w-full px-4 py-3 text-left text-sm text-zen-text hover:bg-[#d7e5ff]"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
+          items={visibleSuggestions}
+          activeIndex={activeIndex}
+          onActiveIndexChange={setActiveIndex}
+          onSelect={selectSuggestion}
+          className={suggestionPositionClass}
+        />
       ) : null}
     </div>
   );

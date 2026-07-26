@@ -55,8 +55,7 @@ describe('TeaEditorModal', () => {
         expect(screen.getByLabelText('Subtype')).toBeDefined();
         expect(screen.getByLabelText('Season')).toBeDefined();
         expect(screen.getByLabelText('Year')).toBeDefined();
-        expect(screen.getAllByRole('textbox').every((input) => input.getAttribute('autocomplete') === 'off')).toBe(true);
-        expect(screen.getByRole('spinbutton').getAttribute('autocomplete')).toBe('off');
+        expect(screen.getAllByRole('combobox').every((input) => input.getAttribute('autocomplete') === 'off')).toBe(true);
     });
 
     it('saves a selected existing tea without forcing it through the new tea fields', () => {
@@ -129,6 +128,30 @@ describe('TeaEditorModal', () => {
             action: 'create',
             tea: expect.objectContaining({ name: 'Silver Needle' }),
         });
+    });
+
+    it('selects an active suggestion before the modal advances to the next field', () => {
+        render(
+            <TeaEditorModal
+                isOpen
+                selectedTea={null}
+                teas={[createTea('tea-1', 'Longjing')]}
+                onCancel={vi.fn()}
+                onSave={vi.fn()}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('tab', { name: 'New Tea' }));
+        const nameInput = screen.getByLabelText('Name');
+        const brandInput = screen.getByLabelText('Brand');
+        nameInput.focus();
+
+        fireEvent.keyDown(nameInput, { key: 'ArrowDown' });
+        fireEvent.keyDown(nameInput, { key: 'Enter' });
+
+        expect((nameInput as HTMLInputElement).value).toBe('Longjing');
+        expect(document.activeElement).toBe(nameInput);
+        expect(document.activeElement).not.toBe(brandInput);
     });
 
     it('finishes existing-tea search on Enter after a tea is selected', () => {
