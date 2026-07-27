@@ -204,7 +204,7 @@ test.describe('scale reconnect debug harness', () => {
         at: new Date().toISOString(),
         type: 'pageerror',
         text: error.message,
-        location: { url: page.url(), lineNumber: 0, columnNumber: 0 },
+        location: { url: page.url(), line: 0, column: 0, lineNumber: 0, columnNumber: 0 },
       });
     });
 
