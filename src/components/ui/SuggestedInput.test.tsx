@@ -41,7 +41,7 @@ describe('SuggestedInput', () => {
     const input = screen.getByRole('combobox', { name: 'Tea name' });
     expect(input.id).toMatch(/^tea-app-control-[a-zA-Z0-9_-]+$/);
     expect(input.getAttribute('name')).toBe(input.id);
-    expect(input.getAttribute('autocomplete')).toBe('off');
+    expect(input.getAttribute('autocomplete')).toBe('other');
   });
 
   it('uses the spacious Zen menu treatment', () => {
