@@ -153,7 +153,11 @@ export const historyStore = createStore<HistoryStore>()((set, get) => ({
   },
   deleteSession: async (sessionId) => {
     await sessionRepository.deleteSession(sessionId);
-    set({ selectedSession: null });
+    set((state) => ({
+      selectedSession: state.selectedSession?.sessionId === sessionId
+        ? null
+        : state.selectedSession,
+    }));
     await get().reloadHistory(get().currentHistoryQuery);
   },
   restoreSession: async (session) => {

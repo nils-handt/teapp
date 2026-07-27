@@ -157,6 +157,25 @@ describe('useHistoryStore', () => {
     expect(historyStore.getState().selectedSession).toBe(mockSession);
   });
 
+  it('keeps a different selected session when deleting from the brewing screen', async () => {
+    historyStore.setState({ selectedSession: mockSession });
+    vi.mocked(sessionRepository.getHistoryPage).mockResolvedValue({ sessions: [mockSession], hasMore: false });
+
+    await historyStore.getState().deleteSession('newly-completed-session');
+
+    expect(sessionRepository.deleteSession).toHaveBeenCalledWith('newly-completed-session');
+    expect(historyStore.getState().selectedSession).toBe(mockSession);
+  });
+
+  it('clears the selected session when that session is deleted', async () => {
+    historyStore.setState({ selectedSession: mockSession });
+    vi.mocked(sessionRepository.getHistoryPage).mockResolvedValue({ sessions: [], hasMore: false });
+
+    await historyStore.getState().deleteSession(mockSession.sessionId);
+
+    expect(historyStore.getState().selectedSession).toBeNull();
+  });
+
   it('updates a shared tea and replaces it in known teas', async () => {
     const original = Object.assign(new Tea(), { teaId: 'tea-1', name: 'Old' });
     const edited = Object.assign(new Tea(), { teaId: 'tea-1', name: 'Edited' });
