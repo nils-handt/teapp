@@ -35,6 +35,15 @@ describe('SuggestedInput', () => {
     });
   });
 
+  it('uses a neutral field identity that does not resemble personal autofill data', () => {
+    render(<ControlledInput />);
+
+    const input = screen.getByRole('combobox', { name: 'Tea name' });
+    expect(input.id).toMatch(/^tea-app-control-[a-zA-Z0-9_-]+$/);
+    expect(input.getAttribute('name')).toBe(input.id);
+    expect(input.getAttribute('autocomplete')).toBe('off');
+  });
+
   it('uses the spacious Zen menu treatment', () => {
     render(<ControlledInput />);
 
