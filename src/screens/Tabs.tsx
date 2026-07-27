@@ -1,7 +1,7 @@
 import React from 'react';
 import { Redirect, Route } from 'react-router-dom';
 import { IonRouterOutlet, IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/react';
-import { cafe, list, settings } from 'ionicons/icons';
+import { list, settings } from 'ionicons/icons';
 
 import HistoryScreen from './HistoryScreen';
 import SessionDetailScreen from './SessionDetailScreen';
@@ -9,6 +9,7 @@ import SettingsScreen from './SettingsScreen';
 import BrewingZen from './brewing/BrewingZen';
 import HistoryStatisticsScreen from './HistoryStatisticsScreen';
 import { APP_TAB_BAR_ID } from '../constants/ui';
+import { gaiwan1b } from '../icons/gaiwan1b';
 
 const Tabs: React.FC = () => {
   return (
@@ -28,7 +29,7 @@ const Tabs: React.FC = () => {
 
       <IonTabBar id={APP_TAB_BAR_ID} slot="bottom">
         <IonTabButton tab="brewing" href="/tabs/brewing/1">
-          <IonIcon icon={cafe} />
+          <IonIcon icon={gaiwan1b} />
           <IonLabel>Brewing</IonLabel>
         </IonTabButton>
         <IonTabButton tab="history" href="/tabs/history">

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Tabs from './Tabs';
 import { APP_TAB_BAR_ID } from '../constants/ui';
+import { gaiwan1b } from '../icons/gaiwan1b';
 
 vi.mock('@ionic/react', async () => {
   const Wrap = ({ children }: PropsWithChildren) => <div>{children}</div>;
@@ -12,7 +13,7 @@ vi.mock('@ionic/react', async () => {
     IonRouterOutlet: Wrap,
     IonTabBar: ({ children, ...props }: PropsWithChildren<{ id?: string; slot?: string }>) => <div {...props}>{children}</div>,
     IonTabButton: Wrap,
-    IonIcon: () => null,
+    IonIcon: ({ icon }: { icon?: string }) => <span data-testid="tab-icon" data-icon={icon} />,
     IonLabel: Wrap,
   };
 });
@@ -23,6 +24,12 @@ vi.mock('./SessionDetailScreen', () => ({ default: () => <div>Session detail rou
 vi.mock('./SettingsScreen', () => ({ default: () => <div>Settings route</div> }));
 
 describe('Tabs routing', () => {
+  it('uses the selected gaiwan for the Brewing tab', () => {
+    render(<MemoryRouter initialEntries={['/tabs/brewing/1']}><Tabs /></MemoryRouter>);
+
+    expect(screen.getAllByTestId('tab-icon')[0].getAttribute('data-icon')).toBe(gaiwan1b);
+  });
+
   it('exposes the bottom tab bar as the toast position anchor', () => {
     render(<MemoryRouter initialEntries={['/tabs/history']}><Tabs /></MemoryRouter>);
 
