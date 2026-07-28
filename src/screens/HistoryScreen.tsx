@@ -85,7 +85,7 @@ const HistoryScreen: React.FC = () => {
   // Load history when entering the view
   useIonViewWillEnter(() => {
     void reloadCurrentHistory();
-  });
+  }, [reloadCurrentHistory]);
 
   useEffect(() => {
     if (skipInitialFilterReload.current) {

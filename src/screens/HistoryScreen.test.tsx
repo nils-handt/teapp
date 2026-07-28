@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, type ChangeEvent, type HTMLAttributes, type KeyboardEventHandler, type MouseEventHandler, type PropsWithChildren } from 'react';
+import { forwardRef, useImperativeHandle, useRef, type ChangeEvent, type DependencyList, type HTMLAttributes, type KeyboardEventHandler, type MouseEventHandler, type PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HistoryScreen from './HistoryScreen';
@@ -15,7 +15,10 @@ const refresherMocks = vi.hoisted(() => ({
 const infiniteMocks = vi.hoisted(() => ({
   onIonInfinite: undefined as ((event: CustomEvent) => Promise<void>) | undefined,
 }));
-const viewMocks = vi.hoisted(() => ({ entered: false }));
+const viewMocks = vi.hoisted(() => ({
+  callback: undefined as (() => void) | undefined,
+  entered: false,
+}));
 
 const reloadHistory = vi.fn().mockResolvedValue(undefined);
 const loadMoreHistory = vi.fn().mockResolvedValue(undefined);
@@ -142,7 +145,17 @@ vi.mock('@ionic/react', () => ({
   }),
   IonToolbar: ({ children }: PropsWithChildren) => <div>{children}</div>,
   useIonToast: () => [presentToast],
-  useIonViewWillEnter: (callback: () => void) => {
+  useIonViewWillEnter: (callback: () => void, dependencies: DependencyList = []) => {
+    const previousDependencies = useRef<DependencyList>(undefined);
+    const dependenciesChanged = previousDependencies.current === undefined
+      || previousDependencies.current.length !== dependencies.length
+      || dependencies.some((dependency, index) => !Object.is(dependency, previousDependencies.current?.[index]));
+
+    if (dependenciesChanged) {
+      previousDependencies.current = dependencies;
+      viewMocks.callback = callback;
+    }
+
     if (!viewMocks.entered) {
       viewMocks.entered = true;
       callback();
@@ -212,6 +225,7 @@ describe('HistoryScreen', () => {
     vi.clearAllMocks();
     refresherMocks.onIonRefresh = undefined;
     infiniteMocks.onIonInfinite = undefined;
+    viewMocks.callback = undefined;
     viewMocks.entered = false;
     seedHistoryStore();
   });
@@ -266,6 +280,21 @@ describe('HistoryScreen', () => {
     render(<HistoryScreen />);
 
     fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'gao shan' } });
+
+    await waitFor(() => expect(reloadHistory).toHaveBeenCalledWith({ teaIds: ['tea-1'] }));
+  });
+
+  it('reapplies active filters when the retained History view is entered again', async () => {
+    render(<HistoryScreen />);
+    await waitFor(() => expect(reloadHistory).toHaveBeenCalledWith({}));
+
+    fireEvent.change(screen.getByLabelText('Search teas'), { target: { value: 'gao shan' } });
+    await waitFor(() => expect(reloadHistory).toHaveBeenLastCalledWith({ teaIds: ['tea-1'] }));
+    reloadHistory.mockClear();
+
+    await act(async () => {
+      viewMocks.callback?.();
+    });
 
     await waitFor(() => expect(reloadHistory).toHaveBeenCalledWith({ teaIds: ['tea-1'] }));
   });
