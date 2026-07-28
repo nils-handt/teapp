@@ -67,7 +67,8 @@ function Draw-Icon(
   [single]$contentScale,
   [bool]$transparentBackground,
   [bool]$roundClip,
-  [string]$filePath
+  [string]$filePath,
+  [bool]$fillCanvas = $false
 ) {
   $bitmap = [System.Drawing.Bitmap]::new($size, $size)
   $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
@@ -88,10 +89,21 @@ function Draw-Icon(
     $graphics.Clear($backgroundColor)
   }
 
-  $designToPixels = $size / 1024.0
-  $renderScale = $designToPixels * $contentScale
-  $offset = ($size - (1024 * $renderScale)) / 2
-  $matrix = [System.Drawing.Drawing2D.Matrix]::new($renderScale, 0, 0, $renderScale, $offset, $offset)
+  if ($fillCanvas) {
+    # The artwork itself spans x=156..876 and y=129..900 in the 1024-unit design.
+    # Map those bounds directly to the favicon canvas so no background padding remains.
+    $renderScaleX = $size / 720.0
+    $renderScaleY = $size / 771.0
+    $offsetX = -156 * $renderScaleX
+    $offsetY = -129 * $renderScaleY
+  } else {
+    $designToPixels = $size / 1024.0
+    $renderScaleX = $designToPixels * $contentScale
+    $renderScaleY = $renderScaleX
+    $offsetX = ($size - (1024 * $renderScaleX)) / 2
+    $offsetY = $offsetX
+  }
+  $matrix = [System.Drawing.Drawing2D.Matrix]::new($renderScaleX, 0, 0, $renderScaleY, $offsetX, $offsetY)
   $graphics.Transform = $matrix
 
   $knob = New-RoundedRectanglePath 407 129 220 26 11
@@ -157,7 +169,7 @@ Draw-Icon 512 1 $false $false (Join-Path $resolvedOutputDir "pwa-512x512.png")
 Draw-Icon 192 0.76 $false $false (Join-Path $resolvedOutputDir "pwa-maskable-192x192.png")
 Draw-Icon 512 0.76 $false $false (Join-Path $resolvedOutputDir "pwa-maskable-512x512.png")
 Draw-Icon 180 1 $false $false (Join-Path $resolvedOutputDir "apple-touch-icon.png")
-Draw-Icon 64 1 $false $false (Join-Path $resolvedOutputDir "favicon-64x64.png")
+Draw-Icon 64 1 $true $false (Join-Path $resolvedOutputDir "favicon-64x64.png") $true
 
 $androidSizes = [ordered]@{
   "mdpi" = 48
