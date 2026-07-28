@@ -1,25 +1,24 @@
 param(
-  [string]$OutputDir = "public"
+  [string]$OutputDir = "public",
+  [string]$AndroidResDir = "android/app/src/main/res"
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Drawing
 
 $resolvedOutputDir = Join-Path (Get-Location) $OutputDir
+$resolvedAndroidResDir = Join-Path (Get-Location) $AndroidResDir
 New-Item -ItemType Directory -Force -Path $resolvedOutputDir | Out-Null
 
-function New-Brush([string]$hex) {
-  return [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml($hex))
-}
-
-function New-Pen([string]$hex, [float]$width) {
-  $pen = [System.Drawing.Pen]::new([System.Drawing.ColorTranslator]::FromHtml($hex), $width)
-  $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-  $pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-  $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
-  return $pen
-}
-
-function Draw-RoundedRectangle($graphics, [float]$x, [float]$y, [float]$width, [float]$height, [float]$radius, $brush) {
+function New-RoundedRectanglePath(
+  [float]$x,
+  [float]$y,
+  [float]$width,
+  [float]$height,
+  [float]$radius
+) {
   $path = [System.Drawing.Drawing2D.GraphicsPath]::new()
   $diameter = $radius * 2
   $path.AddArc($x, $y, $diameter, $diameter, 180, 90)
@@ -27,68 +26,152 @@ function Draw-RoundedRectangle($graphics, [float]$x, [float]$y, [float]$width, [
   $path.AddArc($x + $width - $diameter, $y + $height - $diameter, $diameter, $diameter, 0, 90)
   $path.AddArc($x, $y + $height - $diameter, $diameter, $diameter, 90, 90)
   $path.CloseFigure()
-  $graphics.FillPath($brush, $path)
-  $path.Dispose()
+  return $path
 }
 
-function Draw-Icon([int]$size, [bool]$maskable, [string]$fileName) {
+function New-GradientBrush(
+  [System.Drawing.RectangleF]$bounds,
+  [string[]]$colors,
+  [single[]]$positions,
+  [single]$angle
+) {
+  $brush = [System.Drawing.Drawing2D.LinearGradientBrush]::new(
+    $bounds,
+    [System.Drawing.ColorTranslator]::FromHtml($colors[0]),
+    [System.Drawing.ColorTranslator]::FromHtml($colors[$colors.Length - 1]),
+    $angle
+  )
+  $blend = [System.Drawing.Drawing2D.ColorBlend]::new($colors.Length)
+  $blend.Colors = [System.Drawing.Color[]]@(
+    $colors | ForEach-Object { [System.Drawing.ColorTranslator]::FromHtml($_) }
+  )
+  $blend.Positions = $positions
+  $brush.InterpolationColors = $blend
+  return $brush
+}
+
+function Fill-CeramicPath($graphics, $path) {
+  $brush = New-GradientBrush $path.GetBounds() @("#DFBD99", "#C9A27A", "#DDB58D") ([single[]]@(0, 0.52, 1)) 38
+  $graphics.FillPath($brush, $path)
+  $brush.Dispose()
+}
+
+function Fill-ScalePath($graphics, $path) {
+  $brush = New-GradientBrush $path.GetBounds() @("#172B3B", "#203345", "#172A3A") ([single[]]@(0, 0.52, 1)) 42
+  $graphics.FillPath($brush, $path)
+  $brush.Dispose()
+}
+
+function Draw-Icon(
+  [int]$size,
+  [single]$contentScale,
+  [bool]$transparentBackground,
+  [bool]$roundClip,
+  [string]$filePath
+) {
   $bitmap = [System.Drawing.Bitmap]::new($size, $size)
   $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
   $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
   $graphics.Clear([System.Drawing.Color]::Transparent)
 
-  $bg = New-Brush "#164E43"
-  $cream = New-Brush "#F6E7C8"
-  $tea = New-Brush "#D59A38"
-  $accent = New-Brush "#8ED6C9"
-  $darkPen = New-Pen "#164E43" ($size * 0.045)
-  $creamPen = New-Pen "#F6E7C8" ($size * 0.045)
-  $accentPen = New-Pen "#8ED6C9" ($size * 0.03)
-
-  if ($maskable) {
-    $graphics.FillRectangle($bg, 0, 0, $size, $size)
-    $safe = $size * 0.18
-  } else {
-    $safe = $size * 0.08
-    Draw-RoundedRectangle $graphics $safe $safe ($size - $safe * 2) ($size - $safe * 2) ($size * 0.18) $bg
+  if ($roundClip) {
+    $clipPath = [System.Drawing.Drawing2D.GraphicsPath]::new()
+    $clipPath.AddEllipse(0, 0, $size, $size)
+    $graphics.SetClip($clipPath)
+    $clipPath.Dispose()
   }
 
-  $cupX = $size * 0.27
-  $cupY = $size * 0.38
-  $cupW = $size * 0.46
-  $cupH = $size * 0.29
-  Draw-RoundedRectangle $graphics $cupX $cupY $cupW $cupH ($size * 0.075) $cream
-  $graphics.FillEllipse($tea, $cupX + $size * 0.055, $cupY + $size * 0.045, $cupW - $size * 0.11, $size * 0.085)
-  $graphics.DrawArc($creamPen, $cupX + $cupW - $size * 0.045, $cupY + $size * 0.055, $size * 0.18, $size * 0.18, 275, 175)
+  $backgroundColor = [System.Drawing.ColorTranslator]::FromHtml("#FAF0E7")
+  if (-not $transparentBackground) {
+    $graphics.Clear($backgroundColor)
+  }
 
-  $graphics.DrawLine($creamPen, $size * 0.32, $size * 0.75, $size * 0.68, $size * 0.75)
-  $graphics.DrawLine($creamPen, $size * 0.5, $size * 0.67, $size * 0.5, $size * 0.75)
-  $graphics.DrawLine($accentPen, $size * 0.39, $size * 0.79, $size * 0.61, $size * 0.79)
+  $designToPixels = $size / 1024.0
+  $renderScale = $designToPixels * $contentScale
+  $offset = ($size - (1024 * $renderScale)) / 2
+  $matrix = [System.Drawing.Drawing2D.Matrix]::new($renderScale, 0, 0, $renderScale, $offset, $offset)
+  $graphics.Transform = $matrix
 
-  $graphics.DrawBezier($accentPen, $size * 0.38, $size * 0.29, $size * 0.28, $size * 0.18, $size * 0.51, $size * 0.18, $size * 0.43, $size * 0.08)
-  $graphics.DrawBezier($accentPen, $size * 0.56, $size * 0.30, $size * 0.47, $size * 0.19, $size * 0.70, $size * 0.19, $size * 0.62, $size * 0.09)
+  $knob = New-RoundedRectanglePath 407 129 220 26 11
+  Fill-CeramicPath $graphics $knob
 
-  $graphics.DrawLine($darkPen, $cupX + $size * 0.11, $cupY + $size * 0.20, $cupX + $cupW - $size * 0.11, $cupY + $size * 0.20)
+  $lid = [System.Drawing.Drawing2D.GraphicsPath]::new()
+  $lid.AddLine(426, 169, 608, 169)
+  $lid.AddBezier(608, 169, 599, 185, 594, 201, 597, 218)
+  $lid.AddBezier(597, 218, 669, 226, 732, 261, 768, 319)
+  $lid.AddBezier(768, 319, 770, 323, 768, 325, 764, 325)
+  $lid.AddLine(764, 325, 268, 325)
+  $lid.AddBezier(268, 325, 264, 325, 262, 323, 264, 319)
+  $lid.AddBezier(264, 319, 300, 261, 363, 226, 436, 218)
+  $lid.AddBezier(436, 218, 439, 201, 437, 186, 425, 172)
+  $lid.AddBezier(425, 172, 423, 170, 424, 169, 426, 169)
+  $lid.CloseFigure()
+  Fill-CeramicPath $graphics $lid
 
-  $path = Join-Path $resolvedOutputDir $fileName
-  $bitmap.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+  $bowl = [System.Drawing.Drawing2D.GraphicsPath]::new()
+  $bowl.AddLine(175, 336, 857, 336)
+  $bowl.AddBezier(857, 336, 829, 365, 815, 396, 807, 439)
+  $bowl.AddLine(807, 439, 786, 540)
+  $bowl.AddBezier(786, 540, 775, 594, 754, 635, 724, 663)
+  $bowl.AddLine(724, 663, 307, 663)
+  $bowl.AddBezier(307, 663, 277, 634, 256, 593, 245, 540)
+  $bowl.AddLine(245, 540, 224, 439)
+  $bowl.AddBezier(224, 439, 215, 396, 202, 365, 174, 339)
+  $bowl.AddBezier(174, 339, 172, 337, 173, 336, 175, 336)
+  $bowl.CloseFigure()
+  Fill-CeramicPath $graphics $bowl
 
-  $darkPen.Dispose()
-  $creamPen.Dispose()
-  $accentPen.Dispose()
-  $bg.Dispose()
-  $cream.Dispose()
-  $tea.Dispose()
-  $accent.Dispose()
+  $saucer = [System.Drawing.Drawing2D.GraphicsPath]::new()
+  $saucer.AddLine(193, 674, 839, 674)
+  $saucer.AddBezier(839, 674, 839, 697, 801, 719, 730, 730)
+  $saucer.AddLine(730, 730, 301, 730)
+  $saucer.AddBezier(301, 730, 232, 719, 194, 697, 193, 674)
+  $saucer.CloseFigure()
+  Fill-CeramicPath $graphics $saucer
+
+  $scaleBase = New-RoundedRectanglePath 156 744 720 156 53
+  Fill-ScalePath $graphics $scaleBase
+
+  $ringPen = [System.Drawing.Pen]::new($backgroundColor, 10)
+  $graphics.DrawEllipse($ringPen, 477, 784, 78, 78)
+
+  $ringPen.Dispose()
+  $scaleBase.Dispose()
+  $saucer.Dispose()
+  $bowl.Dispose()
+  $lid.Dispose()
+  $knob.Dispose()
+  $matrix.Dispose()
   $graphics.Dispose()
+
+  $parentDir = Split-Path -Parent $filePath
+  New-Item -ItemType Directory -Force -Path $parentDir | Out-Null
+  $bitmap.Save($filePath, [System.Drawing.Imaging.ImageFormat]::Png)
   $bitmap.Dispose()
 }
 
-Draw-Icon 192 $false "pwa-192x192.png"
-Draw-Icon 512 $false "pwa-512x512.png"
-Draw-Icon 192 $true "pwa-maskable-192x192.png"
-Draw-Icon 512 $true "pwa-maskable-512x512.png"
-Draw-Icon 180 $false "apple-touch-icon.png"
-Draw-Icon 64 $false "favicon-64x64.png"
+Draw-Icon 192 1 $false $false (Join-Path $resolvedOutputDir "pwa-192x192.png")
+Draw-Icon 512 1 $false $false (Join-Path $resolvedOutputDir "pwa-512x512.png")
+Draw-Icon 192 0.76 $false $false (Join-Path $resolvedOutputDir "pwa-maskable-192x192.png")
+Draw-Icon 512 0.76 $false $false (Join-Path $resolvedOutputDir "pwa-maskable-512x512.png")
+Draw-Icon 180 1 $false $false (Join-Path $resolvedOutputDir "apple-touch-icon.png")
+Draw-Icon 64 1 $false $false (Join-Path $resolvedOutputDir "favicon-64x64.png")
 
-Write-Output "Generated Teapp PWA icons in $resolvedOutputDir"
+$androidSizes = [ordered]@{
+  "mdpi" = 48
+  "hdpi" = 72
+  "xhdpi" = 96
+  "xxhdpi" = 144
+  "xxxhdpi" = 192
+}
+
+foreach ($entry in $androidSizes.GetEnumerator()) {
+  $mipmapDir = Join-Path $resolvedAndroidResDir ("mipmap-" + $entry.Key)
+  Draw-Icon $entry.Value 1 $false $false (Join-Path $mipmapDir "ic_launcher.png")
+  Draw-Icon $entry.Value 0.76 $false $true (Join-Path $mipmapDir "ic_launcher_round.png")
+  Draw-Icon ([int]($entry.Value * 2.25)) 0.76 $true $false (Join-Path $mipmapDir "ic_launcher_foreground.png")
+}
+
+Write-Output "Generated Teapp web, PWA, and Android launcher icons."

@@ -1,11 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
   <title id="title">Teapp icon</title>
-  <desc id="desc">A tea cup on a scale with steam above it.</desc>
-  <rect x="40" y="40" width="432" height="432" rx="92" fill="#164E43"/>
-  <path d="M159 246h194a26 26 0 0 1 26 26v74a55 55 0 0 1-55 55H188a55 55 0 0 1-55-55v-74a26 26 0 0 1 26-26Z" fill="#F6E7C8"/>
-  <ellipse cx="256" cy="278" rx="93" ry="24" fill="#D59A38"/>
-  <path d="M376 281c57-9 57 83 4 74" fill="none" stroke="#F6E7C8" stroke-width="24" stroke-linecap="round"/>
-  <path d="M196 436h120M256 401v35M214 458h84" fill="none" stroke="#F6E7C8" stroke-width="22" stroke-linecap="round"/>
-  <path d="M201 184c-45-54 57-62 21-111M300 185c-44-54 58-62 21-111" fill="none" stroke="#8ED6C9" stroke-width="16" stroke-linecap="round"/>
-  <path d="M190 330h132" fill="none" stroke="#164E43" stroke-width="20" stroke-linecap="round"/>
+  <desc id="desc">A warm ceramic gaiwan resting on a dark digital scale.</desc>
+  <defs>
+    <linearGradient id="ceramic" x1="0" y1="0" x2="1" y2="0.9">
+      <stop offset="0" stop-color="#DFBD99" />
+      <stop offset="0.52" stop-color="#C9A27A" />
+      <stop offset="1" stop-color="#DDB58D" />
+    </linearGradient>
+    <linearGradient id="scale" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172B3B" />
+      <stop offset="0.52" stop-color="#203345" />
+      <stop offset="1" stop-color="#172A3A" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="#FAF0E7" />
+
+  <g fill="url(#ceramic)">
+    <rect x="407" y="129" width="220" height="26" rx="11" />
+    <path d="M426 169h182c-10 17-14 32-11 49 72 8 135 43 171 101 2 4 0 6-4 6H268c-4 0-6-3-4-6 36-58 99-93 172-101 3-17-1-32-11-46-2-2-1-3 1-3Z" />
+    <path d="M175 336h682c-28 29-42 60-50 103l-21 101c-11 54-32 95-62 123H307c-30-29-51-70-62-123l-21-101c-9-43-22-74-50-100-2-2-1-3 1-3Z" />
+    <path d="M193 674h646c0 23-38 45-109 56H301c-69-11-107-33-108-56Z" />
+  </g>
+
+  <rect x="156" y="744" width="720" height="156" rx="53" fill="url(#scale)" />
+  <circle cx="516" cy="823" r="39" fill="none" stroke="#FAF0E7" stroke-width="10" />
 </svg>
