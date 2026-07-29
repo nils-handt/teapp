@@ -1,51 +1,60 @@
-# Teapp - Automatic Tea Brewing Tracker
+# Teapp
 
-Teapp is an Android application designed for tea enthusiasts to automatically track and log tea brewing sessions, with a focus on short, multiple infusions (like GongFu style). The app connects to a Bluetooth-enabled scale to monitor weight changes, allowing for hands-free logging of each infusion.
+Teapp is a scale-aware tea brewing tracker for short, repeated infusions such as gongfu brewing. It watches a Bluetooth scale during setup and brewing, reacts to weight changes, and keeps a history of your sessions without requiring you to operate a timer for every infusion.
 
-## Core Features
+> Teapp is under active development. Only BOOKOO scales are currently confirmed to work; see [Supported scales](#supported-scales) before relying on it for a brew.
 
-*   **Bluetooth Scale Integration:** Seamlessly connect to your Bluetooth scale for real-time weight monitoring.
-*   **Automatic Infusion Tracking:** The app automatically detects weight changes to start and stop infusion timers.
-*   **Session History:** Browse and review your past brewing sessions.
+## Open Teapp
 
-## Development sample data
+Use the hosted app at [nils-handt.github.io/teapp](https://nils-handt.github.io/teapp/).
 
-Create a full backup file that can be imported through Settings → Data Management → Restore Data:
+You can use Teapp in the browser or install it as a Progressive Web App (PWA). When installation is available, use **Settings → Install Teapp** or your browser's install/add-to-home-screen action.
 
-```bash
-npm run generate:sample-data -- --sessions 100 --teas 12 --vessels 4 --seed demo --output ./tmp/sample-data.json
-```
+Bluetooth scale integration currently works only in Chromium-based browsers that support Web Bluetooth. Teapp must remain in the foreground while it is communicating with a scale.
 
-All sessions are completed, linked to a generated tea entity, and populated with randomized infusions. Tea metadata is selected from the preset arrays in `scripts/generate-sample-dataset.mjs`. The `--seed` option makes generated values and IDs repeatable; timestamps are based on the generation time. Omit the seed for a fresh random dataset. Restore overwrites the current database, so use this only with development data.
+## What Teapp does
 
-## Project Documentation
+- Tracks the brewing vessel and the amount of tea used.
+- Starts and stops an infusion timer when water is added to or poured out of the brewing vessel.
+- Records infusion time and weight as part of the brewing session.
+- Keeps a searchable, filterable session history with session details and statistics.
+- Stores tea and brewing-vessel details for reuse in later sessions.
+- Exports and restores local data as a JSON backup.
 
-This project is described in more detail in the following documents:
+## Supported scales
 
-*   **Requirements**:
-    *   `docs/FEATURES.md`: A detailed list of planned application features.
-    *   `docs/USER_STORIES.md`: Scenarios describing how a user will interact with the app.
-*   **Architecture**:
-    *   `docs/ARCHITECTURE.md`: An overview of the proposed technical architecture.
-*   **Planning**:
-    *   `docs/SHORT_TERM_PLAN.md`: MVP development roadmap and implementation phases.
-    *   `docs/LONG_TERM_PLAN.md`: Post-MVP features and long-term enhancements.
+**Confirmed:** BOOKOO scales are the only scales currently verified to work with Teapp.
 
-## Bluetooth Scale Integration
+The codebase contains integrations for several other Bluetooth scale protocols, but none of them has been verified with Teapp. They should be treated as experimental and may fail to connect, report incorrect data, or behave unexpectedly during a brew.
 
-The Bluetooth scale integration is built upon protocol implementations ported from the open-source [Beanconqueror](https://github.com/graphefruit/Beanconqueror) project. We extend our gratitude to the Beanconqueror team for their excellent work.
+## Your first brew
 
-*   **Supported Scales:**
-    *   Decent Scale
-    *   Felicita Scale
-    *   (Acaia scale support is planned, with the basic structure in place but implementation deferred).
-*   **Architecture:**
-    *   The core logic resides in `src/services/bluetooth/`.
-    *   A base `BluetoothScale` class provides common functionality.
-    *   Device-specific implementations (e.g., `DecentScale.ts`) extend the base class.
-    *   The `BleAdapter` abstracts the `@capacitor-community/bluetooth-le` plugin, providing a consistent interface for the scale classes.
-    *   The event system uses RxJS `Subject` for handling weight, timer, and flow events, adapted from Beanconqueror's original `EventEmitter` implementation.
-*   **Development Notes:**
-    *   To add a new scale, extend the `BluetoothScale` class and implement the device-specific BLE protocol.
-    *   The `Logger` utility in `src/services/bluetooth/utils/` can be used for debugging.
-    *   All code is written to be compliant with strict TypeScript rules.
+1. Open **Settings** and choose **Connect New Scale**.
+2. Select your BOOKOO scale and grant Bluetooth permission when prompted.
+3. Open the **Brewing** tab and choose **Start Session**.
+4. Follow the setup prompts: add the vessel, remove its lid, add the tea leaves, and confirm the setup.
+5. Add water to start the infusion timer automatically.
+6. Lift the vessel to pour. Returning it to the scale completes the infusion.
+7. Continue with further infusions, then end the session to save it to **History**.
+
+The first-run walkthrough is available again at any time from **Settings → Show Tutorial Again**.
+
+## Data and backups
+
+Teapp stores its data locally on your device or in your browser's site storage. It does not provide cloud synchronization.
+
+Use **Settings → Data Management → Backup Data** to download or share a backup regularly. **Restore Data** replaces all current Teapp data with the selected backup and cannot be undone.
+
+Browser users should create a backup before clearing site data, changing browsers, or moving to another device.
+
+## Known limitations
+
+- Only BOOKOO scales have been verified.
+- Bluetooth behavior depends on the browser, operating system, permissions, and whether Teapp remains in the foreground.
+- Waste water can currently be added only during the brewing phase.
+
+## Feedback and development
+
+Found a problem or have an idea? [Open an issue on GitHub](https://github.com/nils-handt/teapp/issues).
+
+Developer setup, architecture notes, commands, and deployment details are in [DEVELOPMENT.md](DEVELOPMENT.md).
