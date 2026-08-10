@@ -49,6 +49,51 @@ npx cap open android
 
 The normal build uses relative asset paths for Capacitor. Do not use the PWA build as the source for the native application.
 
+### GitHub Actions Android APK
+
+The `Build Android APK` workflow builds an installable debug APK after each push to `main` and can also be run manually from the Actions tab. The APK uses a dedicated test signing key so that a newer workflow artifact can update an existing installation without removing its local app data.
+
+#### Configure the test signing secrets
+
+Create this key outside the repository checkout and keep a secure backup. Losing it means future APKs cannot update the installed app. Do not reuse this test key for a production or app-store release.
+
+```bash
+keytool -genkeypair \
+  -keystore teapp-test.jks \
+  -storetype JKS \
+  -alias teapp-test \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000
+```
+
+In the GitHub repository, open `Settings > Secrets and variables > Actions` and create these repository secrets:
+
+- `ANDROID_TEST_KEYSTORE_BASE64`: the keystore encoded as one line of Base64.
+- `ANDROID_TEST_KEYSTORE_PASSWORD`: the keystore password entered in `keytool`.
+- `ANDROID_TEST_KEY_ALIAS`: `teapp-test`, unless a different alias was chosen.
+- `ANDROID_TEST_KEY_PASSWORD`: the private-key password entered in `keytool`.
+
+Encode the keystore on Linux with:
+
+```bash
+base64 -w 0 teapp-test.jks
+```
+
+On macOS, use:
+
+```bash
+base64 < teapp-test.jks | tr -d '\n'
+```
+
+The workflow intentionally fails if any signing secret is missing instead of producing an APK with a temporary signing key.
+
+#### Download and install an APK
+
+Open a successful `Build Android APK` workflow run, download the `teapp-debug-<commit>` artifact, unzip it, and open the contained APK on the Android device. Android may ask you to allow APK installation from the browser or file-manager app used to open it.
+
+GitHub retains these APK artifacts for 30 days. The app currently keeps a fixed Android version code and version name; automated versioning can be added later if needed.
+
 ## PWA and GitHub Pages
 
 The hosted build is an installable PWA deployed to [nils-handt.github.io/teapp](https://nils-handt.github.io/teapp/).

@@ -1,8 +1,30 @@
 apply plugin: 'com.android.application'
 
+def testKeystorePath = System.getenv('TEAPP_TEST_KEYSTORE_PATH')
+def testKeystorePassword = System.getenv('TEAPP_TEST_KEYSTORE_PASSWORD')
+def testKeyAlias = System.getenv('TEAPP_TEST_KEY_ALIAS')
+def testKeyPassword = System.getenv('TEAPP_TEST_KEY_PASSWORD')
+def testSigningValues = [testKeystorePath, testKeystorePassword, testKeyAlias, testKeyPassword]
+def hasAnyTestSigningValue = testSigningValues.any { it != null && !it.trim().isEmpty() }
+def hasTestSigningConfig = testSigningValues.every { it != null && !it.trim().isEmpty() }
+
+if (hasAnyTestSigningValue && !hasTestSigningConfig) {
+    throw new GradleException('Test signing requires all TEAPP_TEST_KEYSTORE_* environment variables')
+}
+
 android {
     namespace = "com.teapp.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        if (hasTestSigningConfig) {
+            ciTest {
+                storeFile = file(testKeystorePath)
+                storePassword = testKeystorePassword
+                keyAlias = testKeyAlias
+                keyPassword = testKeyPassword
+            }
+        }
+    }
     defaultConfig {
         applicationId = "com.teapp.app"
         minSdkVersion = rootProject.ext.minSdkVersion
@@ -17,6 +39,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            if (hasTestSigningConfig) {
+                signingConfig = signingConfigs.ciTest
+            }
+        }
         release {
             minifyEnabled = false
             proguardFiles = [getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro']

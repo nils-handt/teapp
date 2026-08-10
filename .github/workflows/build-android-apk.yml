@@ -1,0 +1,102 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build -- --configLoader native
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Prepare test signing key
+        env:
+          ANDROID_TEST_KEYSTORE_BASE64: ${{ secrets.ANDROID_TEST_KEYSTORE_BASE64 }}
+          ANDROID_TEST_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD }}
+          ANDROID_TEST_KEY_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS }}
+          ANDROID_TEST_KEY_PASSWORD: ${{ secrets.ANDROID_TEST_KEY_PASSWORD }}
+        run: |
+          for secret_name in \
+            ANDROID_TEST_KEYSTORE_BASE64 \
+            ANDROID_TEST_KEYSTORE_PASSWORD \
+            ANDROID_TEST_KEY_ALIAS \
+            ANDROID_TEST_KEY_PASSWORD
+          do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "Missing required repository secret: ${secret_name}" >&2
+              exit 1
+            fi
+          done
+
+          test_keystore_path="${RUNNER_TEMP}/teapp-test.jks"
+          printf '%s' "${ANDROID_TEST_KEYSTORE_BASE64}" | base64 --decode > "${test_keystore_path}"
+          test -s "${test_keystore_path}"
+          chmod 600 "${test_keystore_path}"
+          echo "TEAPP_TEST_KEYSTORE_PATH=${test_keystore_path}" >> "${GITHUB_ENV}"
+
+      - name: Build signed debug APK
+        working-directory: android
+        env:
+          TEAPP_TEST_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD }}
+          TEAPP_TEST_KEY_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS }}
+          TEAPP_TEST_KEY_PASSWORD: ${{ secrets.ANDROID_TEST_KEY_PASSWORD }}
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Prepare APK artifact
+        run: |
+          source_apk="android/app/build/outputs/apk/debug/app-debug.apk"
+          artifact_apk="${RUNNER_TEMP}/teapp-debug-${GITHUB_SHA}.apk"
+          test -s "${source_apk}"
+          cp "${source_apk}" "${artifact_apk}"
+          sha256sum "${artifact_apk}"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: teapp-debug-${{ github.sha }}
+          path: ${{ runner.temp }}/teapp-debug-${{ github.sha }}.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
