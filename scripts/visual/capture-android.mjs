@@ -56,8 +56,15 @@ const installDomDriver = async (client) => client.evaluate(`(() => {
   const visible = (element) => {
     if (!(element instanceof Element)) return false;
     const rect = element.getBoundingClientRect();
-    const style = getComputedStyle(element);
-    return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    let current = element;
+    while (current instanceof Element) {
+      const style = getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+      const root = current.getRootNode();
+      current = current.parentElement || (root instanceof ShadowRoot ? root.host : null);
+    }
+    return true;
   };
   const deepElements = () => {
     const elements = [];
