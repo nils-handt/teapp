@@ -140,15 +140,38 @@ const setVisibleDialogInput = async (client, value) => client.evaluate(`(() => {
   return true;
 })()`);
 
-const focusVisibleDialogInput = async (client) => {
+const focusVisibleDialogInput = async (client, forwardPort) => {
   const point = await client.evaluate(`(() => {
     const input = Array.from(document.querySelectorAll('[role="dialog"] input')).find(window.__teappVisual.visible);
     if (!input) throw new Error('No visible dialog input');
     const rect = input.getBoundingClientRect();
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   })()`);
+  const beforeTarget = await discoverTarget(forwardPort);
+  const beforeBounds = targetBounds(beforeTarget);
+  const devicePixelRatio = await client.evaluate('window.devicePixelRatio');
+  if (beforeBounds && beforeBounds.height < beforeBounds.width * 1.2) {
+    await sleep(350);
+    return;
+  }
   await client.send('Input.dispatchMouseEvent', { button: 'left', clickCount: 1, type: 'mousePressed', x: point.x, y: point.y });
   await client.send('Input.dispatchMouseEvent', { button: 'left', clickCount: 1, type: 'mouseReleased', x: point.x, y: point.y });
+  if (beforeBounds) {
+    await adb(
+      'shell',
+      'input',
+      'tap',
+      String(Math.round(beforeBounds.screenX + (point.x * devicePixelRatio))),
+      String(Math.round(beforeBounds.screenY + (point.y * devicePixelRatio))),
+    );
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const currentBounds = targetBounds(await discoverTarget(forwardPort));
+      if (currentBounds && currentBounds.height < beforeBounds.height * 0.8) return;
+      await sleep(150);
+    }
+    throw new Error('Timed out waiting for the Android software keyboard');
+  }
   await sleep(350);
 };
 
@@ -270,6 +293,7 @@ const run = async () => {
 
   const capture = async (name) => {
     console.log(`[visual:${targetName}] capturing ${name}`);
+    await dismissSystemUiDialog();
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-content')).map((content) => content.scrollToTop(0)))`);
     await sleep(150);
     const metrics = await client.evaluate(`(async () => ({
@@ -296,7 +320,11 @@ const run = async () => {
     captures.push({ name, metrics });
   };
 
-  const openTab = async (tab) => clickCss(client, `ion-tab-button[tab="${tab}"]`);
+  const openTab = async (tab) => {
+    await clickCss(client, `ion-tab-button[tab="${tab}"]`);
+    await waitFor(client, `window.location.pathname.startsWith('/tabs/${tab}')`, `${tab} tab route`);
+    await sleep(500);
+  };
   const textVisible = (text) => `window.__teappVisual.deepElements().some((element) => window.__teappVisual.visible(element) && (element.textContent || '').trim() === ${JSON.stringify(text)})`;
   const roleVisible = (role) => `window.__teappVisual.visibleCss('[role="${role}"]')`;
 
@@ -362,7 +390,7 @@ const run = async () => {
     const editSetupField = async (label, value, beforeSave) => {
       await clickText(client, label, true);
       await waitFor(client, roleVisible('dialog'), `${label} dialog`);
-      await focusVisibleDialogInput(client);
+      await focusVisibleDialogInput(client, forwardPort);
       if (beforeSave) await beforeSave();
       await setVisibleDialogInput(client, value);
       await clickText(client, 'Save');
