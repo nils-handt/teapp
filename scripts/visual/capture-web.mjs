@@ -6,6 +6,9 @@ import { chromium } from 'playwright';
 import { captureVisualStateRecipe } from './capture-shared.mjs';
 
 const webViewReferenceViewport = { width: 411, height: 683 };
+const outputRootIndex = process.argv.indexOf('--output-root');
+const outputRoot = outputRootIndex >= 0 ? process.argv[outputRootIndex + 1] : undefined;
+if (outputRootIndex >= 0 && !outputRoot) throw new Error('--output-root requires a directory');
 
 const getAvailablePort = async () => new Promise((resolvePort, reject) => {
   const server = createServer();
@@ -74,6 +77,7 @@ const run = async () => {
     await captureVisualStateRecipe({
       page,
       target: 'web',
+      ...(outputRoot ? { outputRoot } : {}),
       extraMetadata: {
         browserVersion: browser.version(),
         viewport: webViewReferenceViewport,

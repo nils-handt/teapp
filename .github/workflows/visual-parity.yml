@@ -1,0 +1,145 @@
+name: Visual parity
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/visual-parity.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/visual/**'
+      - 'src/**'
+      - 'tests/visual/**'
+      - 'vite.config.ts'
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate visual fixture
+        run: npm run visual:fixture
+
+      - name: Build production app
+        run: npm run build -- --configLoader native
+
+      - name: Capture web states
+        run: npm run visual:capture:web
+
+      - name: Compare web states
+        id: compare
+        continue-on-error: true
+        run: npm run visual:compare:web
+
+      - name: Add comparison summary
+        if: always()
+        run: |
+          if [[ -f tests/visual/artifacts/diff/web/report.md ]]; then
+            cat tests/visual/artifacts/diff/web/report.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload visual report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: visual-parity-web-${{ github.sha }}
+          path: tests/visual/artifacts
+          if-no-files-found: error
+
+  android:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [24, 36]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate visual fixture
+        run: npm run visual:fixture
+
+      - name: Build Android debug APK
+        run: npm run android:build:debug
+
+      - name: Capture Android states
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: ANDROID_SERIAL=emulator-5554 npm run visual:capture:android
+
+      - name: Compare Android states
+        id: compare
+        continue-on-error: true
+        run: npm run visual:compare:android:api${{ matrix.api-level }}
+
+      - name: Compare API 36 with web layout
+        if: matrix.api-level == 36
+        continue-on-error: true
+        run: npm run visual:compare:parity:api36
+
+      - name: Add comparison summary
+        if: always()
+        run: |
+          report="tests/visual/artifacts/diff/android-api${{ matrix.api-level }}/report.md"
+          if [[ -f "${report}" ]]; then
+            cat "${report}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          parity_report="tests/visual/artifacts/diff/parity-api36/report.md"
+          if [[ -f "${parity_report}" ]]; then
+            cat "${parity_report}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload visual report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: visual-parity-android-api${{ matrix.api-level }}-${{ github.sha }}
+          path: tests/visual/artifacts
+          if-no-files-found: error

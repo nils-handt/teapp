@@ -4,21 +4,31 @@ import { execFile as execFileCallback } from 'node:child_process';
 import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
+import { PNG } from 'pngjs';
 import { CdpClient } from './cdp-client.mjs';
 import {
+  assertReferenceCaptureSource,
   DEFAULT_VISUAL_OUTPUT_ROOT,
   readSourceMetadata,
   VISUAL_FIXTURE_PATH,
-  VISUAL_FIXTURE_RELATIVE_PATH,
 } from './capture-shared.mjs';
+import {
+  assertCanonicalCaptures,
+  VISUAL_FIXTURE_METADATA,
+  VISUAL_SETUP_VALUES,
+} from './state-manifest.mjs';
 
 const execFile = promisify(execFileCallback);
 const serial = process.env.ANDROID_SERIAL;
 const apkPath = resolve(process.env.VISUAL_ANDROID_APK ?? 'android/app/build/outputs/apk/debug/app-debug.apk');
+const outputRootIndex = process.argv.indexOf('--output-root');
+const outputRootArgument = outputRootIndex >= 0 ? process.argv[outputRootIndex + 1] : undefined;
 
 if (!serial) {
   throw new Error('Set ANDROID_SERIAL to a running local emulator before capturing Android screenshots');
 }
+if (outputRootIndex >= 0 && !outputRootArgument) throw new Error('--output-root requires a directory');
+const outputRoot = resolve(outputRootArgument ?? DEFAULT_VISUAL_OUTPUT_ROOT);
 
 const adb = async (...args) => execFile('adb', ['-s', serial, ...args], { maxBuffer: 10 * 1024 * 1024 });
 const adbBuffer = (...args) => new Promise((resolveResult, reject) => {
@@ -165,6 +175,15 @@ const targetBounds = (target) => {
   return null;
 };
 
+const cropPng = (sourceBuffer, bounds) => {
+  const source = PNG.sync.read(sourceBuffer);
+  const width = Math.min(bounds.width, source.width - bounds.screenX);
+  const height = Math.min(bounds.height, source.height - bounds.screenY);
+  const cropped = new PNG({ width, height });
+  PNG.bitblt(source, cropped, bounds.screenX, bounds.screenY, width, height, 0, 0);
+  return PNG.sync.write(cropped);
+};
+
 const dismissSystemUiDialog = async () => {
   const dumpPath = '/sdcard/teapp-visual-window.xml';
   await adb('shell', 'uiautomator', 'dump', dumpPath).catch(() => undefined);
@@ -182,6 +201,7 @@ const run = async () => {
   await access(apkPath);
   const fixtureText = await readFile(VISUAL_FIXTURE_PATH, 'utf8');
   const source = await readSourceMetadata();
+  assertReferenceCaptureSource(outputRoot, source);
   await adb('uninstall', 'com.teapp.app').catch(() => undefined);
   await adb('install', apkPath);
   await Promise.all([
@@ -201,8 +221,8 @@ const run = async () => {
     adb('shell', 'wm', 'density'),
   ]);
   const targetName = `android-api${sdk.trim()}`;
-  const targetDirectory = resolve(DEFAULT_VISUAL_OUTPUT_ROOT, targetName);
-  const deviceDirectory = resolve(DEFAULT_VISUAL_OUTPUT_ROOT, `${targetName}-device`);
+  const targetDirectory = resolve(outputRoot, targetName);
+  const deviceDirectory = resolve(outputRoot, `${targetName}-device`);
   await Promise.all([
     rm(targetDirectory, { force: true, recursive: true }),
     rm(deviceDirectory, { force: true, recursive: true }),
@@ -230,7 +250,7 @@ const run = async () => {
     captures,
     density: density.trim(),
     ...(captureError ? { captureError } : {}),
-    fixture: { now: '2026-08-11T12:00:00.000Z', path: VISUAL_FIXTURE_RELATIVE_PATH, seed: 'visual-parity-v1' },
+    fixture: VISUAL_FIXTURE_METADATA,
     model: model.trim(),
     screenSize: screenSize.trim(),
     source,
@@ -242,27 +262,23 @@ const run = async () => {
     console.log(`[visual:${targetName}] capturing ${name}`);
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-content')).map((content) => content.scrollToTop(0)))`);
     await sleep(150);
-    const metrics = await client.evaluate(`({
+    const metrics = await client.evaluate(`(async () => ({
       devicePixelRatio: window.devicePixelRatio,
       height: window.innerHeight,
       pathname: window.location.pathname,
       search: window.location.search,
       hash: window.location.hash,
+      scrollTops: await Promise.all(Array.from(document.querySelectorAll('ion-content')).map(async (content) => (await content.getScrollElement()).scrollTop)),
       userAgent: navigator.userAgent,
       width: window.innerWidth,
-    })`);
+    }))()`);
     const devicePath = resolve(deviceDirectory, `${name}.png`);
     const webViewPath = resolve(targetDirectory, `${name}.png`);
     const { stdout } = await adbBuffer('exec-out', 'screencap', '-p');
     await writeFile(devicePath, stdout);
     const bounds = targetBounds(await discoverTarget(forwardPort));
     if (bounds) {
-      await execFile('magick', [
-        devicePath,
-        '-crop', `${bounds.width}x${bounds.height}+${bounds.screenX}+${bounds.screenY}`,
-        '+repage',
-        webViewPath,
-      ]);
+      await writeFile(webViewPath, cropPng(stdout, bounds));
     } else {
       const screenshot = await client.send('Page.captureScreenshot', { format: 'png' });
       await writeFile(webViewPath, Buffer.from(screenshot.data, 'base64'));
@@ -319,6 +335,7 @@ const run = async () => {
     await capture('history-filters');
     await clickCss(client, 'ion-button[aria-label="Open tea statistics"]');
     await waitFor(client, `window.__teappVisual.visibleCss('[aria-label="Statistics period"]')`, 'statistics');
+    await waitFor(client, textVisible('24 sessions'), 'the populated statistics summary');
     await capture('statistics');
 
     await openTab('history');
@@ -342,10 +359,10 @@ const run = async () => {
       await waitFor(client, `!${roleVisible('dialog')}`, `${label} dialog to close`);
     };
 
-    await editSetupField('Vessel', '120', () => capture('brewing-setup-modal'));
-    await editSetupField('Lid', '35');
-    await editSetupField('Dry tea weight', '6.5');
-    await editSetupField('Vessel name', 'Visual Gaiwan');
+    await editSetupField('Vessel', VISUAL_SETUP_VALUES.vessel, () => capture('brewing-setup-modal'));
+    await editSetupField('Lid', VISUAL_SETUP_VALUES.lid);
+    await editSetupField('Dry tea weight', VISUAL_SETUP_VALUES.dryTeaWeight);
+    await editSetupField('Vessel name', VISUAL_SETUP_VALUES.vesselName);
     await capture('brewing-setup');
     await clickText(client, 'Confirm Setup');
     await waitFor(client, textVisible('Start Infusion'), 'the ready state');
@@ -363,6 +380,7 @@ const run = async () => {
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-toast')).filter((toast) => toast.presented).map((toast) => toast.dismiss()))`);
     await capture('brewing-ended');
 
+    assertCanonicalCaptures(captures);
     await writeMetadata();
   } catch (error) {
     const failureName = captures.length === 0 ? 'startup-failure' : 'capture-failure';

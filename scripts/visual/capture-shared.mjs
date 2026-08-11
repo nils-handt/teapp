@@ -2,18 +2,39 @@ import { execFile as execFileCallback } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
+import {
+  assertCanonicalCaptures,
+  VISUAL_FIXTURE_METADATA,
+  VISUAL_SETUP_VALUES,
+} from './state-manifest.mjs';
 
 const execFile = promisify(execFileCallback);
 export const VISUAL_FIXTURE_RELATIVE_PATH = 'tmp/visual-parity/sample-data.json';
 export const VISUAL_FIXTURE_PATH = resolve(VISUAL_FIXTURE_RELATIVE_PATH);
-export const DEFAULT_VISUAL_OUTPUT_ROOT = resolve(process.env.VISUAL_OUTPUT_ROOT ?? 'tests/visual/baselines/reference');
+export const DEFAULT_VISUAL_OUTPUT_ROOT = resolve(process.env.VISUAL_OUTPUT_ROOT ?? 'tests/visual/artifacts/actual');
 
 export const readSourceMetadata = async () => {
   const [{ stdout: revision }, { stdout: status }] = await Promise.all([
     execFile('git', ['rev-parse', 'HEAD']),
-    execFile('git', ['status', '--porcelain']),
+    execFile('git', [
+      'status',
+      '--porcelain',
+      '--',
+      '.',
+      ':(exclude)tests/visual/baselines/**',
+      ':(exclude)tests/visual/artifacts/**',
+    ]),
   ]);
   return { revision: revision.trim(), workingTreeDirty: status.trim().length > 0 };
+};
+
+export const assertReferenceCaptureSource = (outputRoot, source) => {
+  const referenceRoot = resolve('tests/visual/baselines/reference');
+  const resolvedOutputRoot = resolve(outputRoot);
+  const writesReference = resolvedOutputRoot === referenceRoot || resolvedOutputRoot.startsWith(`${referenceRoot}/`);
+  if (writesReference && source.workingTreeDirty) {
+    throw new Error('Reference capture requires a committed source revision with no unrelated tracked or untracked changes');
+  }
 };
 
 const stabilizationCss = `
@@ -115,6 +136,7 @@ export async function captureVisualStateRecipe({
   const deviceDirectory = resolve(outputRoot, `${target}-device`);
   const fixtureText = await readFile(VISUAL_FIXTURE_PATH, 'utf8');
   const source = await readSourceMetadata();
+  assertReferenceCaptureSource(outputRoot, source);
   const captures = [];
 
   await rm(targetDirectory, { force: true, recursive: true });
@@ -128,12 +150,15 @@ export async function captureVisualStateRecipe({
     console.log(`[visual:${target}] capturing ${name}`);
     await resetScrollPosition(page);
     await page.waitForTimeout(150);
-    const metrics = await page.evaluate(() => ({
+    const metrics = await page.evaluate(async () => ({
       devicePixelRatio: window.devicePixelRatio,
       height: window.innerHeight,
       pathname: window.location.pathname,
       search: window.location.search,
       hash: window.location.hash,
+      scrollTops: await Promise.all(Array.from(document.querySelectorAll('ion-content')).map(async (content) => (
+        (await content.getScrollElement()).scrollTop
+      ))),
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }));
@@ -172,7 +197,7 @@ export async function captureVisualStateRecipe({
 
   await page.locator('ion-button[aria-label="Open tea statistics"]').click();
   await page.getByRole('group', { name: 'Statistics period' }).waitFor({ state: 'visible' });
-  await page.getByText(/sessions$/).first().waitFor({ state: 'visible' });
+  await page.getByText('24 sessions', { exact: true }).waitFor({ state: 'visible' });
   await capture('statistics');
 
   await openTab(page, 'history');
@@ -188,10 +213,10 @@ export async function captureVisualStateRecipe({
   await page.getByRole('button', { name: 'START SESSION', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm Setup', exact: true }).waitFor({ state: 'visible' });
 
-  await editSetupField(page, 'Vessel', '120', () => capture('brewing-setup-modal'));
-  await editSetupField(page, 'Lid', '35');
-  await editSetupField(page, 'Dry tea weight', '6.5');
-  await editSetupField(page, 'Vessel name', 'Visual Gaiwan');
+  await editSetupField(page, 'Vessel', VISUAL_SETUP_VALUES.vessel, () => capture('brewing-setup-modal'));
+  await editSetupField(page, 'Lid', VISUAL_SETUP_VALUES.lid);
+  await editSetupField(page, 'Dry tea weight', VISUAL_SETUP_VALUES.dryTeaWeight);
+  await editSetupField(page, 'Vessel name', VISUAL_SETUP_VALUES.vesselName);
   await capture('brewing-setup');
 
   await page.getByRole('button', { name: 'Confirm Setup', exact: true }).click();
@@ -215,14 +240,11 @@ export async function captureVisualStateRecipe({
   });
   await capture('brewing-ended');
 
+  assertCanonicalCaptures(captures);
   const metadata = {
     capturedAt: new Date().toISOString(),
     captures,
-    fixture: {
-      path: VISUAL_FIXTURE_RELATIVE_PATH,
-      seed: 'visual-parity-v1',
-      now: '2026-08-11T12:00:00.000Z',
-    },
+    fixture: VISUAL_FIXTURE_METADATA,
     source,
     target,
     ...extraMetadata,

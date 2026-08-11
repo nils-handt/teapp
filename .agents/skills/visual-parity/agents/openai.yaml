@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visual Parity"
+  short_description: "Capture and diagnose web Android UI drift"
+  default_prompt: "Use $visual-parity to capture, compare, and diagnose Teapp visual changes."

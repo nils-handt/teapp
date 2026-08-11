@@ -18,6 +18,7 @@ const listFiles = async (root, directory = root) => {
 
 const hash = async (path) => createHash('sha256').update(await readFile(path)).digest('hex');
 const webFiles = await listFiles(webRoot);
+const androidFiles = await listFiles(androidRoot);
 const mismatches = [];
 
 for (const file of webFiles) {
@@ -29,6 +30,13 @@ for (const file of webFiles) {
     if (webHash !== androidHash) mismatches.push(`${file} differs`);
   } catch {
     mismatches.push(`${file} is missing from Android assets`);
+  }
+}
+
+const allowedAndroidOnlyFiles = new Set(['cordova.js', 'cordova_plugins.js']);
+for (const file of androidFiles) {
+  if (!webFiles.includes(file) && !allowedAndroidOnlyFiles.has(file)) {
+    mismatches.push(`${file} exists only in Android assets`);
   }
 }
 
