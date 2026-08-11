@@ -1,5 +1,4 @@
-import { Capacitor } from '@capacitor/core';
-import { sqliteConnection } from '../database/dataSource';
+import { AppDataSource, sqliteConnection } from '../database/dataSource';
 import { createLogger } from './logging';
 
 const logger = createLogger('BackupService');
@@ -74,26 +73,10 @@ class BackupService {
     public async importData(data: BackupData): Promise<void> {
         logger.info('Starting database import');
 
+        const dbName = 'teapp';
+        let dataSourceWasDestroyed = false;
+
         try {
-            const dbName = 'teapp';
-            // Check connection but don't strictly need it open for import if using plugin directly? 
-            // Actually, importFromJson requires the DB to be closed in some versions, or open in others.
-            // The documentation says "Import from Json Object".
-            // Let's ensure we have a handle to the plugin.
-
-            const isConnection = await sqliteConnection.isConnection(dbName, false);
-            if (!isConnection.result) {
-                await sqliteConnection.createConnection(dbName, false, 'no-encryption', 1, false);
-            }
-
-            // Close the connection before importing to avoid locks/issues with overwrite
-            const db = await sqliteConnection.retrieveConnection(dbName, false);
-            const isOpen = await db.isDBOpen();
-            if (isOpen.result) {
-                await db.close();
-            }
-
-            // Validating basic structure - data should be the object that exportToJson returns
             if (!isBackupData(data)) {
                 throw new Error('Invalid backup file format');
             }
@@ -109,6 +92,19 @@ class BackupService {
                 throw new Error('Invalid JSON data for SQLite import');
             }
 
+            // TypeORM closes the database handle, but the Capacitor SQLite
+            // wrapper keeps a named connection registered until it is removed
+            // explicitly. Leaving either layer alive makes native reloads fail.
+            if (AppDataSource.isInitialized) {
+                await AppDataSource.destroy();
+                dataSourceWasDestroyed = true;
+            }
+
+            const isConnection = await sqliteConnection.isConnection(dbName, false);
+            if (isConnection.result) {
+                await sqliteConnection.closeConnection(dbName, false);
+            }
+
             // Perform import
             const result = await sqliteConnection.importFromJson(jsonString);
 
@@ -116,17 +112,19 @@ class BackupService {
                 throw new Error('Import failed');
             }
 
-            if (Capacitor.getPlatform() === 'web') {
-                try {
-                    await sqliteConnection.saveToStore('teapp');
-                } catch (err) {
-                    logger.error('Failed to persist imported database to the web store', err);
-                }
-            }
-
             logger.info('Database import completed', { changes: result.changes });
 
         } catch (error) {
+            // Validation happens before teardown. Once teardown starts, recover
+            // a usable connection if import fails so the current UI is not left
+            // attached to a destroyed DataSource.
+            if (dataSourceWasDestroyed && !AppDataSource.isInitialized) {
+                try {
+                    await AppDataSource.initialize();
+                } catch (recoveryError) {
+                    logger.error('Failed to recover database connection after import failure', recoveryError);
+                }
+            }
             logger.error('Database import failed', error);
             throw error;
         }

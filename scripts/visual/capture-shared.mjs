@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 const execFile = promisify(execFileCallback);
 export const VISUAL_FIXTURE_RELATIVE_PATH = 'tmp/visual-parity/sample-data.json';
 export const VISUAL_FIXTURE_PATH = resolve(VISUAL_FIXTURE_RELATIVE_PATH);
-export const DEFAULT_VISUAL_OUTPUT_ROOT = resolve('tests/visual/baselines/unfixed');
+export const DEFAULT_VISUAL_OUTPUT_ROOT = resolve(process.env.VISUAL_OUTPUT_ROOT ?? 'tests/visual/baselines/reference');
 
 export const readSourceMetadata = async () => {
   const [{ stdout: revision }, { stdout: status }] = await Promise.all([
@@ -44,7 +44,15 @@ const clickIfVisible = async (locator) => {
 const waitForApp = async (page) => {
   await page.locator('ion-app').waitFor({ state: 'visible', timeout: 30_000 });
   await page.addStyleTag({ content: stabilizationCss });
+  await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(250);
+};
+
+const resetScrollPosition = async (page) => {
+  await page.locator('ion-content').evaluateAll(async (contents) => {
+    await Promise.all(contents.map((content) => content.scrollToTop(0)));
+  });
+  await page.waitForTimeout(50);
 };
 
 const dismissTransientAlerts = async (page) => {
@@ -87,6 +95,7 @@ const editSetupField = async (page, label, value, beforeSave) => {
   await dialog.waitFor({ state: 'visible' });
   const input = dialog.locator('input').first();
   await input.waitFor({ state: 'visible' });
+  await input.focus();
   if (beforeSave) {
     await beforeSave();
   }
@@ -117,6 +126,7 @@ export async function captureVisualStateRecipe({
 
   const capture = async (name) => {
     console.log(`[visual:${target}] capturing ${name}`);
+    await resetScrollPosition(page);
     await page.waitForTimeout(150);
     const metrics = await page.evaluate(() => ({
       devicePixelRatio: window.devicePixelRatio,
@@ -190,12 +200,12 @@ export async function captureVisualStateRecipe({
 
   await page.getByRole('button', { name: 'Start Infusion', exact: true }).click();
   await page.getByRole('button', { name: 'End Infusion', exact: true }).waitFor({ state: 'visible' });
-  await page.waitForFunction(() => document.querySelector('[data-testid="primary-timer"]')?.textContent === '0:01');
+  await page.waitForFunction(() => document.querySelector('[data-testid="primary-timer"]')?.textContent?.trim() === '0:01');
   await capture('brewing-infusion');
 
   await page.getByRole('button', { name: 'End Infusion', exact: true }).click();
   await page.getByRole('button', { name: 'Start Infusion', exact: true }).waitFor({ state: 'visible' });
-  await page.waitForFunction(() => document.querySelector('[data-testid="primary-timer"]')?.textContent === '0:01');
+  await page.waitForFunction(() => document.querySelector('[data-testid="primary-timer"]')?.textContent?.trim() === '0:01');
   await capture('brewing-rest');
 
   await page.getByRole('button', { name: 'End Session', exact: true }).click();

@@ -120,6 +120,18 @@ const setVisibleDialogInput = async (client, value) => client.evaluate(`(() => {
   return true;
 })()`);
 
+const focusVisibleDialogInput = async (client) => {
+  const point = await client.evaluate(`(() => {
+    const input = Array.from(document.querySelectorAll('[role="dialog"] input')).find(window.__teappVisual.visible);
+    if (!input) throw new Error('No visible dialog input');
+    const rect = input.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  })()`);
+  await client.send('Input.dispatchMouseEvent', { button: 'left', clickCount: 1, type: 'mousePressed', x: point.x, y: point.y });
+  await client.send('Input.dispatchMouseEvent', { button: 'left', clickCount: 1, type: 'mouseReleased', x: point.x, y: point.y });
+  await sleep(350);
+};
+
 const discoverTarget = async (forwardPort) => {
   const targets = await fetch(`http://127.0.0.1:${forwardPort}/json/list`).then((response) => response.json());
   const target = targets.find((candidate) => candidate.type === 'page');
@@ -151,6 +163,19 @@ const targetBounds = (target) => {
     // Older WebViews may expose a non-JSON target description.
   }
   return null;
+};
+
+const dismissSystemUiDialog = async () => {
+  const dumpPath = '/sdcard/teapp-visual-window.xml';
+  await adb('shell', 'uiautomator', 'dump', dumpPath).catch(() => undefined);
+  const { stdout: hierarchy = '' } = await adb('shell', 'cat', dumpPath).catch(() => ({ stdout: '' }));
+  if (!hierarchy.includes("System UI isn't responding")) return;
+
+  const waitButton = hierarchy.match(/text="Wait"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+  if (!waitButton) throw new Error('System UI dialog is blocking capture and its Wait action could not be located');
+  const [, left, top, right, bottom] = waitButton.map(Number);
+  await adb('shell', 'input', 'tap', String((left + right) / 2), String((top + bottom) / 2));
+  await sleep(350);
 };
 
 const run = async () => {
@@ -215,6 +240,7 @@ const run = async () => {
 
   const capture = async (name) => {
     console.log(`[visual:${targetName}] capturing ${name}`);
+    await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-content')).map((content) => content.scrollToTop(0)))`);
     await sleep(150);
     const metrics = await client.evaluate(`({
       devicePixelRatio: window.devicePixelRatio,
@@ -252,6 +278,7 @@ const run = async () => {
     await waitFor(client, `document.querySelector('ion-app')`, 'the Ionic app');
     await installDomDriver(client);
     await waitFor(client, roleVisible('dialog'), 'the first-run tutorial');
+    await dismissSystemUiDialog();
     await capture('tutorial');
     await clickText(client, 'Skip');
 
@@ -267,16 +294,17 @@ const run = async () => {
     })()`);
     await waitFor(client, textVisible('Confirm Restore'), 'the restore confirmation');
     await clickText(client, 'Restore');
+    // A native location replacement creates a new WebView page target. Reattach
+    // to that target without restarting the Activity; the fixture-backed action
+    // below is the readiness signal for both reload and database initialization.
     await sleep(2_500);
-    // Restarting after import clears the closed native SQLite connection and
-    // returns Capacitor to its origin root instead of reloading /tabs/settings.
     client.close();
     await adb('forward', '--remove', `tcp:${forwardPort}`).catch(() => undefined);
-    await adb('shell', 'am', 'force-stop', 'com.teapp.app');
-    await adb('shell', 'am', 'start', '-W', '-n', 'com.teapp.app/.MainActivity');
     await connectWebView();
-    await waitFor(client, `document.querySelector('ion-app')`, 'the reloaded Ionic app');
+    await waitFor(client, `document.querySelector('ion-app')`, 'the restored app reload');
     await installDomDriver(client);
+    await waitFor(client, textVisible('CONNECT TO SCALE'), 'the restored app bootstrap');
+    await dismissSystemUiDialog();
     await openTab('settings');
     await waitFor(client, textVisible('Connect Mock Scale'), 'the mock-scale connection action');
     await clickText(client, 'Connect Mock Scale');
@@ -307,6 +335,7 @@ const run = async () => {
     const editSetupField = async (label, value, beforeSave) => {
       await clickText(client, label, true);
       await waitFor(client, roleVisible('dialog'), `${label} dialog`);
+      await focusVisibleDialogInput(client);
       if (beforeSave) await beforeSave();
       await setVisibleDialogInput(client, value);
       await clickText(client, 'Save');
@@ -323,11 +352,11 @@ const run = async () => {
     await capture('brewing-ready');
     await clickText(client, 'Start Infusion');
     await waitFor(client, textVisible('End Infusion'), 'the infusion state');
-    await waitFor(client, `document.querySelector('[data-testid="primary-timer"]')?.textContent === '0:01'`, 'the infusion timer');
+    await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the infusion timer');
     await capture('brewing-infusion');
     await clickText(client, 'End Infusion');
     await waitFor(client, textVisible('Start Infusion'), 'the rest state');
-    await waitFor(client, `document.querySelector('[data-testid="primary-timer"]')?.textContent === '0:01'`, 'the rest timer');
+    await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the rest timer');
     await capture('brewing-rest');
     await clickText(client, 'End Session');
     await waitFor(client, textVisible('Start New Session'), 'the ended summary');

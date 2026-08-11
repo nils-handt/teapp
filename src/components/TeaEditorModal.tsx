@@ -10,6 +10,7 @@ import AppButton from './ui/AppButton';
 import ModalFrame from './ui/ModalFrame';
 import SuggestedInput from './ui/SuggestedInput';
 import { cn, zenInputClass } from '../styles/zen';
+import { createUuid } from '../utils/createUuid';
 
 export type TeaEditorSubmission = {
     action: 'select' | 'create' | 'edit';
@@ -155,7 +156,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
         }
 
         const tea = Object.assign(new Tea(), {
-            teaId: selectedTea?.teaId ?? crypto.randomUUID(),
+            teaId: selectedTea?.teaId ?? createUuid(),
             name,
             brand: trimToNullable(draft.brand),
             type: trimToNullable(draft.type),

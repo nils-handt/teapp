@@ -1,7 +1,5 @@
-@layer theme, components, utilities;
-
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
 
 @theme {
   --color-zen-text: #243126;
@@ -26,6 +24,7 @@
 }
 
 :root {
+  --ion-font-family: "Roboto", sans-serif;
   --zen-background: linear-gradient(180deg, #f7f3eb 0%, #eef3ea 100%);
   --zen-danger-gradient: linear-gradient(180deg, #fad3ce 0%, #f4c4bc 100%);
   --zen-tutorial-background: linear-gradient(180deg, #fffdf7 0%, #f3efe2 100%);

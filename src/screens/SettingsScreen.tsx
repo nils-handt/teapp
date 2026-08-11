@@ -25,6 +25,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useScaleStore } from '../stores/useScaleStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import { reloadAfterRestore } from '../utils/reloadAfterRestore';
 import {
   zenListPageClass,
   zenListSectionHeaderClass,
@@ -173,9 +174,8 @@ const SettingsScreen: React.FC = () => {
     try {
       await backupService.importData(restoreData);
       setToastMessage('Data restored successfully. App will reload.');
-      // Force reload to reset store and re-initialize DB connection
       setTimeout(() => {
-        window.location.reload();
+        reloadAfterRestore();
       }, 1500);
     } catch (error) {
       logger.error('Restore failed', error);

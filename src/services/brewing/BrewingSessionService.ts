@@ -8,6 +8,7 @@ import { BrewingVessel } from '../../entities/BrewingVessel.entity';
 import { Infusion } from '../../entities/Infusion.entity';
 import { Tea } from '../../entities/Tea.entity';
 import { formatTeaLabel } from '../../utils/teaSearch';
+import { createUuid } from '../../utils/createUuid';
 
 import {
     BrewingPhase,
@@ -459,7 +460,7 @@ class BrewingSessionService {
             hasNotes: Boolean(notes),
         });
         const session = new BrewingSession();
-        session.sessionId = crypto.randomUUID(); // Requires secure context or polyfill. If failing, move to uuid lib.
+        session.sessionId = createUuid();
         session.teaName = typeof tea === 'string' ? tea : formatTeaLabel(tea);
         session.teaId = typeof tea === 'string' ? null : tea?.teaId ?? null;
         session.tea = typeof tea === 'string' ? null : tea ?? null;
@@ -880,7 +881,7 @@ class BrewingSessionService {
         logger.info('Saving brewing vessel for session', { sessionId, name });
         const brewingVessel = session.brewingVessel ?? await brewingVesselRepository.findSimilarVessel(session.vesselWeight, session.lidWeight) ?? new BrewingVessel();
         if (!brewingVessel.vesselId) {
-            brewingVessel.vesselId = crypto.randomUUID();
+            brewingVessel.vesselId = createUuid();
         }
 
         brewingVessel.name = name;
@@ -1068,7 +1069,7 @@ class BrewingSessionService {
         const firstInfusionDraft = this.firstInfusionDraft$.value;
 
         const infusion = new Infusion();
-        infusion.infusionId = crypto.randomUUID();
+        infusion.infusionId = createUuid();
         infusion.infusionNumber = infusionNumber;
         infusion.startTime = new Date().toISOString();
         infusion.sessionId = session?.sessionId || '';
