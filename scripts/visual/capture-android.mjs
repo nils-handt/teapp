@@ -60,7 +60,10 @@ const installDomDriver = async (client) => client.evaluate(`(() => {
     let current = element;
     while (current instanceof Element) {
       const style = getComputedStyle(current);
-      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+      // Ionic starts some overlays at opacity 0 and applies the final state via
+      // its animation controller. The capture stylesheet disables that
+      // animation, so opacity is not a reliable interaction signal here.
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
       const root = current.getRootNode();
       current = current.parentElement || (root instanceof ShadowRoot ? root.host : null);
     }
