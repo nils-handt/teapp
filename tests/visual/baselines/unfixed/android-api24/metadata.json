@@ -1,0 +1,37 @@
+{
+  "androidSerial": "emulator-5554",
+  "capturedAt": "2026-08-11T21:24:18.183Z",
+  "captures": [
+    {
+      "name": "startup-failure",
+      "metrics": {
+        "devicePixelRatio": 2.625,
+        "height": 660,
+        "pathname": "/",
+        "search": "",
+        "hash": "",
+        "userAgent": "Mozilla/5.0 (Linux; Android 7.0; Android SDK built for x86_64 Build/NYC; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/69.0.3497.100 Mobile Safari/537.36",
+        "width": 412
+      }
+    }
+  ],
+  "density": "Physical density: 420",
+  "captureError": "Timed out waiting for the Ionic app",
+  "fixture": {
+    "now": "2026-08-11T12:00:00.000Z",
+    "path": "tmp/visual-parity/sample-data.json",
+    "seed": "visual-parity-v1"
+  },
+  "model": "Android SDK built for x86_64",
+  "screenSize": "Physical size: 1080x1920",
+  "source": {
+    "revision": "59e6566f8daa9b9a8bbae4b53baa6b984cb68d24",
+    "workingTreeDirty": true
+  },
+  "target": "android-api24",
+  "webViewTarget": {
+    "description": "{\"attached\":true,\"empty\":false,\"height\":1731,\"screenX\":0,\"screenY\":63,\"visible\":true,\"width\":1080}",
+    "title": "Teapp - Tea Brewing Tracker",
+    "url": "https://localhost/"
+  }
+}
