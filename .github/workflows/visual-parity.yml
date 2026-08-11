@@ -71,10 +71,6 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        api-level: [24, 36]
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -106,7 +102,7 @@ jobs:
       - name: Capture Android states
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: ${{ matrix.api-level }}
+          api-level: 36
           arch: x86_64
           target: google_apis
           profile: pixel_2
@@ -117,17 +113,16 @@ jobs:
       - name: Compare Android states
         id: compare
         continue-on-error: true
-        run: npm run visual:compare:android:api${{ matrix.api-level }}
+        run: npm run visual:compare:android:api36
 
       - name: Compare API 36 with web layout
-        if: matrix.api-level == 36
         continue-on-error: true
         run: npm run visual:compare:parity:api36
 
       - name: Add comparison summary
         if: always()
         run: |
-          report="tests/visual/artifacts/diff/android-api${{ matrix.api-level }}/report.md"
+          report="tests/visual/artifacts/diff/android-api36/report.md"
           if [[ -f "${report}" ]]; then
             cat "${report}" >> "${GITHUB_STEP_SUMMARY}"
           fi
@@ -140,6 +135,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: visual-parity-android-api${{ matrix.api-level }}-${{ github.sha }}
+          name: visual-parity-android-api36-${{ github.sha }}
           path: tests/visual/artifacts
           if-no-files-found: error

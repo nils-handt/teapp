@@ -18,10 +18,10 @@ Build synchronized Android assets, then capture and compare a running emulator (
 ```bash
 npm run android:build:debug
 ANDROID_SERIAL=emulator-5554 npm run visual:capture:android
-npm run visual:compare:android:api24
+npm run visual:compare:android:api36
 ```
 
-Use a disposable Pixel 2 AVD that matches the CI profile: API 24 for the minimum-WebView compatibility target and API 36 for current Android. Discover local names with `emulator -list-avds`, start one on an explicit port, and pass its `emulator-<port>` serial. Do not run the capture against a personal/data-bearing emulator: it uninstalls `com.teapp.app` and changes emulator-wide font scale, rotation, and animation settings.
+Use a disposable API 36 Pixel 2 AVD that matches the CI profile. Discover local names with `emulator -list-avds`, start one on an explicit port, and pass its `emulator-<port>` serial. Do not run the capture against a personal/data-bearing emulator: it uninstalls `com.teapp.app` and changes emulator-wide font scale, rotation, and animation settings. The API 24 compare command remains available for legacy-support diagnosis, but API 24 is not a visual-parity acceptance target while the minimum Android/WebView policy is being reconsidered.
 
 Android capture attaches a page-level Chrome DevTools Protocol client to the debuggable Capacitor WebView through an `adb` port forward. A full Playwright browser connection is intentionally not used because Android WebViews do not expose browser-context management. The harness saves full-device screenshots and crops the reported WebView bounds into matching app-content screenshots, allowing operating-system chrome to be evaluated separately. The web reference uses the current API 36 WebView's 411 x 683 CSS-pixel content viewport.
 
@@ -35,8 +35,8 @@ Normal captures write to ignored `tests/visual/artifacts/actual/`; diffs and rep
 | --- | --- | --- |
 | Packaged Android UI | Gradle could package ignored, previously generated Capacitor assets | `android:sync`/`android:build:debug` plus a byte-for-byte asset verification step in local and CI builds |
 | Tailwind cascade | Named Tailwind layers lost to unlayered Ionic author CSS | Emit theme and utilities unlayered after Ionic while keeping Tailwind preflight omitted |
-| API 24 startup | Vite 8 output and runtime APIs exceeded Chrome 69 | Legacy-plugin ESM syntax lowering, modern polyfills, and a UUID fallback |
-| API 24 spacing | Tailwind 4 logical properties such as `padding-inline` are unsupported by Chrome 69 | PostCSS physical LTR fallbacks for logical properties |
+| Legacy startup | Vite 8 output and runtime APIs exceeded the API 24 emulator's Chrome 69 WebView | Legacy-plugin ESM syntax lowering, modern polyfills, and a UUID fallback; retained pending the minimum-support decision |
+| Legacy spacing | Tailwind 4 logical properties such as `padding-inline` are unsupported by Chrome 69 | PostCSS physical LTR fallbacks; legacy behavior is diagnostic rather than an API 36 acceptance gate |
 | Typography | Linux Chromium fell back to DejaVu while Android used Roboto | Bundle Roboto 300/400/500 Latin and wait for `document.fonts.ready` |
 | Native restore | TypeORM and Capacitor kept a stale named connection; nested BrowserRouter reload broke relative asset URLs | Validate first, destroy/remove both connection layers, recover after failure, and replace native location with the origin root |
 | Screenshot alignment | Browser clicks scrolled content while raw Android DOM clicks did not | Reset visible Ionic content to the top before each canonical capture |
@@ -44,6 +44,6 @@ Normal captures write to ignored `tests/visual/artifacts/actual/`; diffs and rep
 
 ## CI policy
 
-Pull requests that touch UI inputs run the production web capture. The API 24/API 36 Android matrix runs weekly and on manual dispatch. API 36 also gets a normalized direct comparison with the web reference via `npm run visual:compare:parity:api36`; this resizes the device-pixel capture to the web dimensions and uses a deliberately broad 12% guard against gross layout drift. The focused setup modal is excluded from the cross-runtime calculation because Android shows the operating-system keyboard; its target-specific app and full-device screenshots remain required. Pixel differences are initially report-only in CI: actual, reference, diff, and metadata artifacts are uploaded for review. Local compare commands still exit nonzero on drift. Build, capture, state-manifest, and stale-asset failures remain blocking. Tighten changed-pixel thresholds only after repeated runs establish stable target-specific noise.
+Pull requests that touch UI inputs run the production web capture. Android API 36 runs weekly and on manual dispatch, and gets a normalized direct comparison with the web reference via `npm run visual:compare:parity:api36`; this resizes the device-pixel capture to the web dimensions and uses a deliberately broad 12% guard against gross layout drift. The focused setup modal is excluded from the cross-runtime calculation because Android shows the operating-system keyboard; its target-specific app and full-device screenshots remain required. Pixel differences are initially report-only in CI: actual, reference, diff, and metadata artifacts are uploaded for review. Local compare commands still exit nonzero on drift. Build, capture, state-manifest, and stale-asset failures remain blocking. Tighten changed-pixel thresholds only after repeated runs establish stable target-specific noise.
 
 Every reference must contain the 13 names in `scripts/visual/state-manifest.mjs`. Timers are captured at controlled checkpoints; Android system chrome is stored separately and excluded from app-content diffs.
