@@ -1,0 +1,242 @@
+{
+  "capturedAt": "2026-08-11T23:43:01.912Z",
+  "captures": [
+    {
+      "name": "tutorial",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "settings-mock-scale",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/settings",
+        "scrollTops": [
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "history",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/history",
+        "scrollTops": [
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "history-filters",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/history",
+        "scrollTops": [
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "statistics",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/history/statistics",
+        "scrollTops": [
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "session-detail",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/history/00000000-0000-4000-8000-000000000048",
+        "scrollTops": [
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-idle",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-setup-modal",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-setup",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-ready",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-infusion",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-rest",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    },
+    {
+      "name": "brewing-ended",
+      "metrics": {
+        "devicePixelRatio": 1,
+        "height": 683,
+        "pathname": "/",
+        "search": "",
+        "hash": "#/tabs/brewing/1",
+        "scrollTops": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+        "width": 411
+      }
+    }
+  ],
+  "fixture": {
+    "now": "2026-08-11T12:00:00.000Z",
+    "path": "tmp/visual-parity/sample-data.json",
+    "seed": "visual-parity-v1"
+  },
+  "source": {
+    "revision": "b01b10e58b445f59e51b60453aa5c608022326d3",
+    "workingTreeDirty": false
+  },
+  "target": "web",
+  "browserVersion": "151.0.7922.34",
+  "viewport": {
+    "width": 411,
+    "height": 683
+  }
+}
