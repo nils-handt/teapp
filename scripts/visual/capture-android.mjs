@@ -102,6 +102,11 @@ const installDomDriver = async (client) => client.evaluate(`(() => {
   return true;
 })()`);
 
+const waitForFonts = async (client) => {
+  await client.evaluate('document.fonts.ready.then(() => true)');
+  await sleep(100);
+};
+
 const clickCss = async (client, selector) => {
   await waitFor(client, `window.__teappVisual.visibleCss(${JSON.stringify(selector)})`, selector);
   const clicked = await client.evaluate(`(() => {
@@ -331,6 +336,7 @@ const run = async () => {
   try {
     await waitFor(client, `document.querySelector('ion-app')`, 'the Ionic app');
     await installDomDriver(client);
+    await waitForFonts(client);
     await waitFor(client, roleVisible('dialog'), 'the first-run tutorial');
     await dismissSystemUiDialog();
     await capture('tutorial');
@@ -357,6 +363,7 @@ const run = async () => {
     await connectWebView();
     await waitFor(client, `document.querySelector('ion-app')`, 'the restored app reload');
     await installDomDriver(client);
+    await waitForFonts(client);
     await waitFor(client, textVisible('CONNECT TO SCALE'), 'the restored app bootstrap');
     await dismissSystemUiDialog();
     await openTab('settings');
