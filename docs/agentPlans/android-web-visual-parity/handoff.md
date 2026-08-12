@@ -101,6 +101,9 @@ After `statistics`, proceed in the order defined in `plan-v2.md`.
 - Collapsed `history` retains 4.755% direct changed pixels, but every counted pixel is in foreground text or icons. The broad surfaces and decorations match.
 - All six visible titles have identical two-line word wrapping and equal computed typography. Their rows are locally 85.375px web versus 85.155px Android because the equal 1px inner separator quantizes to 0.761905px at DPR 2.625; the resulting −0.220px cadence accumulates down the list.
 - No additional shared production CSS change is justified for collapsed `history`: the remaining differences are measured DPR/browser glyph rasterization and physical-grid border quantization, not a cascade or token mismatch.
+- The tracked web, API 36 app-content, and full-device references were regenerated from committed revision `ff36509`. Web PNGs remained byte-identical; the API 36 app-content changes are the four approved shared-fix states plus the keyboard-modal crop. Historical `baselines/unfixed` files were not changed.
+- `visual:compare:android:api36` now matches `history`, `history-filters`, Settings, and Statistics at 0.000% against the updated API 36 reference. This remains repeatability evidence only; the direct ratios and Phase 2 classifications still use web as the source of truth.
+- The refreshed keyboard-modal app-content crop is 1080×1101 versus the prior 1080×985 because the OS keyboard dynamically resizes the WebView. An immediate repeat capture produced 1080×985 again (`innerHeight` 375 versus 419), leaving the Android repeatability report with a dimension mismatch only for this state. Its full-device screenshot was reviewed with the numeric keyboard visible; the explicit cross-runtime modal comparison strategy remains unfinished.
 
 ## Required constraints
 

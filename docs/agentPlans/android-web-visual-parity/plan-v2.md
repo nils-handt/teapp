@@ -43,6 +43,7 @@ Device-pixel ratio and browser rasterization may produce small antialiasing diff
 - Android build/sync asset verification.
 - Target-specific repeatability checks.
 - Historical pre-fix evidence and stable API 36 captures.
+- Web and API 36 references recaptured from committed revision `ff36509` after the approved History-surface fixes; `baselines/unfixed` remains unchanged.
 
 ### Partially complete but not accepted as parity
 

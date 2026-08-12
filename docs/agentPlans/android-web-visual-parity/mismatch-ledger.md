@@ -77,6 +77,7 @@ Status: no independent material styling or responsive-layout drift remains after
 - `visual:compare:web`: all 13 states at 0.000% against the unchanged web reference.
 - Focused API 36 capture through the production journey to `history-filters`: 1.638% direct changed pixels.
 - Full API 36 journey: all 13 canonical states captured after the causal group.
-- `visual:compare:android:api36` reports expected drift in four corrected states because its Android reference is pre-fix; it is repeatability evidence only and must not be used to reject the web-backed fix.
+- The API 36 reference was recaptured from committed revision `ff36509` after the approved shared fixes. `visual:compare:android:api36` now matches the four corrected states at 0.000%; it remains repeatability evidence only and does not prove web parity.
 - `visual:compare:parity:api36` still uses the broad report-only policy and is not acceptance evidence.
 - Focused collapsed-History recapture: web remains 0.000% from its unchanged reference; direct API 36 comparison remains 4.755%, with the mismatch localized and classified above.
+- The keyboard-modal app-content reference changed from 1080×985 to 1080×1101 because the Android keyboard reduces the WebView crop dynamically. An immediate repeat capture returned to 1080×985 (`innerHeight` 375 versus the reference's 419), so the target repeatability check still reports a dimension mismatch only for this state. Its full-device reference retains the OS keyboard for separate review; cross-runtime acceptance still requires the explicit Phase 4 modal strategy.
