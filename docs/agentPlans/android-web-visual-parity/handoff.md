@@ -69,24 +69,24 @@ The latest recorded cross-runtime ratios include:
 
 | State | Changed pixels |
 | --- | ---: |
-| `history-filters` | approximately 3.8% |
-| `history` | approximately 5.3% |
-| `statistics` | approximately 5.0% |
+| `history-filters` | 1.638% after shared fix; diagnosed |
+| `history` | 4.755% after shared fix; diagnosed |
+| `statistics` | 2.243% after shared fix; next active state |
 | `tutorial` | approximately 11.2% |
 
-These differences remain unexplained until measured and classified.
+The History-state residuals are now measured and classified. The remaining states are still unexplained until their own ledger work is complete.
 
 ## Next active task
 
-Continue Phase 2 with `history`. The `history-filters` material drift is resolved and documented in `mismatch-ledger.md`; overall parity remains incomplete.
+Continue Phase 2 with `statistics`. The `history-filters` material drift and the collapsed `history` residuals are resolved or explained in `mismatch-ledger.md`; overall parity remains incomplete.
 
-1. Preserve the `history-filters` evidence and shared specificity fixes.
-2. Build the `history` rows in the canonical `mismatch-ledger.md`.
-3. Explain its remaining 4.755% direct changed pixels using geometry, computed styles, Ionic internals, fonts, and winning declarations.
+1. Preserve the two completed History-state ledger entries and shared specificity fixes.
+2. Build the `statistics` rows in the canonical `mismatch-ledger.md`.
+3. Explain its remaining 2.243% direct changed pixels using geometry, computed styles, Ionic internals, fonts, charts, and winning declarations.
 4. Fix and recapture the smallest affected state before expanding the next causal group.
 5. Do not update the web reference or loosen thresholds to make the difference disappear.
 
-After `history-filters`, proceed in the order defined in `plan-v2.md`.
+After `statistics`, proceed in the order defined in `plan-v2.md`.
 
 ## Latest Phase 2 findings (2026-08-12)
 
@@ -97,6 +97,10 @@ After `history-filters`, proceed in the order defined in `plan-v2.md`.
 - Full direct ratios also improved: `history` 5.285% → 4.755%, Settings 3.910% → 1.923%, and Statistics 5.009% → 2.243%.
 - The unchanged web capture remained 0.000% different from the web reference in all 13 states.
 - A complete API 36 journey succeeded after limiting native keyboard assertions to the one canonical keyboard-open modal. The first two full attempts exposed that later, uncaptured setup edits did not need OS-keyboard readiness.
+- Focused collapsed-`history` capture now records header controls, content Shadow DOM, the list and six visible Ionic item internals, typography ranges, chevrons, all tab hosts/parts/icons/labels, viewport, safe area, fonts, Ionic mode, variables, and matched declarations in both runtimes.
+- Collapsed `history` retains 4.755% direct changed pixels, but every counted pixel is in foreground text or icons. The broad surfaces and decorations match.
+- All six visible titles have identical two-line word wrapping and equal computed typography. Their rows are locally 85.375px web versus 85.155px Android because the equal 1px inner separator quantizes to 0.761905px at DPR 2.625; the resulting −0.220px cadence accumulates down the list.
+- No additional shared production CSS change is justified for collapsed `history`: the remaining differences are measured DPR/browser glyph rasterization and physical-grid border quantization, not a cascade or token mismatch.
 
 ## Required constraints
 

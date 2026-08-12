@@ -3,19 +3,22 @@ const expression = `(() => {
     'display', 'position', 'boxSizing', 'width', 'height', 'minWidth', 'minHeight',
     'maxWidth', 'maxHeight', 'top', 'right', 'bottom', 'left',
     'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
+    'marginInlineStart', 'marginInlineEnd',
     'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+    'paddingInlineStart', 'paddingInlineEnd',
     'gap', 'rowGap', 'columnGap', 'alignItems', 'justifyContent',
     'flex', 'flexBasis', 'flexGrow', 'flexShrink', 'gridTemplateColumns',
     'fontFamily', 'fontSize', 'fontStyle', 'fontWeight', 'lineHeight',
-    'letterSpacing', 'textAlign', 'whiteSpace', 'textOverflow',
+    'letterSpacing', 'textAlign', 'textTransform', 'verticalAlign', 'whiteSpace', 'textOverflow',
     'color', 'background', 'backgroundColor',
     'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
     'borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle',
     'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
     'borderTopLeftRadius', 'borderTopRightRadius',
     'borderBottomRightRadius', 'borderBottomLeftRadius',
-    'boxShadow', 'opacity', 'overflow', 'overflowX', 'overflowY',
-    'transform', 'filter', 'backdropFilter', 'appearance',
+    'boxShadow', 'opacity', 'overflow', 'overflowX', 'overflowY', 'visibility',
+    'transform', 'filter', 'backdropFilter', 'appearance', 'contain', 'zIndex',
+    'fill', 'stroke', 'strokeWidth',
   ];
   const customProperties = [
     '--ion-font-family', '--ion-safe-area-top', '--ion-safe-area-right',
@@ -23,7 +26,12 @@ const expression = `(() => {
     '--background', '--border-radius', '--box-shadow', '--color', '--icon-color',
     '--placeholder-color', '--placeholder-opacity', '--padding-start', '--padding-end',
     '--inner-padding-start', '--inner-padding-end', '--border-color', '--border-width',
-    '--inner-border-width', '--min-height', '--zen-autocomplete-background',
+    '--padding-top', '--padding-bottom', '--inner-padding-top', '--inner-padding-bottom',
+    '--inner-border-width', '--inner-box-shadow', '--min-height',
+    '--detail-icon-color', '--detail-icon-font-size', '--detail-icon-opacity',
+    '--offset-top', '--offset-bottom', '--ion-color-base', '--ion-color-medium',
+    '--ion-color-primary', '--border', '--background-focused', '--color-selected',
+    '--transition', '--zen-autocomplete-background',
   ];
   const relevantDeclarations = new Set([
     ...styleProperties.map((property) => property.replace(/[A-Z]/g, (match) => '-' + match.toLowerCase())),
@@ -140,6 +148,11 @@ const expression = `(() => {
   const searchbar = surface ? firstVisible('ion-searchbar', surface) : null;
   const searchRoot = searchbar && (searchbar.shadowRoot || searchbar);
   const fields = surface ? firstVisible('.zen-history-filter-fields', surface) : null;
+  const historyList = firstVisible('ion-list.zen-list-surface');
+  const historyContent = firstVisible('[data-testid="history-page"]');
+  const contentRoot = historyContent && historyContent.shadowRoot;
+  const statisticsButton = surface ? firstVisible('[aria-label="Open tea statistics"]', surface) : null;
+  const statisticsRoot = statisticsButton && statisticsButton.shadowRoot;
   const nodes = [
     describe('html', document.documentElement),
     describe('body', document.body),
@@ -152,15 +165,55 @@ const expression = `(() => {
     describe('searchbar-container', searchRoot ? searchRoot.querySelector('.searchbar-input-container') : null),
     describe('searchbar-input', searchRoot ? searchRoot.querySelector('.searchbar-input') : null),
     describe('searchbar-icon', searchRoot ? searchRoot.querySelector('.searchbar-search-icon') : null),
-    describe('filter-toggle', surface ? firstVisible('[aria-label^="Hide history filters"]', surface) : null),
-    describe('statistics-button', surface ? firstVisible('[aria-label="Open tea statistics"]', surface) : null),
+    describe('filter-toggle', surface ? firstVisible('[aria-label$="history filters"]', surface) : null),
+    describe('statistics-button', statisticsButton),
+    describe('statistics-button-native', statisticsRoot ? statisticsRoot.querySelector('[part="native"]') : null),
+    describe('statistics-button-inner', statisticsRoot ? statisticsRoot.querySelector('.button-inner') : null),
     describe('filter-fields', fields),
-    describe('history-content', firstVisible('[data-testid="history-page"]')),
-    describe('history-list', firstVisible('.zen-list-surface')),
+    describe('history-content', historyContent),
+    describe('history-content-background', contentRoot ? contentRoot.querySelector('[part="background"]') : null),
+    describe('history-content-scroll', contentRoot ? contentRoot.querySelector('[part="scroll"]') : null),
+    describe('history-list', historyList),
     describe('first-history-item', firstVisible('ion-item-sliding ion-item')),
     describe('tab-bar', firstVisible('ion-tab-bar')),
     describe('history-tab', firstVisible('ion-tab-button[tab="history"]')),
   ];
+
+  if (historyList) {
+    Array.from(historyList.querySelectorAll(':scope > ion-item-sliding')).slice(0, 6).forEach((sliding, index) => {
+      const item = sliding.querySelector(':scope > ion-item');
+      const itemRoot = item && item.shadowRoot;
+      const label = item ? item.querySelector(':scope > ion-label') : null;
+      const end = item ? item.querySelector(':scope > [slot="end"]') : null;
+      nodes.push(describe('history-row-' + index + '-sliding', sliding));
+      nodes.push(describe('history-row-' + index + '-item', item));
+      nodes.push(describe('history-row-' + index + '-native', itemRoot ? itemRoot.querySelector('.item-native') : null));
+      nodes.push(describe('history-row-' + index + '-inner', itemRoot ? itemRoot.querySelector('.item-inner') : null));
+      nodes.push(describe('history-row-' + index + '-input-wrapper', itemRoot ? itemRoot.querySelector('.input-wrapper') : null));
+      nodes.push(describe('history-row-' + index + '-detail-icon', itemRoot ? itemRoot.querySelector('.item-detail-icon') : null));
+      const detailIcon = itemRoot ? itemRoot.querySelector('.item-detail-icon') : null;
+      nodes.push(describe('history-row-' + index + '-detail-svg', detailIcon && detailIcon.shadowRoot ? detailIcon.shadowRoot.querySelector('svg') : null));
+      nodes.push(describe('history-row-' + index + '-label', label));
+      nodes.push(describe('history-row-' + index + '-title', label ? label.querySelector('h2') : null));
+      nodes.push(describe('history-row-' + index + '-date', label ? label.querySelector('p') : null));
+      nodes.push(describe('history-row-' + index + '-end', end));
+      Array.from(end ? end.querySelectorAll(':scope > ion-note') : []).forEach((note, noteIndex) => {
+        nodes.push(describe('history-row-' + index + '-note-' + noteIndex, note));
+      });
+    });
+  }
+
+  Array.from(document.querySelectorAll('ion-tab-button')).filter(visible).forEach((tab, index) => {
+    const tabRoot = tab.shadowRoot;
+    const icon = tab.querySelector(':scope > ion-icon');
+    const label = tab.querySelector(':scope > ion-label');
+    nodes.push(describe('tab-' + index + '-button', tab));
+    nodes.push(describe('tab-' + index + '-native', tabRoot ? tabRoot.querySelector('[part="native"]') : null));
+    nodes.push(describe('tab-' + index + '-inner', tabRoot ? tabRoot.querySelector('.button-inner') : null));
+    nodes.push(describe('tab-' + index + '-icon', icon));
+    nodes.push(describe('tab-' + index + '-icon-svg', icon && icon.shadowRoot ? icon.shadowRoot.querySelector('svg') : null));
+    nodes.push(describe('tab-' + index + '-label', label));
+  });
 
   if (fields) {
     Array.from(fields.querySelectorAll(':scope > label')).forEach((label, index) => {
@@ -223,4 +276,4 @@ const expression = `(() => {
   };
 })()`;
 
-export const HISTORY_FILTER_DIAGNOSTICS_EXPRESSION = expression;
+export const HISTORY_DIAGNOSTICS_EXPRESSION = expression;

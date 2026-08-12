@@ -17,7 +17,7 @@ import {
   VISUAL_FIXTURE_METADATA,
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
-import { HISTORY_FILTER_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
+import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 const serial = process.env.ANDROID_SERIAL;
@@ -314,8 +314,8 @@ const run = async () => {
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }))()`);
-    if (name === 'history-filters') {
-      metrics.diagnostics = await client.evaluate(HISTORY_FILTER_DIAGNOSTICS_EXPRESSION);
+    if (name === 'history' || name === 'history-filters') {
+      metrics.diagnostics = await client.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
     }
     const devicePath = resolve(deviceDirectory, `${name}.png`);
     const webViewPath = resolve(targetDirectory, `${name}.png`);
@@ -381,6 +381,10 @@ const run = async () => {
     await openTab('history');
     await waitFor(client, `window.__teappVisual.visibleCss('ion-item-sliding')`, 'populated history');
     await capture('history');
+    if (stopAfter === 'history') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await clickCss(client, '[aria-label^="Show history filters"]');
     await waitFor(client, `window.__teappVisual.visibleCss('input[aria-label="Filter Name"]')`, 'expanded history filters');
     await capture('history-filters');

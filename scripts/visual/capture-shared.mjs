@@ -7,7 +7,7 @@ import {
   VISUAL_FIXTURE_METADATA,
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
-import { HISTORY_FILTER_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
+import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 export const VISUAL_FIXTURE_RELATIVE_PATH = 'tmp/visual-parity/sample-data.json';
@@ -164,8 +164,8 @@ export async function captureVisualStateRecipe({
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }));
-    if (name === 'history-filters') {
-      metrics.diagnostics = await page.evaluate(HISTORY_FILTER_DIAGNOSTICS_EXPRESSION);
+    if (name === 'history' || name === 'history-filters') {
+      metrics.diagnostics = await page.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
     }
     const screenshotPath = resolve(targetDirectory, `${name}.png`);
     await page.screenshot({ path: screenshotPath, animations: 'disabled', fullPage: false });
@@ -208,6 +208,7 @@ export async function captureVisualStateRecipe({
   await page.getByTestId('history-page').waitFor({ state: 'visible' });
   await page.locator('ion-item-sliding').first().waitFor({ state: 'visible' });
   await capture('history');
+  if (stopAfter === 'history') return writeMetadata(true);
 
   await page.getByRole('button', { name: /^Show history filters/ }).click();
   await page.getByRole('combobox', { name: 'Filter Name', exact: true }).waitFor({ state: 'visible' });

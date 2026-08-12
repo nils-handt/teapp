@@ -80,9 +80,9 @@ Status: complete. Re-run only when capture code, fixture generation, browser/Web
 
 ## Phase 2: Diagnose web-to-Android differences
 
-Status: next active phase.
+Status: active.
 
-Progress on 2026-08-12: `history-filters` has a complete measured entry in `mismatch-ledger.md`. Two shared late-Ionic cascade causes were fixed, and the remaining state-local pixels were classified as DPR/rasterization only after computed-style equality. Phase 2 remains active because the other 12 canonical states still require state-specific ledger review in the order below.
+Progress on 2026-08-12: `history-filters` and collapsed `history` have complete measured entries in `mismatch-ledger.md`. Two shared late-Ionic cascade causes were fixed. The remaining pixels in both states were classified as DPR/rasterization only after computed-style, Shadow DOM, typography, wrapping, and local-geometry equality were established. Phase 2 remains active because the other 11 canonical states still require state-specific ledger review in the order below; `statistics` is next.
 
 ### 2.1 Establish an apples-to-apples comparison
 
@@ -123,26 +123,25 @@ Measure at least:
 
 ### 2.4 Work state by state
 
-Start with `history-filters`, because it exposes page shell, search controls, Ionic inputs, typography, spacing, and tab-bar behavior in one state. Then proceed through:
+Start with `history-filters`, because it exposes page shell, search controls, Ionic inputs, typography, spacing, and tab-bar behavior in one state. `history-filters` and `history` are now diagnosed. Proceed through:
 
-1. history;
-2. statistics;
-3. tutorial;
-4. settings with mock scale;
-5. session detail;
-6. brewing idle;
-7. brewing setup;
-8. brewing ready;
-9. brewing infusion;
-10. brewing rest;
-11. brewing ended;
-12. brewing setup modal and keyboard behavior.
+1. statistics;
+2. tutorial;
+3. settings with mock scale;
+4. session detail;
+5. brewing idle;
+6. brewing setup;
+7. brewing ready;
+8. brewing infusion;
+9. brewing rest;
+10. brewing ended;
+11. brewing setup modal and keyboard behavior.
 
 Do not mark a state complete because its changed-pixel ratio is below a broad threshold. Mark it complete only when every material difference is fixed or explicitly explained.
 
 ## Phase 3: Fix root causes
 
-Status: not complete.
+Status: partial. Two shared History-surface cascade fixes are complete; the other canonical states remain pending diagnosis and any resulting fixes.
 
 For each validated cause:
 
