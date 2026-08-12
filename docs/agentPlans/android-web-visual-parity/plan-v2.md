@@ -82,6 +82,8 @@ Status: complete. Re-run only when capture code, fixture generation, browser/Web
 
 Status: next active phase.
 
+Progress on 2026-08-12: `history-filters` has a complete measured entry in `mismatch-ledger.md`. Two shared late-Ionic cascade causes were fixed, and the remaining state-local pixels were classified as DPR/rasterization only after computed-style equality. Phase 2 remains active because the other 12 canonical states still require state-specific ledger review in the order below.
+
 ### 2.1 Establish an apples-to-apples comparison
 
 1. Use the web reference as expected output.
@@ -196,6 +198,6 @@ Keep the current `minSdk` and compatibility transforms in this work unless a sep
 1. Commit this corrected plan and an execution handoff.
 2. Correct the draft PR description so it states that Phase 1 and infrastructure are complete while parity fixes remain in progress.
 3. Begin Phase 2 with the `history-filters` mismatch ledger.
-4. Fix and validate one causal group at a time.
+4. Continue Phase 2 with `history`; fix and validate one causal group at a time.
 5. Tighten and enable the blocking parity workflow only after the visual differences are understood.
 6. Recapture and review final Android output against the unchanged web source of truth.

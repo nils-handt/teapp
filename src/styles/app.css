@@ -215,7 +215,7 @@ ion-button.zen-history-header-button {
   padding: 8px;
 }
 
-.zen-list-search {
+ion-searchbar.zen-list-search {
   min-height: 44px;
   padding: 0;
   --background: rgba(255, 255, 255, 0.68);
@@ -273,7 +273,7 @@ ion-button.zen-history-header-button {
   }
 }
 
-.zen-list-surface {
+ion-list.zen-list-surface {
   margin: 16px;
   padding: 0;
   overflow: hidden;
@@ -284,7 +284,7 @@ ion-button.zen-history-header-button {
 }
 
 @media (min-width: 1024px) {
-  .zen-list-surface {
+  ion-list.zen-list-surface {
     max-width: 900px;
     margin-inline: auto;
   }

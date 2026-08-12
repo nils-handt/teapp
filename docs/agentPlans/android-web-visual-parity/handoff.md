@@ -78,18 +78,25 @@ These differences remain unexplained until measured and classified.
 
 ## Next active task
 
-Begin Phase 2 with `history-filters`.
+Continue Phase 2 with `history`. The `history-filters` material drift is resolved and documented in `mismatch-ledger.md`; overall parity remains incomplete.
 
-1. Verify the web and API 36 captures use the same fixture, route, viewport, scroll position, and Ionic mode.
-2. Normalize Android physical pixels to the web CSS-pixel viewport without changing aspect ratio.
-3. Build a per-element mismatch ledger using the table in `plan-v2.md`.
-4. Measure bounding boxes, typography, spacing, colors, borders, radii, shadows, icons, Ionic variables/parts, and winning CSS declarations.
-5. Separate real geometry/style differences from DPR rasterization only after computed styles match.
-6. Propose root-cause fixes backed by the measurements.
-7. Fix and recapture the smallest affected state before expanding to other states.
-8. Do not update the web reference or loosen thresholds to make the difference disappear.
+1. Preserve the `history-filters` evidence and shared specificity fixes.
+2. Build the `history` rows in the canonical `mismatch-ledger.md`.
+3. Explain its remaining 4.755% direct changed pixels using geometry, computed styles, Ionic internals, fonts, and winning declarations.
+4. Fix and recapture the smallest affected state before expanding the next causal group.
+5. Do not update the web reference or loosen thresholds to make the difference disappear.
 
 After `history-filters`, proceed in the order defined in `plan-v2.md`.
+
+## Latest Phase 2 findings (2026-08-12)
+
+- Both runtimes use Ionic `md`, a 411×683 layout viewport, zero safe areas, and loaded Roboto 400/500 faces for `history-filters`.
+- Android injected Material component rules after the application stylesheet. Equal-specificity `.zen-list-search` and `.zen-list-surface` declarations therefore lost only in that runtime.
+- Shared selectors were raised to `ion-searchbar.zen-list-search` and `ion-list.zen-list-surface`; no Android-only design fork was introduced.
+- The focused `history-filters` direct diff improved from 3.797% to 1.638%, with selected computed styles equal and remaining rect deltas bounded by Android DPR/crop quantization.
+- Full direct ratios also improved: `history` 5.285% → 4.755%, Settings 3.910% → 1.923%, and Statistics 5.009% → 2.243%.
+- The unchanged web capture remained 0.000% different from the web reference in all 13 states.
+- A complete API 36 journey succeeded after limiting native keyboard assertions to the one canonical keyboard-open modal. The first two full attempts exposed that later, uncaptured setup edits did not need OS-keyboard readiness.
 
 ## Required constraints
 

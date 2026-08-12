@@ -7,6 +7,7 @@ import {
   VISUAL_FIXTURE_METADATA,
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
+import { HISTORY_FILTER_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 export const VISUAL_FIXTURE_RELATIVE_PATH = 'tmp/visual-parity/sample-data.json';
@@ -138,6 +139,7 @@ export async function captureVisualStateRecipe({
   const source = await readSourceMetadata();
   assertReferenceCaptureSource(outputRoot, source);
   const captures = [];
+  const stopAfter = process.env.VISUAL_STOP_AFTER;
 
   await rm(targetDirectory, { force: true, recursive: true });
   await mkdir(targetDirectory, { recursive: true });
@@ -162,12 +164,28 @@ export async function captureVisualStateRecipe({
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }));
+    if (name === 'history-filters') {
+      metrics.diagnostics = await page.evaluate(HISTORY_FILTER_DIAGNOSTICS_EXPRESSION);
+    }
     const screenshotPath = resolve(targetDirectory, `${name}.png`);
     await page.screenshot({ path: screenshotPath, animations: 'disabled', fullPage: false });
     if (captureDeviceScreenshot) {
       await captureDeviceScreenshot(resolve(deviceDirectory, `${name}.png`));
     }
     captures.push({ name, metrics });
+  };
+  const writeMetadata = async (partial = false) => {
+    const metadata = {
+      capturedAt: new Date().toISOString(),
+      captures,
+      fixture: VISUAL_FIXTURE_METADATA,
+      ...(partial ? { partial: true, stopAfter } : {}),
+      source,
+      target,
+      ...extraMetadata,
+    };
+    await writeFile(resolve(targetDirectory, 'metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
+    return metadata;
   };
 
   await waitForApp(page);
@@ -194,6 +212,7 @@ export async function captureVisualStateRecipe({
   await page.getByRole('button', { name: /^Show history filters/ }).click();
   await page.getByRole('combobox', { name: 'Filter Name', exact: true }).waitFor({ state: 'visible' });
   await capture('history-filters');
+  if (stopAfter === 'history-filters') return writeMetadata(true);
 
   await page.locator('ion-button[aria-label="Open tea statistics"]').click();
   await page.getByRole('group', { name: 'Statistics period' }).waitFor({ state: 'visible' });
@@ -241,16 +260,7 @@ export async function captureVisualStateRecipe({
   await capture('brewing-ended');
 
   assertCanonicalCaptures(captures);
-  const metadata = {
-    capturedAt: new Date().toISOString(),
-    captures,
-    fixture: VISUAL_FIXTURE_METADATA,
-    source,
-    target,
-    ...extraMetadata,
-  };
-  await writeFile(resolve(targetDirectory, 'metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
-  return metadata;
+  return writeMetadata();
 }
 
 export async function closeUnexpectedDialogs(page) {

@@ -17,6 +17,7 @@ import {
   VISUAL_FIXTURE_METADATA,
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
+import { HISTORY_FILTER_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 const serial = process.env.ANDROID_SERIAL;
@@ -29,6 +30,7 @@ if (!serial) {
 }
 if (outputRootIndex >= 0 && !outputRootArgument) throw new Error('--output-root requires a directory');
 const outputRoot = resolve(outputRootArgument ?? DEFAULT_VISUAL_OUTPUT_ROOT);
+const stopAfter = process.env.VISUAL_STOP_AFTER;
 
 const adb = async (...args) => execFile('adb', ['-s', serial, ...args], { maxBuffer: 10 * 1024 * 1024 });
 const adbBuffer = (...args) => new Promise((resolveResult, reject) => {
@@ -282,7 +284,7 @@ const run = async () => {
   await connectWebView();
   const captures = [];
 
-  const writeMetadata = async (captureError) => writeFile(resolve(targetDirectory, 'metadata.json'), `${JSON.stringify({
+  const writeMetadata = async (captureError, partial = false) => writeFile(resolve(targetDirectory, 'metadata.json'), `${JSON.stringify({
     androidSerial: serial,
     capturedAt: new Date().toISOString(),
     captures,
@@ -290,6 +292,7 @@ const run = async () => {
     ...(captureError ? { captureError } : {}),
     fixture: VISUAL_FIXTURE_METADATA,
     model: model.trim(),
+    ...(partial ? { partial: true, stopAfter } : {}),
     screenSize: screenSize.trim(),
     source,
     target: targetName,
@@ -311,6 +314,9 @@ const run = async () => {
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }))()`);
+    if (name === 'history-filters') {
+      metrics.diagnostics = await client.evaluate(HISTORY_FILTER_DIAGNOSTICS_EXPRESSION);
+    }
     const devicePath = resolve(deviceDirectory, `${name}.png`);
     const webViewPath = resolve(targetDirectory, `${name}.png`);
     const { stdout } = await adbBuffer('exec-out', 'screencap', '-p');
@@ -378,6 +384,10 @@ const run = async () => {
     await clickCss(client, '[aria-label^="Show history filters"]');
     await waitFor(client, `window.__teappVisual.visibleCss('input[aria-label="Filter Name"]')`, 'expanded history filters');
     await capture('history-filters');
+    if (stopAfter === 'history-filters') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await clickCss(client, 'ion-button[aria-label="Open tea statistics"]');
     await waitFor(client, `window.__teappVisual.visibleCss('[aria-label="Statistics period"]')`, 'statistics');
     await waitFor(client, textVisible('24 sessions'), 'the populated statistics summary');
@@ -397,8 +407,18 @@ const run = async () => {
     const editSetupField = async (label, value, beforeSave) => {
       await clickText(client, label, true);
       await waitFor(client, roleVisible('dialog'), `${label} dialog`);
-      await focusVisibleDialogInput(client, forwardPort);
-      if (beforeSave) await beforeSave();
+      if (beforeSave) {
+        await focusVisibleDialogInput(client, forwardPort);
+        await beforeSave();
+      } else {
+        await client.evaluate(`(() => {
+          const input = Array.from(document.querySelectorAll('[role="dialog"] input')).find(window.__teappVisual.visible);
+          if (!input) throw new Error('No visible dialog input');
+          input.focus();
+          return document.activeElement === input;
+        })()`);
+        await sleep(100);
+      }
       await setVisibleDialogInput(client, value);
       await clickText(client, 'Save');
       await waitFor(client, `!${roleVisible('dialog')}`, `${label} dialog to close`);
