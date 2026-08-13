@@ -6,7 +6,7 @@ This is the single tracked mismatch ledger for the active `plan-v2.md`. The prod
 
 | Property | Production web | Android API 36 | Classification |
 | --- | --- | --- | --- |
-| Source revision used by original references | `b01b10e58b445f59e51b60453aa5c608022326d3` | Same | Matching |
+| Source revision used by current tracked references | `da1054775d77da098f1806630046d5bd8a437194` | Same | Matching committed source; historical `baselines/unfixed` remains unchanged |
 | Fixture | seed `visual-parity-v1`, time `2026-08-11T12:00:00.000Z` | Same, restored through Settings | Matching |
 | History states | `/tabs/history`, collapsed or expanded filters as named, scroll 0 | Same production route/state, scroll 0 | Matching |
 | Layout viewport | 411×683, DPR 1 | 411×683, DPR 2.625 | Matching CSS viewport |
@@ -97,12 +97,13 @@ Status: the requested heading regression is resolved with a shared component sty
 
 ## Validation notes
 
-- `visual:compare:web`: all 13 states at 0.000% against the unchanged web reference.
+- `visual:compare:web`: all 13 states at 0.000% against the refreshed web reference.
 - Focused API 36 capture through the production journey to `history-filters`: 1.638% direct changed pixels.
 - Full API 36 journey: all 13 canonical states captured after the causal group.
-- The API 36 reference was recaptured from committed revision `ff36509` after the approved shared fixes. `visual:compare:android:api36` now matches the four corrected states at 0.000%; it remains repeatability evidence only and does not prove web parity.
+- Web, API 36 app-content, and API 36 full-device references were recaptured from committed revision `da1054775d77da098f1806630046d5bd8a437194` after the approved regression fixes. All 13 screenshots in each set were reviewed; web image changes are limited to Statistics and Tutorial, and `baselines/unfixed` was not modified.
+- A fresh API 36 journey matches ten reference states at 0.000%; `brewing-ended` (0.002%), `brewing-infusion` (0.145%), and `brewing-rest` (0.092%) remain below the 0.5% repeatability threshold. The keyboard-modal dimension mismatch remains the sole target-repeatability failure. This does not prove web parity.
 - `visual:compare:parity:api36` still uses the broad report-only policy and is not acceptance evidence.
 - Focused collapsed-History recapture: web remains 0.000% from its unchanged reference; direct API 36 comparison remains 4.755%, with the mismatch localized and classified above.
 - The keyboard-modal app-content reference changed from 1080×985 to 1080×1101 because the Android keyboard reduces the WebView crop dynamically. An immediate repeat capture returned to 1080×985 (`innerHeight` 375 versus the reference's 419), so the target repeatability check still reports a dimension mismatch only for this state. Its full-device reference retains the OS keyboard for separate review; cross-runtime acceptance still requires the explicit Phase 4 modal strategy.
 - The regression-fix web and API 36 journeys both captured all 13 canonical states. The first API 36 attempt hit the known post-restore WebView reload timeout after `tutorial`; an unchanged retry completed the journey.
-- Comparing the new actual web output directly to the new actual API 36 app-content output reports 2.226% for `statistics` and 11.597% for `tutorial`. These figures are localization aids only; neither state is declared complete from the report-only threshold.
+- Comparing the refreshed web reference directly to fresh API 36 app-content output reports 2.226% for `statistics` and 11.597% for `tutorial`. These figures are localization aids only; neither state is declared complete from the report-only threshold.
