@@ -71,18 +71,18 @@ The latest recorded cross-runtime ratios include:
 | --- | ---: |
 | `history-filters` | 1.638% after shared fix; diagnosed |
 | `history` | 4.755% after shared fix; diagnosed |
-| `statistics` | 2.243% after shared fix; next active state |
-| `tutorial` | approximately 11.2% |
+| `statistics` | 2.226% after header/tab regression fixes; state audit remains active |
+| `tutorial` | 11.597% after the requested shared heading correction; state audit remains pending |
 
 The History-state residuals are now measured and classified. The remaining states are still unexplained until their own ledger work is complete.
 
 ## Next active task
 
-Continue Phase 2 with `statistics`. The `history-filters` material drift and the collapsed `history` residuals are resolved or explained in `mismatch-ledger.md`; overall parity remains incomplete.
+Continue Phase 2 with the remaining `statistics` audit. The `history-filters` material drift and collapsed `history` residuals are resolved or explained, and the user-reported Statistics header/tab and Tutorial heading regressions are fixed. Overall parity remains incomplete.
 
 1. Preserve the two completed History-state ledger entries and shared specificity fixes.
-2. Build the `statistics` rows in the canonical `mismatch-ledger.md`.
-3. Explain its remaining 2.243% direct changed pixels using geometry, computed styles, Ionic internals, fonts, charts, and winning declarations.
+2. Extend the initial `statistics` rows in the canonical `mismatch-ledger.md` across the complete visible state.
+3. Explain its remaining 2.226% direct changed pixels using geometry, computed styles, Ionic internals, fonts, charts, and winning declarations.
 4. Fix and recapture the smallest affected state before expanding the next causal group.
 5. Do not update the web reference or loosen thresholds to make the difference disappear.
 
@@ -103,6 +103,11 @@ After `statistics`, proceed in the order defined in `plan-v2.md`.
 - No additional shared production CSS change is justified for collapsed `history`: the remaining differences are measured DPR/browser glyph rasterization and physical-grid border quantization, not a cascade or token mismatch.
 - The tracked web, API 36 app-content, and full-device references were regenerated from committed revision `ff36509`. Web PNGs remained byte-identical; the API 36 app-content changes are the four approved shared-fix states plus the keyboard-modal crop. Historical `baselines/unfixed` files were not changed.
 - `visual:compare:android:api36` now matches `history`, `history-filters`, Settings, and Statistics at 0.000% against the updated API 36 reference. This remains repeatability evidence only; the direct ratios and Phase 2 classifications still use web as the source of truth.
+- The unlayered Tailwind/Roboto change was not reverted because it is required for the preferred current Statistics period selector and earlier Android parity fixes.
+- The prior Statistics filter-button appearance was an incidental Playwright hover state. Canonical captures now move the pointer away before screenshotting; Android production CSS is unchanged.
+- Statistics breakdown tabs are again borderless and compact: the explicit 4px separator utilities were removed and `.tea-mode-tab` restores line-height 1 with the existing 13px padding, producing a 40px web strip and the DPR-equivalent Android strip.
+- The Tutorial heading now explicitly uses shared 24px/1.2/400 Roboto styling, restoring a lighter two-line layout in both runtimes.
+- A fresh full web journey and a fresh full API 36 journey completed after one known post-restore reload-timeout retry. Direct actual-to-actual ratios are now 2.226% for Statistics and 11.597% for Tutorial; these report values do not complete either state.
 - The refreshed keyboard-modal app-content crop is 1080×1101 versus the prior 1080×985 because the OS keyboard dynamically resizes the WebView. An immediate repeat capture produced 1080×985 again (`innerHeight` 375 versus 419), leaving the Android repeatability report with a dimension mismatch only for this state. Its full-device screenshot was reviewed with the numeric keyboard visible; the explicit cross-runtime modal comparison strategy remains unfinished.
 
 ## Required constraints

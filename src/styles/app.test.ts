@@ -58,4 +58,11 @@ describe('app header layout', () => {
     expect(listRule).toMatch(/padding\s*:\s*0/);
     expect(listRule).toMatch(/background\s*:\s*var\(--color-zen-panel\)/);
   });
+
+  it('keeps shared tea tabs at their compact pre-cascade line height', () => {
+    const tabRule = appCss.match(/\.tea-mode-tab\s*{([^}]*)}/)?.[1] ?? '';
+
+    expect(tabRule).toMatch(/padding\s*:\s*13px 12px/);
+    expect(tabRule).toMatch(/line-height\s*:\s*1/);
+  });
 });

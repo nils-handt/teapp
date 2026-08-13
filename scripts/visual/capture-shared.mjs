@@ -151,6 +151,10 @@ export async function captureVisualStateRecipe({
   const capture = async (name) => {
     console.log(`[visual:${target}] capturing ${name}`);
     await resetScrollPosition(page);
+    // Navigation clicks can leave the pointer over a control at the same screen
+    // coordinate on the next route. Canonical screenshots represent resting UI,
+    // not an incidental desktop hover state.
+    await page.mouse.move(0, 0);
     await page.waitForTimeout(150);
     const metrics = await page.evaluate(async () => ({
       devicePixelRatio: window.devicePixelRatio,

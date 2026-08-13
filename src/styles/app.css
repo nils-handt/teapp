@@ -424,6 +424,7 @@ ion-button[data-zen-variant="soft"] {
 
 .tea-mode-tab {
   padding: 13px 12px;
+  line-height: 1;
 }
 
 .zen-tutorial-button {
