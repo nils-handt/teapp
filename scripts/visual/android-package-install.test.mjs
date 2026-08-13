@@ -57,6 +57,8 @@ describe('Android visual APK installation', () => {
 
     expect(installAttempts).toBe(2);
     expect(adb).toHaveBeenCalledWith('wait-for-device');
+    expect(clock.sleep).toHaveBeenCalledWith(15_000);
+    expect(clock.sleep).toHaveBeenCalledWith(10_000);
   });
 
   it('does not retry permanent installation errors', async () => {

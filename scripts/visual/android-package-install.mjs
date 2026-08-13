@@ -42,19 +42,29 @@ export const installAndroidApk = async ({
   log = console.warn,
   maxAttempts = 3,
   packageManagerOptions,
+  preInstallSettleMs = 15_000,
+  postInstallSettleMs = 10_000,
 }) => {
   const waitForPackageManager = () => waitForAndroidPackageManager({
     adb,
     sleep,
     ...packageManagerOptions,
   });
+  const waitForSettledPackageManager = async () => {
+    await waitForPackageManager();
+    if (preInstallSettleMs > 0) {
+      await sleep(preInstallSettleMs);
+      await waitForPackageManager();
+    }
+  };
 
-  await waitForPackageManager();
+  await waitForSettledPackageManager();
   await adb('uninstall', packageName).catch(() => undefined);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const result = await adb('install', apkPath);
+      if (postInstallSettleMs > 0) await sleep(postInstallSettleMs);
       await waitForPackageManager();
       for (let verification = 0; verification < 2; verification += 1) {
         const { stdout = '' } = await adb('shell', 'cmd', 'package', 'path', packageName);
@@ -66,7 +76,7 @@ export const installAndroidApk = async ({
       if (attempt === maxAttempts || !TRANSIENT_INSTALL_ERROR.test(errorText(error))) throw error;
       log(`[visual:android] transient APK install failure (${attempt}/${maxAttempts}); waiting for Package Manager`);
       await adb('wait-for-device');
-      await waitForPackageManager();
+      await waitForSettledPackageManager();
     }
   }
 
