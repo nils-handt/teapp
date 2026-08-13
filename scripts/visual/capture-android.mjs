@@ -307,7 +307,7 @@ const run = async () => {
     webViewTarget: { description: target.description, title: target.title, url: target.url },
   }, null, 2)}\n`, 'utf8');
 
-  const capture = async (name, { systemUiPrepared = false, recordPrimaryTimer = false } = {}) => {
+  const capture = async (name, { afterScreenshot, systemUiPrepared = false, recordPrimaryTimer = false } = {}) => {
     console.log(`[visual:${targetName}] capturing ${name}`);
     if (!systemUiPrepared) {
       await dismissSystemUiDialog();
@@ -371,6 +371,9 @@ const run = async () => {
         primaryTimerAfter: await client.evaluate(`(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent ? timer.textContent.trim() : null; })()`),
         screenshotCompletedAt: new Date().toISOString(),
       };
+    }
+    if (afterScreenshot) {
+      await afterScreenshot();
     }
     await writeFile(devicePath, stdout);
     const bounds = targetBounds(await discoverTarget(forwardPort));
@@ -524,13 +527,18 @@ const run = async () => {
     await clickText(client, 'Start Infusion');
     await waitFor(client, textVisible('End Infusion'), 'the infusion state');
     await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the infusion timer');
-    await capture('brewing-infusion', { systemUiPrepared: true, recordPrimaryTimer: true });
+    await capture('brewing-infusion', {
+      afterScreenshot: async () => {
+        await clickText(client, 'End Infusion');
+        await waitFor(client, textVisible('Start Infusion'), 'the rest state');
+      },
+      systemUiPrepared: true,
+      recordPrimaryTimer: true,
+    });
     if (stopAfter === 'brewing-infusion') {
       await writeMetadata(undefined, true);
       return;
     }
-    await clickText(client, 'End Infusion');
-    await waitFor(client, textVisible('Start Infusion'), 'the rest state');
     await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the rest timer');
     await capture('brewing-rest', { systemUiPrepared: true, recordPrimaryTimer: true });
     if (stopAfter === 'brewing-rest') {
