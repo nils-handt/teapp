@@ -54,19 +54,18 @@ Device-pixel ratio and browser rasterization may produce small antialiasing diff
 
 These are valid fixes, but the remaining cross-runtime differences have not been exhaustively measured or explained.
 
-### Incomplete
+### Historical gaps now addressed or active
 
-- A per-state, per-element mismatch ledger.
-- Computed-style and geometry evidence for every remaining mismatch.
-- Root-cause fixes for all remaining web-to-Android differences.
-- A tight, blocking cross-runtime regression check.
-- CI that fails when Android drifts from the web source of truth.
+- The per-state ledger and paired fail-closed diagnostics now cover all 13 states; Statistics, Tutorial, and overall residual acceptance remain active rather than complete.
+- Root-cause fixes have landed for every material issue proven in the current causal groups; no final claim is made for every residual pixel.
+- The first blocking cross-runtime boundary is now 5% per non-modal state plus a separate modal app-panel guard. State-specific tightening remains incomplete.
+- CI now fails the direct API 36 guard on pull requests, schedules, and manual runs.
 
-### Current misleading checks to avoid
+### Interpretation rules
 
 - `visual:compare:android:api36` compares Android with its own Android reference. It proves repeatability, not parity.
-- `visual:compare:parity:api36` currently allows 12% changed pixels, excludes the setup modal, and is report-only in CI. It is only a gross-drift signal.
-- The current cross-runtime report still accepts unexplained differences including approximately 3.8% for history filters, 5.3% for history, 5.0% for statistics, and 11.2% for the tutorial.
+- `visual:compare:parity:api36` now allows 5% changed pixels per non-modal state and runs a separate modal application-panel check. It is blocking but remains a gross-drift boundary, not parity-completion evidence.
+- Current direct ratios are recorded in the ledger; Statistics and Tutorial remain explicitly open despite passing this first guard.
 
 ## Phase 1: Preserve and verify the capture foundation
 
@@ -83,7 +82,7 @@ Status: complete. Re-run only when capture code, fixture generation, browser/Web
 
 Status: active.
 
-Progress through 2026-08-13: `history-filters` and collapsed `history` have complete measured entries in `mismatch-ledger.md`. Two shared late-Ionic cascade causes were fixed. The remaining pixels in both states were classified as DPR/rasterization only after computed-style, Shadow DOM, typography, wrapping, and local-geometry equality were established. The user-reported Statistics hover/tab regression group and Tutorial heading regression were then diagnosed and fixed without reverting the shared cascade or the preferred time-range selector. A paired visible Statistics declaration audit found no independent computed-style drift and measured accumulated physical-grid offsets, but Statistics remains explicitly in progress rather than being accepted from its 2.226% report. Tutorial retains an unexplained runtime offset, and the later states remain pending.
+Progress through 2026-08-13: all 13 states now have paired fail-closed declaration/geometry diagnostics. The two History states are classified; Statistics retains its explicit open 2.226% residual boundary. Tutorial's material hidden-page height coupling is fixed, reducing 11.597% to 4.713%, but its foreground residual remains open. Settings, session detail, and all non-modal Brewing states have measured declarations and no evidence-backed shared production CSS fix. Native timer preparation now preserves `0:01` through the screenshot, and the keyboard-open setup modal keeps all application controls visible with matching local geometry. Phase 2 remains active because Statistics, Tutorial, and overall residual acceptance are not declared complete.
 
 ### 2.1 Establish an apples-to-apples comparison
 
@@ -142,7 +141,7 @@ Do not mark a state complete because its changed-pixel ratio is below a broad th
 
 ## Phase 3: Fix root causes
 
-Status: partial. The two shared History-surface cascade fixes, the Statistics capture/tab fixes, and the shared Tutorial heading correction are complete. Remaining state-wide diagnosis and resulting fixes are pending.
+Status: partial. The History cascade fixes, Statistics capture/tab fixes, Tutorial heading and track-height fixes, timer capture fix, and keyboard-resize fix are complete. No remaining state currently has an evidence-backed Android-only styling change; residual classification and threshold refinement remain pending.
 
 For each validated cause:
 
@@ -159,7 +158,7 @@ Maintain a cause table linking each code change to the states and measured prope
 
 ## Phase 4: Prevent future drift
 
-Status: infrastructure exists, enforcement is incomplete.
+Status: active. The direct API 36 check is now blocking at a 5% per-state gross-drift cap on pull requests, schedules, and manual runs. The keyboard-open modal has a separate blocking application-panel crop, geometry, and visibility check. Tighter state-specific boundaries and final residual acceptance remain incomplete.
 
 1. Make the normalized web-to-Android comparison the primary parity check.
 2. Calibrate a tight tolerance only after all known differences are classified.

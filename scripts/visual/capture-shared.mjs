@@ -9,6 +9,13 @@ import {
 } from './state-manifest.mjs';
 import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
 import { STATISTICS_DIAGNOSTICS_EXPRESSION } from './statistics-diagnostics.mjs';
+import { TUTORIAL_DIAGNOSTICS_EXPRESSION } from './tutorial-diagnostics.mjs';
+import { MODAL_DIAGNOSTICS_EXPRESSION } from './modal-diagnostics.mjs';
+import {
+  createBrewingDiagnosticsExpression,
+  isBrewingDiagnosticState,
+} from './brewing-diagnostics.mjs';
+import { SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION } from './settings-session-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 export const VISUAL_FIXTURE_RELATIVE_PATH = 'tmp/visual-parity/sample-data.json';
@@ -169,13 +176,37 @@ export async function captureVisualStateRecipe({
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }));
-    if (name === 'history' || name === 'history-filters') {
+    if (name === 'tutorial') {
+      metrics.diagnostics = await page.evaluate(TUTORIAL_DIAGNOSTICS_EXPRESSION);
+      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete Tutorial diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (name === 'history' || name === 'history-filters') {
       metrics.diagnostics = await page.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
     } else if (name === 'statistics') {
       metrics.diagnostics = await page.evaluate(STATISTICS_DIAGNOSTICS_EXPRESSION);
       const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
       if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
         throw new Error(`Incomplete Statistics diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (name === 'settings-mock-scale' || name === 'session-detail') {
+      metrics.diagnostics = await page.evaluate(SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION);
+      const { expectedNodeCount, inspectedNodeCount, missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (inspectedNodeCount !== expectedNodeCount || missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete ${name} diagnostics: nodes=${inspectedNodeCount}/${expectedNodeCount}; missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (name === 'brewing-setup-modal') {
+      metrics.diagnostics = await page.evaluate(MODAL_DIAGNOSTICS_EXPRESSION);
+      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete modal diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (isBrewingDiagnosticState(name)) {
+      metrics.diagnostics = await page.evaluate(createBrewingDiagnosticsExpression(name));
+      const { countMismatches, missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (countMismatches.length > 0 || missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete ${name} diagnostics: counts=${JSON.stringify(countMismatches)}; missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
       }
     }
     const screenshotPath = resolve(targetDirectory, `${name}.png`);
@@ -203,6 +234,7 @@ export async function captureVisualStateRecipe({
   await dismissTransientAlerts(page);
   await page.getByRole('dialog').waitFor({ state: 'visible' });
   await capture('tutorial');
+  if (stopAfter === 'tutorial') return writeMetadata(true);
   await page.getByRole('button', { name: 'Skip', exact: true }).click();
 
   await openTab(page, 'settings');
@@ -214,6 +246,7 @@ export async function captureVisualStateRecipe({
   await connectMockScale.click();
   await page.getByText('connected', { exact: true }).waitFor({ state: 'visible' });
   await capture('settings-mock-scale');
+  if (stopAfter === 'settings-mock-scale') return writeMetadata(true);
 
   await openTab(page, 'history');
   await page.getByTestId('history-page').waitFor({ state: 'visible' });
@@ -238,32 +271,39 @@ export async function captureVisualStateRecipe({
   await page.getByText('Session overview', { exact: true }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Delete session', exact: true }).waitFor({ state: 'visible' });
   await capture('session-detail');
+  if (stopAfter === 'session-detail') return writeMetadata(true);
 
   await openTab(page, 'brewing');
   await page.getByRole('button', { name: 'START SESSION', exact: true }).waitFor({ state: 'visible' });
   await capture('brewing-idle');
+  if (stopAfter === 'brewing-idle') return writeMetadata(true);
   await page.getByRole('button', { name: 'START SESSION', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm Setup', exact: true }).waitFor({ state: 'visible' });
 
   await editSetupField(page, 'Vessel', VISUAL_SETUP_VALUES.vessel, () => capture('brewing-setup-modal'));
+  if (stopAfter === 'brewing-setup-modal') return writeMetadata(true);
   await editSetupField(page, 'Lid', VISUAL_SETUP_VALUES.lid);
   await editSetupField(page, 'Dry tea weight', VISUAL_SETUP_VALUES.dryTeaWeight);
   await editSetupField(page, 'Vessel name', VISUAL_SETUP_VALUES.vesselName);
   await capture('brewing-setup');
+  if (stopAfter === 'brewing-setup') return writeMetadata(true);
 
   await page.getByRole('button', { name: 'Confirm Setup', exact: true }).click();
   await page.getByRole('button', { name: 'Start Infusion', exact: true }).waitFor({ state: 'visible' });
   await capture('brewing-ready');
+  if (stopAfter === 'brewing-ready') return writeMetadata(true);
 
   await page.getByRole('button', { name: 'Start Infusion', exact: true }).click();
   await page.getByRole('button', { name: 'End Infusion', exact: true }).waitFor({ state: 'visible' });
   await page.waitForFunction(() => document.querySelector('[data-testid="primary-timer"]')?.textContent?.trim() === '0:01');
   await capture('brewing-infusion');
+  if (stopAfter === 'brewing-infusion') return writeMetadata(true);
 
   await page.getByRole('button', { name: 'End Infusion', exact: true }).click();
   await page.getByRole('button', { name: 'Start Infusion', exact: true }).waitFor({ state: 'visible' });
   await page.waitForFunction(() => document.querySelector('[data-testid="primary-timer"]')?.textContent?.trim() === '0:01');
   await capture('brewing-rest');
+  if (stopAfter === 'brewing-rest') return writeMetadata(true);
 
   await page.getByRole('button', { name: 'End Session', exact: true }).click();
   await page.getByRole('button', { name: 'Start New Session', exact: true }).waitFor({ state: 'visible' });
@@ -271,6 +311,7 @@ export async function captureVisualStateRecipe({
     await Promise.all(toasts.filter((toast) => toast.presented === true).map((toast) => toast.dismiss()));
   });
   await capture('brewing-ended');
+  if (stopAfter === 'brewing-ended') return writeMetadata(true);
 
   assertCanonicalCaptures(captures);
   return writeMetadata();

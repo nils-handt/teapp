@@ -29,9 +29,9 @@ Do not use `android-api36-device/` as the automated expected/actual pair. Those 
 | Phase | Status | Notes |
 | --- | --- | --- |
 | 1. Reproducible capture | Complete | Deterministic fixture, shared 13-state journey, mock scale, metadata, web/API 36 app captures, and Android device captures are stable. |
-| 2. Diagnose differences | Incomplete | Several causes were identified, but there is no exhaustive per-state mismatch ledger or computed-style proof for remaining differences. |
-| 3. Fix root causes | Partial | Some valid fixes landed, but the remaining web-to-Android differences have not been explained or eliminated. |
-| 4. Prevent drift | Scaffolded | Capture, reports, CI, and a skill exist, but the direct parity check is broad and report-only rather than a tight blocking guard. |
+| 2. Diagnose differences | Active, substantially advanced | All 13 states have paired fail-closed diagnostics. Statistics and Tutorial remain explicitly open at their residual acceptance boundaries; overall parity is not complete. |
+| 3. Fix root causes | Partial | History/Statistics regressions, Tutorial hidden-page sizing, native timer drift, and keyboard-modal collapse are fixed and measured. |
+| 4. Prevent drift | Active | Direct parity is blocking at 5% per non-modal state; the modal has a separate blocking app-panel crop/geometry/visibility check. State-specific tightening remains. |
 
 ## What has been implemented and should be preserved
 
@@ -62,8 +62,8 @@ Do not repeat the earlier conclusion that Android parity is complete.
 
 - `npm run visual:compare:android:api36` compares Android against an Android reference. It proves only that Android capture is repeatable.
 - `npm run visual:compare:web` compares web against a web reference. It proves only that web capture is repeatable.
-- `npm run visual:compare:parity:api36` is the relevant cross-runtime comparison, but it currently permits 12% changed pixels, excludes `brewing-setup-modal.png`, and is report-only in CI.
-- Passing the current cross-runtime command is not acceptance evidence.
+- `npm run visual:compare:parity:api36` is the relevant cross-runtime comparison. It now permits 5% per non-modal state and then runs the keyboard-open modal's application-panel comparison.
+- The direct command is blocking in CI, including pull requests. Passing it prevents gross drift but does not by itself complete Statistics, Tutorial, or overall residual classification.
 
 The latest recorded cross-runtime ratios include:
 
@@ -72,19 +72,20 @@ The latest recorded cross-runtime ratios include:
 | `history-filters` | 1.638% after shared fix; diagnosed |
 | `history` | 4.755% after shared fix; diagnosed |
 | `statistics` | 2.226% after header/tab regression fixes; state audit remains active |
-| `tutorial` | 11.597% after the requested shared heading correction; state audit remains pending |
+| `tutorial` | 4.713% after the shared deterministic page-body fix; state remains open |
 
 The History-state residuals are now measured and classified. The remaining states are still unexplained until their own ledger work is complete.
 
 ## Next active task
 
-Continue Phase 2 at the remaining `statistics` residual boundary. The `history-filters` material drift and collapsed `history` residuals are resolved or explained, the user-reported Statistics header/tab and Tutorial heading regressions are fixed, and the visible Statistics declaration hierarchy now has paired diagnostics. Overall parity remains incomplete.
+Continue Phase 2 at the remaining `statistics` residual boundary while Phase 4's first blocking guard is active. The material Tutorial and modal defects are fixed, every state has paired diagnostics, and overall parity remains incomplete.
 
 1. Preserve the two completed History-state ledger entries and shared specificity fixes.
 2. Preserve the completed visible Statistics declaration audit and its focused diagnostics.
 3. Keep the 2.226% residual open until its physical-grid/rasterization acceptance boundary is explicitly settled; do not infer completion from the broad report.
-4. Fix and recapture the smallest affected state before expanding the next causal group.
-5. Do not update the web reference or loosen thresholds to make the difference disappear.
+4. Use the retained all-state diagnostics to tighten the 5% gross cap into justified state-specific boundaries.
+5. Keep the keyboard/system region as full-device review evidence while enforcing the application-owned modal panel automatically.
+6. Do not update the web reference or loosen thresholds to make the difference disappear.
 
 After `statistics`, proceed in the order defined in `plan-v2.md`.
 
@@ -110,6 +111,11 @@ After `statistics`, proceed in the order defined in `plan-v2.md`.
 - The clean-source API 36 reference refresh completed after one transient pre-capture CDP disconnect and an unchanged retry. A subsequent full web and API 36 validation journey completed. Direct refreshed-reference ratios remain 2.226% for Statistics and 11.597% for Tutorial; these report values do not complete either state.
 - Focused Statistics diagnostics now cover the header hosts and Ionic back-button internals, page/content shell, selector, summary and metric cards, compact breakdown tabs, first two ranking rows/bars, and bottom tab hosts/parts. Roboto readiness and all material computed visual properties match. Measured geometry advances from about −0.5px at the selector to −2.1px at the ranking panel through DPR border quantization; local 1/1/2px realignment removes 34.35% of the non-AA diff. Statistics remains explicitly in progress.
 - The refreshed keyboard-modal app-content crop is 1080×1101 versus the prior 1080×985 because the OS keyboard dynamically resizes the WebView. An immediate repeat capture produced 1080×985 again (`innerHeight` 375 versus 419), leaving the Android repeatability report with a dimension mismatch only for this state. Its full-device screenshot was reviewed with the numeric keyboard visible; the explicit cross-runtime modal comparison strategy remains unfinished.
+- Current paired diagnostics prove the Tutorial's hidden Brewing page wrapped one additional 25.6px line in WebView and enlarged the centered panel. Giving every page body deterministic `min(52dvh,440px)` height preserves independent scrolling and reduces the direct mismatch from 11.597% to 4.713%; Tutorial remains open.
+- The modal hook previously let a keyboard resize overwrite the resting app height before `ionKeyboardDidShow`, producing a 332px second inset and a zero-height body. The current API 36 run retains the baseline, computes a 24px residual inset, and keeps panel/title/input/actions visible; local geometry differs by no more than 1.206px and the app-panel crop differs by 2.413%.
+- Native system-dialog preparation now runs before each timed action. Infusion and rest metadata record `0:01` immediately before and after their native screenshots, eliminating the prior `0:04`/`0:05` capture-state drift and ended-duration pollution.
+- Current direct ratios are: idle 0.383%, setup 2.209%, ready 0.638%, infusion 0.640%, rest 0.696%, ended 1.269%, Settings 1.923%, session detail 1.848%, Statistics 2.226%, Tutorial 4.713%, History 4.755%, and filters 1.638%.
+- Phase 4 has begun: API 36 now runs on pull requests, the direct non-modal comparison is blocking at 5%, and the modal's 5% app-panel crop plus 1.5 CSS-px geometry/visibility constraints are blocking. This cap is an initial gross-drift guard, not final parity acceptance.
 
 ## Required constraints
 

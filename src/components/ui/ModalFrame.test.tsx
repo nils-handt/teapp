@@ -60,11 +60,82 @@ describe('ModalFrame keyboard avoidance', () => {
     renderModal();
 
     appHeight = 520;
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      showKeyboard(280);
+    });
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
+    expect(dialog.getAttribute('data-keyboard-open')).toBe('true');
+  });
+
+  it('keeps the pre-open app height when autofocus resizes the app before keyboard notification', () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const app = document.createElement('ion-app');
+    app.dataset.testLayoutRoot = '';
+    let appHeight = 800;
+    Object.defineProperty(app, 'clientHeight', {
+      configurable: true,
+      get: () => appHeight,
+    });
+    document.body.append(app);
+
+    const { rerender } = render(
+      <ModalFrame isOpen={false} title="Edit value">
+        <input aria-label="Value" autoFocus />
+      </ModalFrame>,
+    );
+
+    appHeight = 520;
+    rerender(
+      <ModalFrame isOpen title="Edit value">
+        <input aria-label="Value" autoFocus />
+      </ModalFrame>,
+    );
     act(() => showKeyboard(280));
 
     const dialog = screen.getByRole('dialog');
     expect(dialog.style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
     expect(dialog.getAttribute('data-keyboard-open')).toBe('true');
+  });
+
+  it('refreshes the resting height when the keyboard hides after the modal closes', () => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    const app = document.createElement('ion-app');
+    app.dataset.testLayoutRoot = '';
+    let appHeight = 800;
+    Object.defineProperty(app, 'clientHeight', {
+      configurable: true,
+      get: () => appHeight,
+    });
+    document.body.append(app);
+    const { rerender } = renderModal();
+
+    appHeight = 520;
+    act(() => showKeyboard(280));
+    rerender(
+      <ModalFrame isOpen={false} title="Edit value">
+        <input aria-label="Value" />
+      </ModalFrame>,
+    );
+    appHeight = 800;
+    act(() => window.dispatchEvent(new Event('ionKeyboardDidHide')));
+    rerender(
+      <ModalFrame isOpen title="Edit value">
+        <input aria-label="Value" />
+      </ModalFrame>,
+    );
+    appHeight = 520;
+    act(() => showKeyboard(280));
+
+    expect(screen.getByRole('dialog').style.getPropertyValue('--modal-keyboard-height')).toBe('0px');
   });
 
   it('scrolls a focused field into the modal body after the keyboard opens', () => {

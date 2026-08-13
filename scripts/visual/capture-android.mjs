@@ -19,6 +19,13 @@ import {
 } from './state-manifest.mjs';
 import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
 import { STATISTICS_DIAGNOSTICS_EXPRESSION } from './statistics-diagnostics.mjs';
+import { TUTORIAL_DIAGNOSTICS_EXPRESSION } from './tutorial-diagnostics.mjs';
+import { MODAL_DIAGNOSTICS_EXPRESSION } from './modal-diagnostics.mjs';
+import {
+  createBrewingDiagnosticsExpression,
+  isBrewingDiagnosticState,
+} from './brewing-diagnostics.mjs';
+import { SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION } from './settings-session-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 const serial = process.env.ANDROID_SERIAL;
@@ -300,11 +307,17 @@ const run = async () => {
     webViewTarget: { description: target.description, title: target.title, url: target.url },
   }, null, 2)}\n`, 'utf8');
 
-  const capture = async (name) => {
+  const capture = async (name, { systemUiPrepared = false, recordPrimaryTimer = false } = {}) => {
     console.log(`[visual:${targetName}] capturing ${name}`);
-    await dismissSystemUiDialog();
+    if (!systemUiPrepared) {
+      await dismissSystemUiDialog();
+    }
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-content')).map((content) => content.scrollToTop(0)))`);
     await sleep(150);
+    const captureStartedAt = new Date().toISOString();
+    const primaryTimerBefore = recordPrimaryTimer
+      ? await client.evaluate(`(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent ? timer.textContent.trim() : null; })()`)
+      : undefined;
     const metrics = await client.evaluate(`(async () => ({
       devicePixelRatio: window.devicePixelRatio,
       height: window.innerHeight,
@@ -315,7 +328,13 @@ const run = async () => {
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }))()`);
-    if (name === 'history' || name === 'history-filters') {
+    if (name === 'tutorial') {
+      metrics.diagnostics = await client.evaluate(TUTORIAL_DIAGNOSTICS_EXPRESSION);
+      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete Tutorial diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (name === 'history' || name === 'history-filters') {
       metrics.diagnostics = await client.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
     } else if (name === 'statistics') {
       metrics.diagnostics = await client.evaluate(STATISTICS_DIAGNOSTICS_EXPRESSION);
@@ -323,10 +342,36 @@ const run = async () => {
       if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
         throw new Error(`Incomplete Statistics diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
       }
+    } else if (name === 'settings-mock-scale' || name === 'session-detail') {
+      metrics.diagnostics = await client.evaluate(SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION);
+      const { expectedNodeCount, inspectedNodeCount, missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (inspectedNodeCount !== expectedNodeCount || missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete ${name} diagnostics: nodes=${inspectedNodeCount}/${expectedNodeCount}; missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (name === 'brewing-setup-modal') {
+      metrics.diagnostics = await client.evaluate(MODAL_DIAGNOSTICS_EXPRESSION);
+      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete modal diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
+    } else if (isBrewingDiagnosticState(name)) {
+      metrics.diagnostics = await client.evaluate(createBrewingDiagnosticsExpression(name));
+      const { countMismatches, missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (countMismatches.length > 0 || missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete ${name} diagnostics: counts=${JSON.stringify(countMismatches)}; missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
     }
     const devicePath = resolve(deviceDirectory, `${name}.png`);
     const webViewPath = resolve(targetDirectory, `${name}.png`);
     const { stdout } = await adbBuffer('exec-out', 'screencap', '-p');
+    if (recordPrimaryTimer) {
+      metrics.captureTiming = {
+        captureStartedAt,
+        primaryTimerBefore,
+        primaryTimerAfter: await client.evaluate(`(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent ? timer.textContent.trim() : null; })()`),
+        screenshotCompletedAt: new Date().toISOString(),
+      };
+    }
     await writeFile(devicePath, stdout);
     const bounds = targetBounds(await discoverTarget(forwardPort));
     if (bounds) {
@@ -353,6 +398,10 @@ const run = async () => {
     await waitFor(client, roleVisible('dialog'), 'the first-run tutorial');
     await dismissSystemUiDialog();
     await capture('tutorial');
+    if (stopAfter === 'tutorial') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await clickText(client, 'Skip');
 
     await openTab('settings');
@@ -384,6 +433,10 @@ const run = async () => {
     await clickText(client, 'Connect Mock Scale');
     await waitFor(client, textVisible('connected'), 'the connected mock scale');
     await capture('settings-mock-scale');
+    if (stopAfter === 'settings-mock-scale') {
+      await writeMetadata(undefined, true);
+      return;
+    }
 
     await openTab('history');
     await waitFor(client, `window.__teappVisual.visibleCss('ion-item-sliding')`, 'populated history');
@@ -412,10 +465,18 @@ const run = async () => {
     await clickCss(client, 'ion-item-sliding ion-item');
     await waitFor(client, textVisible('Session overview'), 'session detail');
     await capture('session-detail');
+    if (stopAfter === 'session-detail') {
+      await writeMetadata(undefined, true);
+      return;
+    }
 
     await openTab('brewing');
     await waitFor(client, textVisible('START SESSION'), 'the brewing idle state');
     await capture('brewing-idle');
+    if (stopAfter === 'brewing-idle') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await clickText(client, 'START SESSION');
     await waitFor(client, textVisible('Confirm Setup'), 'the brewing setup state');
 
@@ -440,25 +501,51 @@ const run = async () => {
     };
 
     await editSetupField('Vessel', VISUAL_SETUP_VALUES.vessel, () => capture('brewing-setup-modal'));
+    if (stopAfter === 'brewing-setup-modal') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await editSetupField('Lid', VISUAL_SETUP_VALUES.lid);
     await editSetupField('Dry tea weight', VISUAL_SETUP_VALUES.dryTeaWeight);
     await editSetupField('Vessel name', VISUAL_SETUP_VALUES.vesselName);
     await capture('brewing-setup');
+    if (stopAfter === 'brewing-setup') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await clickText(client, 'Confirm Setup');
     await waitFor(client, textVisible('Start Infusion'), 'the ready state');
     await capture('brewing-ready');
+    if (stopAfter === 'brewing-ready') {
+      await writeMetadata(undefined, true);
+      return;
+    }
+    await dismissSystemUiDialog();
     await clickText(client, 'Start Infusion');
     await waitFor(client, textVisible('End Infusion'), 'the infusion state');
     await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the infusion timer');
-    await capture('brewing-infusion');
+    await capture('brewing-infusion', { systemUiPrepared: true, recordPrimaryTimer: true });
+    if (stopAfter === 'brewing-infusion') {
+      await writeMetadata(undefined, true);
+      return;
+    }
+    await dismissSystemUiDialog();
     await clickText(client, 'End Infusion');
     await waitFor(client, textVisible('Start Infusion'), 'the rest state');
     await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the rest timer');
-    await capture('brewing-rest');
+    await capture('brewing-rest', { systemUiPrepared: true, recordPrimaryTimer: true });
+    if (stopAfter === 'brewing-rest') {
+      await writeMetadata(undefined, true);
+      return;
+    }
     await clickText(client, 'End Session');
     await waitFor(client, textVisible('Start New Session'), 'the ended summary');
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-toast')).filter((toast) => toast.presented).map((toast) => toast.dismiss()))`);
     await capture('brewing-ended');
+    if (stopAfter === 'brewing-ended') {
+      await writeMetadata(undefined, true);
+      return;
+    }
 
     assertCanonicalCaptures(captures);
     await writeMetadata();

@@ -68,7 +68,6 @@ jobs:
           if-no-files-found: error
 
   android:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -116,7 +115,6 @@ jobs:
         run: npm run visual:compare:android:api36
 
       - name: Compare API 36 with web layout
-        continue-on-error: true
         run: npm run visual:compare:parity:api36
 
       - name: Add comparison summary
@@ -129,6 +127,10 @@ jobs:
           parity_report="tests/visual/artifacts/diff/parity-api36/report.md"
           if [[ -f "${parity_report}" ]]; then
             cat "${parity_report}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          modal_report="tests/visual/artifacts/diff/parity-api36-modal/report.md"
+          if [[ -f "${modal_report}" ]]; then
+            cat "${modal_report}" >> "${GITHUB_STEP_SUMMARY}"
           fi
 
       - name: Upload visual report
