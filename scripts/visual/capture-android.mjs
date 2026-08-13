@@ -529,7 +529,6 @@ const run = async () => {
       await writeMetadata(undefined, true);
       return;
     }
-    await dismissSystemUiDialog();
     await clickText(client, 'End Infusion');
     await waitFor(client, textVisible('Start Infusion'), 'the rest state');
     await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the rest timer');
