@@ -111,6 +111,7 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
+          disk-size: 6G
           disable-animations: true
           emulator-boot-timeout: 900
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
