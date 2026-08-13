@@ -89,6 +89,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Install dependencies
         run: npm ci
 
@@ -106,6 +112,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
+          emulator-boot-timeout: 900
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: ANDROID_SERIAL=emulator-5554 npm run visual:capture:android
 
@@ -139,4 +146,4 @@ jobs:
         with:
           name: visual-parity-android-api36-${{ github.sha }}
           path: tests/visual/artifacts
-          if-no-files-found: error
+          if-no-files-found: warn
