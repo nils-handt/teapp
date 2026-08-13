@@ -104,6 +104,9 @@ jobs:
       - name: Build Android debug APK
         run: npm run android:build:debug
 
+      - name: Guard emulator unlock readiness
+        run: echo "${GITHUB_WORKSPACE}/scripts/visual/adb-ready-bin" >> "${GITHUB_PATH}"
+
       - name: Capture Android states
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
