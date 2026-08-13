@@ -107,7 +107,7 @@ jobs:
       - name: Capture Android states
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 36
+          api-level: 36.1
           arch: x86_64
           target: google_apis
           profile: pixel_2
