@@ -78,11 +78,11 @@ The History-state residuals are now measured and classified. The remaining state
 
 ## Next active task
 
-Continue Phase 2 with the remaining `statistics` audit. The `history-filters` material drift and collapsed `history` residuals are resolved or explained, and the user-reported Statistics header/tab and Tutorial heading regressions are fixed. Overall parity remains incomplete.
+Continue Phase 2 at the remaining `statistics` residual boundary. The `history-filters` material drift and collapsed `history` residuals are resolved or explained, the user-reported Statistics header/tab and Tutorial heading regressions are fixed, and the visible Statistics declaration hierarchy now has paired diagnostics. Overall parity remains incomplete.
 
 1. Preserve the two completed History-state ledger entries and shared specificity fixes.
-2. Extend the initial `statistics` rows in the canonical `mismatch-ledger.md` across the complete visible state.
-3. Explain its remaining 2.226% direct changed pixels using geometry, computed styles, Ionic internals, fonts, charts, and winning declarations.
+2. Preserve the completed visible Statistics declaration audit and its focused diagnostics.
+3. Keep the 2.226% residual open until its physical-grid/rasterization acceptance boundary is explicitly settled; do not infer completion from the broad report.
 4. Fix and recapture the smallest affected state before expanding the next causal group.
 5. Do not update the web reference or loosen thresholds to make the difference disappear.
 
@@ -108,6 +108,7 @@ After `statistics`, proceed in the order defined in `plan-v2.md`.
 - Statistics breakdown tabs are again borderless and compact: the explicit 4px separator utilities were removed and `.tea-mode-tab` restores line-height 1 with the existing 13px padding, producing a 40px web strip and the DPR-equivalent Android strip.
 - The Tutorial heading now explicitly uses shared 24px/1.2/400 Roboto styling, restoring a lighter two-line layout in both runtimes.
 - The clean-source API 36 reference refresh completed after one transient pre-capture CDP disconnect and an unchanged retry. A subsequent full web and API 36 validation journey completed. Direct refreshed-reference ratios remain 2.226% for Statistics and 11.597% for Tutorial; these report values do not complete either state.
+- Focused Statistics diagnostics now cover the header hosts and Ionic back-button internals, page/content shell, selector, summary and metric cards, compact breakdown tabs, first two ranking rows/bars, and bottom tab hosts/parts. Roboto readiness and all material computed visual properties match. Measured geometry advances from about −0.5px at the selector to −2.1px at the ranking panel through DPR border quantization; local 1/1/2px realignment removes 34.35% of the non-AA diff. Statistics remains explicitly in progress.
 - The refreshed keyboard-modal app-content crop is 1080×1101 versus the prior 1080×985 because the OS keyboard dynamically resizes the WebView. An immediate repeat capture produced 1080×985 again (`innerHeight` 375 versus 419), leaving the Android repeatability report with a dimension mismatch only for this state. Its full-device screenshot was reviewed with the numeric keyboard visible; the explicit cross-runtime modal comparison strategy remains unfinished.
 
 ## Required constraints

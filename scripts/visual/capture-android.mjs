@@ -18,6 +18,7 @@ import {
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
 import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
+import { STATISTICS_DIAGNOSTICS_EXPRESSION } from './statistics-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 const serial = process.env.ANDROID_SERIAL;
@@ -316,6 +317,12 @@ const run = async () => {
     }))()`);
     if (name === 'history' || name === 'history-filters') {
       metrics.diagnostics = await client.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
+    } else if (name === 'statistics') {
+      metrics.diagnostics = await client.evaluate(STATISTICS_DIAGNOSTICS_EXPRESSION);
+      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete Statistics diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
     }
     const devicePath = resolve(deviceDirectory, `${name}.png`);
     const webViewPath = resolve(targetDirectory, `${name}.png`);
@@ -396,6 +403,10 @@ const run = async () => {
     await waitFor(client, `window.__teappVisual.visibleCss('[aria-label="Statistics period"]')`, 'statistics');
     await waitFor(client, textVisible('24 sessions'), 'the populated statistics summary');
     await capture('statistics');
+    if (stopAfter === 'statistics') {
+      await writeMetadata(undefined, true);
+      return;
+    }
 
     await openTab('history');
     await clickCss(client, 'ion-item-sliding ion-item');

@@ -83,7 +83,7 @@ Status: complete. Re-run only when capture code, fixture generation, browser/Web
 
 Status: active.
 
-Progress on 2026-08-12: `history-filters` and collapsed `history` have complete measured entries in `mismatch-ledger.md`. Two shared late-Ionic cascade causes were fixed. The remaining pixels in both states were classified as DPR/rasterization only after computed-style, Shadow DOM, typography, wrapping, and local-geometry equality were established. The user-reported Statistics hover/tab regression group and Tutorial heading regression were then diagnosed and fixed without reverting the shared cascade or the preferred time-range selector. Phase 2 remains active: Statistics still needs its remaining state-wide audit, Tutorial retains an unexplained runtime offset, and the later states remain pending.
+Progress through 2026-08-13: `history-filters` and collapsed `history` have complete measured entries in `mismatch-ledger.md`. Two shared late-Ionic cascade causes were fixed. The remaining pixels in both states were classified as DPR/rasterization only after computed-style, Shadow DOM, typography, wrapping, and local-geometry equality were established. The user-reported Statistics hover/tab regression group and Tutorial heading regression were then diagnosed and fixed without reverting the shared cascade or the preferred time-range selector. A paired visible Statistics declaration audit found no independent computed-style drift and measured accumulated physical-grid offsets, but Statistics remains explicitly in progress rather than being accepted from its 2.226% report. Tutorial retains an unexplained runtime offset, and the later states remain pending.
 
 ### 2.1 Establish an apples-to-apples comparison
 

@@ -8,6 +8,7 @@ import {
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
 import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
+import { STATISTICS_DIAGNOSTICS_EXPRESSION } from './statistics-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
 export const VISUAL_FIXTURE_RELATIVE_PATH = 'tmp/visual-parity/sample-data.json';
@@ -170,6 +171,12 @@ export async function captureVisualStateRecipe({
     }));
     if (name === 'history' || name === 'history-filters') {
       metrics.diagnostics = await page.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
+    } else if (name === 'statistics') {
+      metrics.diagnostics = await page.evaluate(STATISTICS_DIAGNOSTICS_EXPRESSION);
+      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
+      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
+        throw new Error(`Incomplete Statistics diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
+      }
     }
     const screenshotPath = resolve(targetDirectory, `${name}.png`);
     await page.screenshot({ path: screenshotPath, animations: 'disabled', fullPage: false });
@@ -223,6 +230,7 @@ export async function captureVisualStateRecipe({
   await page.getByRole('group', { name: 'Statistics period' }).waitFor({ state: 'visible' });
   await page.getByText('24 sessions', { exact: true }).waitFor({ state: 'visible' });
   await capture('statistics');
+  if (stopAfter === 'statistics') return writeMetadata(true);
 
   await openTab(page, 'history');
   const firstSession = page.locator('ion-item-sliding ion-item').first();
