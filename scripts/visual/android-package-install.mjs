@@ -1,4 +1,4 @@
-const TRANSIENT_INSTALL_ERROR = /(?:broken pipe|device offline|device ['"].*['"] not found|failure calling service package|can't find service: package|connection (?:closed|reset)|cannot connect)/i;
+const TRANSIENT_INSTALL_ERROR = /(?:android package was not registered|broken pipe|device offline|device ['"].*['"] not found|failure calling service package|can't find service: (?:activity|package)|connection (?:closed|reset)|cannot connect|timed out waiting for the android package manager)/i;
 
 const errorText = (error) => [error?.message, error?.stdout, error?.stderr]
   .filter(Boolean)
@@ -19,8 +19,10 @@ export const waitForAndroidPackageManager = async ({
 
   while (now() < deadline) {
     try {
-      const { stdout = '' } = await adb('shell', 'cmd', 'package', 'path', 'android');
-      consecutiveSuccesses = String(stdout).includes('package:') ? consecutiveSuccesses + 1 : 0;
+      const { stdout: packageOutput = '' } = await adb('shell', 'cmd', 'package', 'path', 'android');
+      const { stdout: activityOutput = '' } = await adb('shell', 'service', 'check', 'activity');
+      const servicesReady = String(packageOutput).includes('package:') && String(activityOutput).includes('found');
+      consecutiveSuccesses = servicesReady ? consecutiveSuccesses + 1 : 0;
       if (consecutiveSuccesses >= stableProbeCount) return;
     } catch (error) {
       consecutiveSuccesses = 0;
@@ -52,7 +54,14 @@ export const installAndroidApk = async ({
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await adb('install', apkPath);
+      const result = await adb('install', apkPath);
+      await waitForPackageManager();
+      for (let verification = 0; verification < 2; verification += 1) {
+        const { stdout = '' } = await adb('shell', 'cmd', 'package', 'path', packageName);
+        if (!String(stdout).includes('package:')) throw new Error('Android package was not registered after adb install');
+        if (verification === 0) await sleep(1_000);
+      }
+      return result;
     } catch (error) {
       if (attempt === maxAttempts || !TRANSIENT_INSTALL_ERROR.test(errorText(error))) throw error;
       log(`[visual:android] transient APK install failure (${attempt}/${maxAttempts}); waiting for Package Manager`);
