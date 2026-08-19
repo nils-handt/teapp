@@ -5,6 +5,7 @@
 - Repository: `nils-handt/teapp`
 - Checkout: `/home/codex/src/teapp`
 - Phase 4 branch: `agent/android-web-visual-parity-phase-4`
+- Phase 4 draft PR: [#2](https://github.com/nils-handt/teapp/pull/2)
 - Stacked base: `agent/android-web-visual-parity`
 - Base work: draft PR #1, which is now scoped to Phases 1–3
 - Phase 4 plan: `docs/agentPlans/android-web-visual-parity-phase-4/plan.md`
