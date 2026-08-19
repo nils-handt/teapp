@@ -24,21 +24,23 @@ Critical correction from the prior thread:
 - Android-to-Android repeatability does not prove Android-to-web parity.
 - `visual:compare:android:api36` is only a target repeatability check.
 - The current cross-runtime comparison allows 12% changed pixels, excludes the keyboard modal, and is report-only. Passing it does not prove parity.
-- Phase 1 is complete. Phase 2 is incomplete, Phase 3 is partial, and Phase 4 is only scaffolded.
+- Phase 1 is complete. Phase 2 is active and substantially advanced, and Phase 3 is partial. Phase 4 prevention/CI work is intentionally split to `agent/android-web-visual-parity-phase-4`.
 
-Start with Phase 2 and the `history-filters` state. Compare:
+Continue Phase 2 with the remaining `statistics` residual boundary. Compare:
 
-- `tests/visual/baselines/reference/web/history-filters.png`
-- `tests/visual/baselines/reference/android-api36/history-filters.png`
+- `tests/visual/baselines/reference/web/statistics.png`
+- `tests/visual/baselines/reference/android-api36/statistics.png`
 
 The `android-api36-device` screenshot contains operating-system chrome and is for separate manual review, not the direct app-content comparison.
 
-For `history-filters`, produce the mismatch ledger required by `plan-v2.md`. Measure and record element bounding boxes, typography, text wrapping, spacing, colors, borders, radii, shadows, icons, Ionic mode/variables/parts, font loading, viewport/safe-area values, and the winning CSS declarations. Classify each difference and distinguish real styling/layout drift from DPR rasterization only after computed styles match.
+For `statistics`, finish the mismatch-ledger acceptance boundary required by `plan-v2.md`. Preserve the existing 59-node paired diagnostics and declaration proof, and settle the remaining physical-grid/rasterization classification without accepting the state from a broad changed-pixel threshold.
 
 Then propose and implement evidence-backed shared fixes. Re-run the smallest affected capture first, followed by the full web/API 36 journey when a causal group is complete. Do not update the web reference, create an Android-specific design fork, loosen thresholds, or mark a state complete merely to make a diff pass.
 
-Use the production UI, deterministic fixture, Settings restore, mock-scale connection, and mock-only brewing controls. Keep API 36 as the blocking target; API 24 is diagnostic and outside the active parity work.
+Use the production UI, deterministic fixture, Settings restore, mock-scale connection, and mock-only brewing controls. Keep API 36 as the primary parity target; API 24 is diagnostic and outside the active parity work.
 
 Use subagents where appropriate for bounded independent diagnosis. Keep one canonical mismatch ledger and update the tracked plan/handoff with material findings and status changes. Communicate progress regularly, preserve unrelated changes, validate in proportion to risk, commit and push completed work to the existing PR branch, and do not declare parity complete until every acceptance criterion in `plan-v2.md` is satisfied.
 
-First report the verified current branch/worktree state and a concise Phase 2 execution plan. Then begin the `history-filters` diagnosis without asking for confirmation unless a genuinely product-changing choice is required.
+First report the verified current branch/worktree state and a concise Phase 2 execution plan. Then begin the remaining Statistics audit without asking for confirmation unless a genuinely product-changing choice is required.
+
+Do not implement Phase 4 CI enforcement in this branch. That work has its own plan and handoff on `agent/android-web-visual-parity-phase-4`.

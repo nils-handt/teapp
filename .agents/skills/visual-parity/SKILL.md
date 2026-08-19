@@ -13,7 +13,7 @@ Use the repository harness as the source of truth. Do not create component-only 
 2. Generate the deterministic fixture with `npm run visual:fixture`.
 3. For web, run `npm run build -- --configLoader native`, then `npm run visual:capture:web` and `npm run visual:compare:web`.
 4. For Android, run `npm run android:build:debug`, start a disposable API 36 Pixel 2 AVD, then run `ANDROID_SERIAL=<serial> npm run visual:capture:android` and `npm run visual:compare:android:api36`. Capture uninstalls the app and changes emulator-wide display and animation settings, so do not use a personal or data-bearing AVD.
-5. After API 36, run `npm run visual:compare:parity:api36` to compare its normalized app-content output directly with the web reference. The command also checks the keyboard-open setup modal through its application-owned panel crop and CSS-pixel-local geometry; review the full-device screenshot separately for the operating-system keyboard region.
+5. After API 36, run `npm run visual:compare:parity:api36` to compare its normalized app-content output directly with the web reference. The focused setup modal is excluded because Android shows the operating-system keyboard; review its target-specific app and device screenshots instead.
 6. Read `tests/visual/artifacts/diff/<target>/report.md` and inspect actual, reference, and diff PNGs for every failed state. Copy the artifact directory elsewhere before another capture or comparison if it must be retained; each run replaces its own target output.
 
 The Android journey must restore the fixture through Settings, connect the mock scale, and use the mock-only infusion controls. Do not replace those steps with direct database writes or test-only navigation.
