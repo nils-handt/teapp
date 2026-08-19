@@ -43,7 +43,7 @@ Device-pixel ratio and browser rasterization may produce small antialiasing diff
 - Android build/sync asset verification.
 - Target-specific repeatability checks.
 - Historical pre-fix evidence and stable API 36 captures.
-- Web and API 36 references recaptured from committed revision `155fda8497895554808c0bacc6b6ccf12128275d` after the Tutorial, modal, timer, diagnostic, and first Phase 4 guard changes; all 13 web app-content, Android app-content, and Android full-device screenshots were reviewed, and `baselines/unfixed` remains unchanged.
+- Web and API 36 references recaptured from committed revision `155fda8497895554808c0bacc6b6ccf12128275d` after the Tutorial, modal, timer, and diagnostic changes; all 13 web app-content, Android app-content, and Android full-device screenshots were reviewed, and `baselines/unfixed` remains unchanged.
 
 ### Partially complete but not accepted as parity
 
@@ -54,18 +54,17 @@ Device-pixel ratio and browser rasterization may produce small antialiasing diff
 
 These are valid fixes, but the remaining cross-runtime differences have not been exhaustively measured or explained.
 
-### Historical gaps now addressed or active
+### Historical gaps now addressed or active in this PR
 
 - The per-state ledger and paired fail-closed diagnostics now cover all 13 states; Statistics, Tutorial, and overall residual acceptance remain active rather than complete.
 - Root-cause fixes have landed for every material issue proven in the current causal groups; no final claim is made for every residual pixel.
-- The first blocking cross-runtime boundary is now 5% per non-modal state plus a separate modal app-panel guard. State-specific tightening remains incomplete.
-- CI now fails the direct API 36 guard on pull requests, schedules, and manual runs.
+- Phase 4 prevention and CI enforcement are intentionally out of scope for this PR and continue on `agent/android-web-visual-parity-phase-4`.
 
 ### Interpretation rules
 
 - `visual:compare:android:api36` compares Android with its own Android reference. It proves repeatability, not parity.
-- `visual:compare:parity:api36` now allows 5% changed pixels per non-modal state and runs a separate modal application-panel check. It is blocking but remains a gross-drift boundary, not parity-completion evidence.
-- Current direct ratios are recorded in the ledger; Statistics and Tutorial remain explicitly open despite passing this first guard.
+- `visual:compare:parity:api36` allows 12% changed pixels, excludes the keyboard-open setup modal, and remains report-only in CI. Passing it does not prove parity.
+- Current direct ratios and the separate modal geometry evidence are recorded in the ledger; Statistics and Tutorial remain explicitly open.
 
 ## Phase 1: Preserve and verify the capture foundation
 
@@ -141,7 +140,7 @@ Do not mark a state complete because its changed-pixel ratio is below a broad th
 
 ## Phase 3: Fix root causes
 
-Status: partial. The History cascade fixes, Statistics capture/tab fixes, Tutorial heading and track-height fixes, timer capture fix, and keyboard-resize fix are complete. No remaining state currently has an evidence-backed Android-only styling change; residual classification and threshold refinement remain pending.
+Status: partial. The History cascade fixes, Statistics capture/tab fixes, Tutorial heading and track-height fixes, timer capture fix, and keyboard-resize fix are complete. No remaining state currently has an evidence-backed Android-only styling change; residual classification remains pending.
 
 For each validated cause:
 
@@ -156,23 +155,7 @@ For each validated cause:
 
 Maintain a cause table linking each code change to the states and measured properties it corrects.
 
-## Phase 4: Prevent future drift
-
-Status: active. The direct API 36 check is now blocking at a 5% per-state gross-drift cap on pull requests, schedules, and manual runs. The keyboard-open modal has a separate blocking application-panel crop, geometry, and visibility check. Tighter state-specific boundaries and final residual acceptance remain incomplete.
-
-1. Make the normalized web-to-Android comparison the primary parity check.
-2. Calibrate a tight tolerance only after all known differences are classified.
-3. Fail CI on unexplained layout, typography, color, spacing, or component differences.
-4. Keep target-specific repeatability checks as secondary diagnostics.
-5. Run web capture for UI-affecting pull requests.
-6. Run API 36 capture for relevant pull requests or a required pre-merge workflow, not only as an optional report.
-7. Upload web expected, Android actual, normalized diff, metadata, and full-device screenshots.
-8. Require explicit review for intentional web reference changes.
-9. Permit masks or exclusions only for identified operating-system-owned or genuinely nondeterministic regions.
-10. Treat the keyboard-open setup modal explicitly: compare application-owned modal content and review the Android keyboard/system region separately rather than silently excluding the entire state.
-11. Update the repo-local visual-parity skill so it cannot describe target repeatability as cross-runtime parity.
-
-## Acceptance criteria
+## Phase 1–3 acceptance criteria
 
 The work is complete only when:
 
@@ -182,21 +165,20 @@ The work is complete only when:
 - remaining changed pixels are limited to explained rasterization noise or approved system-owned regions;
 - the keyboard/modal state has an explicit comparison strategy;
 - the Android artifact is verified to contain the tested web assets;
-- the direct web-to-Android comparison is blocking for the selected CI workflow;
-- an intentional web design change produces a reviewable Android parity diff;
 - no separate Android reference can silently legitimize drift from the web source of truth.
+
+Phase 4 prevention, CI policy, and threshold enforcement have a separate plan and handoff on `agent/android-web-visual-parity-phase-4`; they are not completion criteria for this PR.
 
 ## Android support policy
 
-API 36 is the blocking visual-parity target. API 24 remains diagnostic and must not delay completion of API 36 parity.
+API 36 is the primary visual-parity target. API 24 remains diagnostic and must not delay completion of API 36 parity.
 
 Keep the current `minSdk` and compatibility transforms in this work unless a separate, explicit product decision selects a new minimum Android version and validates its pinned WebView with the same 13-state journey.
 
-## Delivery sequence from the current branch
+## Remaining delivery sequence for this branch
 
-1. Commit this corrected plan and an execution handoff.
-2. Correct the draft PR description so it states that Phase 1 and infrastructure are complete while parity fixes remain in progress.
-3. Begin Phase 2 with the `history-filters` mismatch ledger.
-4. Continue Phase 2 with `history`; fix and validate one causal group at a time.
-5. Tighten and enable the blocking parity workflow only after the visual differences are understood.
-6. Recapture and review final Android output against the unchanged web source of truth.
+1. Finish the remaining Statistics declaration-level acceptance audit.
+2. Finish the Tutorial foreground residual classification.
+3. Reconcile every remaining open ledger row without accepting it from a broad threshold.
+4. Recapture and review final Android output against the unchanged web source of truth when a causal group changes rendered output.
+5. Hand the classified residuals and approved tolerances to the separate Phase 4 branch.

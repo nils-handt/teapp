@@ -31,7 +31,8 @@ Do not use `android-api36-device/` as the automated expected/actual pair. Those 
 | 1. Reproducible capture | Complete | Deterministic fixture, shared 13-state journey, mock scale, metadata, web/API 36 app captures, and Android device captures are stable. |
 | 2. Diagnose differences | Active, substantially advanced | All 13 states have paired fail-closed diagnostics. Statistics and Tutorial remain explicitly open at their residual acceptance boundaries; overall parity is not complete. |
 | 3. Fix root causes | Partial | History/Statistics regressions, Tutorial hidden-page sizing, native timer drift, and keyboard-modal collapse are fixed and measured. |
-| 4. Prevent drift | Active | Direct parity is blocking at 5% per non-modal state; the modal has a separate blocking app-panel crop/geometry/visibility check. State-specific tightening remains. |
+
+Phase 4 prevention and CI enforcement are intentionally split to `agent/android-web-visual-parity-phase-4`. They are not part of draft PR #1.
 
 ## What has been implemented and should be preserved
 
@@ -62,8 +63,8 @@ Do not repeat the earlier conclusion that Android parity is complete.
 
 - `npm run visual:compare:android:api36` compares Android against an Android reference. It proves only that Android capture is repeatable.
 - `npm run visual:compare:web` compares web against a web reference. It proves only that web capture is repeatable.
-- `npm run visual:compare:parity:api36` is the relevant cross-runtime comparison. It now permits 5% per non-modal state and then runs the keyboard-open modal's application-panel comparison.
-- The direct command is blocking in CI, including pull requests. Passing it prevents gross drift but does not by itself complete Statistics, Tutorial, or overall residual classification.
+- `npm run visual:compare:parity:api36` is the relevant cross-runtime comparison, but it permits 12% changed pixels, excludes `brewing-setup-modal.png`, and remains report-only in CI.
+- Passing the direct command does not complete Statistics, Tutorial, or overall residual classification. The modal's measured application-panel crop and geometry remain Phase 2–3 evidence until Phase 4 adds enforcement.
 
 The latest recorded cross-runtime ratios include:
 
@@ -78,13 +79,13 @@ The History-state residuals are now measured and classified. The remaining state
 
 ## Next active task
 
-Continue Phase 2 at the remaining `statistics` residual boundary while Phase 4's first blocking guard is active. The material Tutorial and modal defects are fixed, every state has paired diagnostics, and overall parity remains incomplete.
+Continue Phase 2 at the remaining `statistics` residual boundary. The material Tutorial and modal defects are fixed, every state has paired diagnostics, and overall parity remains incomplete.
 
 1. Preserve the two completed History-state ledger entries and shared specificity fixes.
 2. Preserve the completed visible Statistics declaration audit and its focused diagnostics.
 3. Keep the 2.226% residual open until its physical-grid/rasterization acceptance boundary is explicitly settled; do not infer completion from the broad report.
-4. Use the retained all-state diagnostics to tighten the 5% gross cap into justified state-specific boundaries.
-5. Keep the keyboard/system region as full-device review evidence while enforcing the application-owned modal panel automatically.
+4. Finish the Tutorial foreground residual classification after Statistics.
+5. Keep the keyboard/system region as full-device review evidence and the application-owned modal measurements as explicit Phase 3 evidence.
 6. Do not update the web reference or loosen thresholds to make the difference disappear.
 
 After `statistics`, proceed in the order defined in `plan-v2.md`.
@@ -114,9 +115,8 @@ After `statistics`, proceed in the order defined in `plan-v2.md`.
 - The modal hook previously let a keyboard resize overwrite the resting app height before `ionKeyboardDidShow`, producing a 332px second inset and a zero-height body. The current API 36 run retains the baseline, computes a 24px residual inset, and keeps panel/title/input/actions visible; local geometry differs by no more than 1.206px and the app-panel crop differs by 2.413%.
 - Native system-dialog preparation now runs before each timed action. Infusion and rest metadata record `0:01` immediately before and after their native screenshots, eliminating the prior `0:04`/`0:05` capture-state drift and ended-duration pollution.
 - Current direct ratios are: idle 0.383%, setup 2.209%, ready 0.638%, infusion 0.640%, rest 0.694%, ended 1.262%, Settings 1.923%, session detail 1.848%, Statistics 2.226%, Tutorial 4.713%, History 4.755%, and filters 1.638%.
-- Phase 4 has begun: API 36 now runs on pull requests, the direct non-modal comparison is blocking at 5%, and the modal's 5% app-panel crop plus 1.5 CSS-px geometry/visibility constraints are blocking. This cap is an initial gross-drift guard, not final parity acceptance.
 - Current references come from clean committed revision `155fda8497895554808c0bacc6b6ccf12128275d`. All 39 web/app/device screenshots were reviewed; the ended duration is `0:01`, and `baselines/unfixed` is unchanged.
-- Fresh full web and API 36 journeys match all 13 target-specific references at 0.000%. The direct blocking comparison passes all non-modal states, and the separate modal check passes at 2.413% with zero geometry/visibility failures. This does not complete Statistics, Tutorial, or overall parity.
+- Fresh full web and API 36 journeys match all 13 target-specific references at 0.000%. A separately run 5% non-modal probe and modal check passed at 2.413% with zero geometry/visibility failures; these are recorded measurements, not enforcement or parity completion.
 
 ## Required constraints
 
@@ -124,7 +124,7 @@ After `statistics`, proceed in the order defined in `plan-v2.md`.
 - Preserve unrelated user changes.
 - Use the production application UI; do not introduce direct database injection or test-only navigation.
 - Use the mock scale to progress brewing states.
-- Keep API 36 as the blocking target; API 24 is diagnostic and out of the active parity path.
+- Keep API 36 as the primary parity target; API 24 is diagnostic and out of the active parity path.
 - Prefer shared fixes over Android-only overrides.
 - Do not update references until a change is understood and approved.
 - Treat Android system chrome separately from app-content parity.
@@ -153,5 +153,6 @@ Use the acceptance criteria in `plan-v2.md`. In particular:
 - every material mismatch has a measured cause and resolution;
 - remaining differences are limited to explained rasterization or approved system-owned regions;
 - the keyboard/modal state has an explicit comparison strategy;
-- the direct web-to-Android check is tight and blocking;
 - a separate Android reference cannot silently legitimize drift from web.
+
+Phase 4's CI enforcement and drift-prevention definition of done belong to its separate branch, plan, and handoff.
