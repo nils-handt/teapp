@@ -68,7 +68,6 @@ jobs:
           if-no-files-found: error
 
   android:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -90,6 +89,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Install dependencies
         run: npm ci
 
@@ -99,14 +104,20 @@ jobs:
       - name: Build Android debug APK
         run: npm run android:build:debug
 
+      - name: Guard emulator unlock readiness
+        run: echo "${GITHUB_WORKSPACE}/scripts/visual/adb-ready-bin" >> "${GITHUB_PATH}"
+
       - name: Capture Android states
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 36
+          api-level: 36.1
           arch: x86_64
           target: google_apis
           profile: pixel_2
+          disk-size: 6G
+          ram-size: 3072M
           disable-animations: true
+          emulator-boot-timeout: 900
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: ANDROID_SERIAL=emulator-5554 npm run visual:capture:android
 
@@ -116,7 +127,6 @@ jobs:
         run: npm run visual:compare:android:api36
 
       - name: Compare API 36 with web layout
-        continue-on-error: true
         run: npm run visual:compare:parity:api36
 
       - name: Add comparison summary
@@ -130,6 +140,10 @@ jobs:
           if [[ -f "${parity_report}" ]]; then
             cat "${parity_report}" >> "${GITHUB_STEP_SUMMARY}"
           fi
+          modal_report="tests/visual/artifacts/diff/parity-api36-modal/report.md"
+          if [[ -f "${modal_report}" ]]; then
+            cat "${modal_report}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       - name: Upload visual report
         if: always()
@@ -137,4 +151,4 @@ jobs:
         with:
           name: visual-parity-android-api36-${{ github.sha }}
           path: tests/visual/artifacts
-          if-no-files-found: error
+          if-no-files-found: warn

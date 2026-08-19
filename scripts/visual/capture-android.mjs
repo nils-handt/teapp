@@ -26,6 +26,7 @@ import {
   isBrewingDiagnosticState,
 } from './brewing-diagnostics.mjs';
 import { SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION } from './settings-session-diagnostics.mjs';
+import { installAndroidApk } from './android-package-install.mjs';
 
 const execFile = promisify(execFileCallback);
 const serial = process.env.ANDROID_SERIAL;
@@ -250,8 +251,12 @@ const run = async () => {
   const fixtureText = await readFile(VISUAL_FIXTURE_PATH, 'utf8');
   const source = await readSourceMetadata();
   assertReferenceCaptureSource(outputRoot, source);
-  await adb('uninstall', 'com.teapp.app').catch(() => undefined);
-  await adb('install', apkPath);
+  await installAndroidApk({
+    adb,
+    apkPath,
+    packageName: 'com.teapp.app',
+    sleep,
+  });
   await Promise.all([
     adb('shell', 'settings', 'put', 'global', 'window_animation_scale', '0'),
     adb('shell', 'settings', 'put', 'global', 'transition_animation_scale', '0'),
