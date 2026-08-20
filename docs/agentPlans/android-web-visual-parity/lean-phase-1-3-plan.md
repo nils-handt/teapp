@@ -67,7 +67,7 @@ For each remaining significant discrepancy:
 4. Rerun `npm run visual:parity`.
 5. Eliminate the discrepancy or add a narrowly written entry to `masterReport.md` only after explicit approval.
 
-Statistics, Tutorial, and overall parity remain incomplete until their residuals are fixed or explicitly accepted.
+Phase 3 completed on 2026-08-20. A current 13-state run at revision `fe9d044` reproduced the fully audited Statistics and Tutorial residuals; their narrowly bounded foreground-rasterization and physical-grid differences were then explicitly approved and recorded in `tests/visual/masterReport.md`. New or out-of-bound differences remain unapproved and require the same paired review.
 
 ## Deletion target
 
