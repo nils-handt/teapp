@@ -216,7 +216,7 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: 'jsdom',
-      exclude: [...configDefaults.exclude, '**/.worktrees/**'],
+      exclude: [...configDefaults.exclude, '**/.worktrees/**', 'tests/e2e/**'],
       setupFiles: ['./src/setupMocks.ts', './src/setupTests.ts'],
       server: {
         deps: {
