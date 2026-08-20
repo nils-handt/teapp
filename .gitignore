@@ -9,7 +9,6 @@
 /coverage
 /playwright-report
 /test-results
-/tests/visual/artifacts
 
 # production
 /build

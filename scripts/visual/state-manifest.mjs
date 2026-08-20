@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 export const VISUAL_STATE_NAMES = Object.freeze([
   'tutorial',
   'settings-mock-scale',
@@ -14,11 +16,13 @@ export const VISUAL_STATE_NAMES = Object.freeze([
   'brewing-ended',
 ]);
 
-export const VISUAL_FIXTURE_METADATA = Object.freeze({
+export const VISUAL_FIXTURE = Object.freeze({
   now: '2026-08-11T12:00:00.000Z',
-  path: 'tmp/visual-parity/sample-data.json',
   seed: 'visual-parity-v1',
 });
+
+export const VISUAL_OUTPUT_ROOT = resolve('tmp/visual-parity/current');
+export const VISUAL_FIXTURE_PATH = resolve(VISUAL_OUTPUT_ROOT, 'sample-data.json');
 
 export const VISUAL_SETUP_VALUES = Object.freeze({
   dryTeaWeight: '6.5',

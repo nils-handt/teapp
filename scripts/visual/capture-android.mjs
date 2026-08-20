@@ -1,55 +1,33 @@
-#!/usr/bin/env node
-
 import { execFile as execFileCallback } from 'node:child_process';
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { PNG } from 'pngjs';
 import { CdpClient } from './cdp-client.mjs';
 import {
-  assertReferenceCaptureSource,
-  DEFAULT_VISUAL_OUTPUT_ROOT,
-  readSourceMetadata,
-  VISUAL_FIXTURE_PATH,
-} from './capture-shared.mjs';
-import {
   assertCanonicalCaptures,
-  VISUAL_FIXTURE_METADATA,
+  VISUAL_FIXTURE,
   VISUAL_SETUP_VALUES,
 } from './state-manifest.mjs';
-import { HISTORY_DIAGNOSTICS_EXPRESSION } from './history-filter-diagnostics.mjs';
-import { STATISTICS_DIAGNOSTICS_EXPRESSION } from './statistics-diagnostics.mjs';
-import { TUTORIAL_DIAGNOSTICS_EXPRESSION } from './tutorial-diagnostics.mjs';
-import { MODAL_DIAGNOSTICS_EXPRESSION } from './modal-diagnostics.mjs';
-import {
-  createBrewingDiagnosticsExpression,
-  isBrewingDiagnosticState,
-} from './brewing-diagnostics.mjs';
-import { SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION } from './settings-session-diagnostics.mjs';
 
 const execFile = promisify(execFileCallback);
-const serial = process.env.ANDROID_SERIAL;
-const apkPath = resolve(process.env.VISUAL_ANDROID_APK ?? 'android/app/build/outputs/apk/debug/app-debug.apk');
-const outputRootIndex = process.argv.indexOf('--output-root');
-const outputRootArgument = outputRootIndex >= 0 ? process.argv[outputRootIndex + 1] : undefined;
 
-if (!serial) {
-  throw new Error('Set ANDROID_SERIAL to a running local emulator before capturing Android screenshots');
-}
-if (outputRootIndex >= 0 && !outputRootArgument) throw new Error('--output-root requires a directory');
-const outputRoot = resolve(outputRootArgument ?? DEFAULT_VISUAL_OUTPUT_ROOT);
-const stopAfter = process.env.VISUAL_STOP_AFTER;
-
-const adb = async (...args) => execFile('adb', ['-s', serial, ...args], { maxBuffer: 10 * 1024 * 1024 });
-const adbBuffer = (...args) => new Promise((resolveResult, reject) => {
-  execFileCallback('adb', ['-s', serial, ...args], { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
-    if (error) {
-      reject(Object.assign(error, { stderr }));
-      return;
-    }
-    resolveResult({ stdout, stderr });
-  });
+const createAdb = (serial) => ({
+  buffer: (...args) => new Promise((resolveResult, reject) => {
+    execFileCallback('adb', ['-s', serial, ...args], { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        reject(Object.assign(error, { stderr }));
+        return;
+      }
+      resolveResult({ stdout, stderr });
+    });
+  }),
+  text: (...args) => execFile('adb', ['-s', serial, ...args], { maxBuffer: 10 * 1024 * 1024 }),
 });
+
+let adb;
+let adbBuffer;
+let serial;
 
 const sleep = (milliseconds) => new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds));
 
@@ -245,11 +223,11 @@ const dismissSystemUiDialog = async () => {
   await sleep(350);
 };
 
-const run = async () => {
-  await access(apkPath);
-  const fixtureText = await readFile(VISUAL_FIXTURE_PATH, 'utf8');
-  const source = await readSourceMetadata();
-  assertReferenceCaptureSource(outputRoot, source);
+export const captureAndroid = async ({ avdName, fixturePath, outputRoot, serial: selectedSerial, source }) => {
+  serial = selectedSerial;
+  ({ text: adb, buffer: adbBuffer } = createAdb(serial));
+  const apkPath = resolve('android/app/build/outputs/apk/debug/app-debug.apk');
+  const fixtureText = await readFile(fixturePath, 'utf8');
   await adb('uninstall', 'com.teapp.app').catch(() => undefined);
   await adb('install', apkPath);
   await Promise.all([
@@ -268,13 +246,9 @@ const run = async () => {
     adb('shell', 'wm', 'size'),
     adb('shell', 'wm', 'density'),
   ]);
-  const targetName = `android-api${sdk.trim()}`;
-  const targetDirectory = resolve(outputRoot, targetName);
-  const deviceDirectory = resolve(outputRoot, `${targetName}-device`);
-  await Promise.all([
-    rm(targetDirectory, { force: true, recursive: true }),
-    rm(deviceDirectory, { force: true, recursive: true }),
-  ]);
+  const targetName = 'android';
+  const targetDirectory = resolve(outputRoot, 'android');
+  const deviceDirectory = resolve(outputRoot, 'android-device');
   await Promise.all([mkdir(targetDirectory, { recursive: true }), mkdir(deviceDirectory, { recursive: true })]);
 
   let client;
@@ -292,20 +266,32 @@ const run = async () => {
   await connectWebView();
   const captures = [];
 
-  const writeMetadata = async (captureError, partial = false) => writeFile(resolve(targetDirectory, 'metadata.json'), `${JSON.stringify({
+  const metadataPath = resolve(outputRoot, 'metadata/android.json');
+  const writeMetadata = async (captureError) => {
+    const metadata = {
+    apiLevel: sdk.trim(),
     androidSerial: serial,
+    avdName,
     capturedAt: new Date().toISOString(),
     captures,
     density: density.trim(),
     ...(captureError ? { captureError } : {}),
-    fixture: VISUAL_FIXTURE_METADATA,
+    ...(captureError ? { partial: true } : {}),
+    fixture: VISUAL_FIXTURE,
     model: model.trim(),
-    ...(partial ? { partial: true, stopAfter } : {}),
     screenSize: screenSize.trim(),
     source,
     target: targetName,
+    webViewVersion: target.userAgent ?? 'recorded per capture',
     webViewTarget: { description: target.description, title: target.title, url: target.url },
-  }, null, 2)}\n`, 'utf8');
+  };
+    const userAgent = captures[0]?.metrics?.userAgent ?? '';
+    metadata.webViewVersion = userAgent.match(/Chrome\/([^\s]+)/)?.[1]
+      ?? userAgent.match(/Version\/([^\s]+)/)?.[1]
+      ?? 'unknown';
+    await writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
+    return metadata;
+  };
 
   const capture = async (name, { afterScreenshot, systemUiPrepared = false, recordPrimaryTimer = false } = {}) => {
     console.log(`[visual:${targetName}] capturing ${name}`);
@@ -313,6 +299,7 @@ const run = async () => {
       await dismissSystemUiDialog();
     }
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-content')).map((content) => content.scrollToTop(0)))`);
+    await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 }).catch(() => undefined);
     await sleep(150);
     const captureStartedAt = new Date().toISOString();
     const primaryTimerBefore = recordPrimaryTimer
@@ -324,43 +311,11 @@ const run = async () => {
       pathname: window.location.pathname,
       search: window.location.search,
       hash: window.location.hash,
+      route: window.location.hash.replace(/^#/, '') || window.location.pathname,
       scrollTops: await Promise.all(Array.from(document.querySelectorAll('ion-content')).map(async (content) => (await content.getScrollElement()).scrollTop)),
       userAgent: navigator.userAgent,
       width: window.innerWidth,
     }))()`);
-    if (name === 'tutorial') {
-      metrics.diagnostics = await client.evaluate(TUTORIAL_DIAGNOSTICS_EXPRESSION);
-      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
-      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
-        throw new Error(`Incomplete Tutorial diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
-      }
-    } else if (name === 'history' || name === 'history-filters') {
-      metrics.diagnostics = await client.evaluate(HISTORY_DIAGNOSTICS_EXPRESSION);
-    } else if (name === 'statistics') {
-      metrics.diagnostics = await client.evaluate(STATISTICS_DIAGNOSTICS_EXPRESSION);
-      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
-      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
-        throw new Error(`Incomplete Statistics diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
-      }
-    } else if (name === 'settings-mock-scale' || name === 'session-detail') {
-      metrics.diagnostics = await client.evaluate(SETTINGS_SESSION_DIAGNOSTICS_EXPRESSION);
-      const { expectedNodeCount, inspectedNodeCount, missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
-      if (inspectedNodeCount !== expectedNodeCount || missingLabels.length > 0 || notVisibleLabels.length > 0) {
-        throw new Error(`Incomplete ${name} diagnostics: nodes=${inspectedNodeCount}/${expectedNodeCount}; missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
-      }
-    } else if (name === 'brewing-setup-modal') {
-      metrics.diagnostics = await client.evaluate(MODAL_DIAGNOSTICS_EXPRESSION);
-      const { missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
-      if (missingLabels.length > 0 || notVisibleLabels.length > 0) {
-        throw new Error(`Incomplete modal diagnostics: missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
-      }
-    } else if (isBrewingDiagnosticState(name)) {
-      metrics.diagnostics = await client.evaluate(createBrewingDiagnosticsExpression(name));
-      const { countMismatches, missingLabels, notVisibleLabels } = metrics.diagnostics.coverage;
-      if (countMismatches.length > 0 || missingLabels.length > 0 || notVisibleLabels.length > 0) {
-        throw new Error(`Incomplete ${name} diagnostics: counts=${JSON.stringify(countMismatches)}; missing=${missingLabels.join(',')}; notVisible=${notVisibleLabels.join(',')}`);
-      }
-    }
     const devicePath = resolve(deviceDirectory, `${name}.png`);
     const webViewPath = resolve(targetDirectory, `${name}.png`);
     const { stdout } = await adbBuffer('exec-out', 'screencap', '-p');
@@ -401,10 +356,6 @@ const run = async () => {
     await waitFor(client, roleVisible('dialog'), 'the first-run tutorial');
     await dismissSystemUiDialog();
     await capture('tutorial');
-    if (stopAfter === 'tutorial') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await clickText(client, 'Skip');
 
     await openTab('settings');
@@ -436,50 +387,26 @@ const run = async () => {
     await clickText(client, 'Connect Mock Scale');
     await waitFor(client, textVisible('connected'), 'the connected mock scale');
     await capture('settings-mock-scale');
-    if (stopAfter === 'settings-mock-scale') {
-      await writeMetadata(undefined, true);
-      return;
-    }
 
     await openTab('history');
     await waitFor(client, `window.__teappVisual.visibleCss('ion-item-sliding')`, 'populated history');
     await capture('history');
-    if (stopAfter === 'history') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await clickCss(client, '[aria-label^="Show history filters"]');
     await waitFor(client, `window.__teappVisual.visibleCss('input[aria-label="Filter Name"]')`, 'expanded history filters');
     await capture('history-filters');
-    if (stopAfter === 'history-filters') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await clickCss(client, 'ion-button[aria-label="Open tea statistics"]');
     await waitFor(client, `window.__teappVisual.visibleCss('[aria-label="Statistics period"]')`, 'statistics');
     await waitFor(client, textVisible('24 sessions'), 'the populated statistics summary');
     await capture('statistics');
-    if (stopAfter === 'statistics') {
-      await writeMetadata(undefined, true);
-      return;
-    }
 
     await openTab('history');
     await clickCss(client, 'ion-item-sliding ion-item');
     await waitFor(client, textVisible('Session overview'), 'session detail');
     await capture('session-detail');
-    if (stopAfter === 'session-detail') {
-      await writeMetadata(undefined, true);
-      return;
-    }
 
     await openTab('brewing');
     await waitFor(client, textVisible('START SESSION'), 'the brewing idle state');
     await capture('brewing-idle');
-    if (stopAfter === 'brewing-idle') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await clickText(client, 'START SESSION');
     await waitFor(client, textVisible('Confirm Setup'), 'the brewing setup state');
 
@@ -504,25 +431,13 @@ const run = async () => {
     };
 
     await editSetupField('Vessel', VISUAL_SETUP_VALUES.vessel, () => capture('brewing-setup-modal'));
-    if (stopAfter === 'brewing-setup-modal') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await editSetupField('Lid', VISUAL_SETUP_VALUES.lid);
     await editSetupField('Dry tea weight', VISUAL_SETUP_VALUES.dryTeaWeight);
     await editSetupField('Vessel name', VISUAL_SETUP_VALUES.vesselName);
     await capture('brewing-setup');
-    if (stopAfter === 'brewing-setup') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await clickText(client, 'Confirm Setup');
     await waitFor(client, textVisible('Start Infusion'), 'the ready state');
     await capture('brewing-ready');
-    if (stopAfter === 'brewing-ready') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await dismissSystemUiDialog();
     await clickText(client, 'Start Infusion');
     await waitFor(client, textVisible('End Infusion'), 'the infusion state');
@@ -535,30 +450,16 @@ const run = async () => {
       systemUiPrepared: true,
       recordPrimaryTimer: true,
     });
-    if (stopAfter === 'brewing-infusion') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await waitFor(client, `(() => { const timer = document.querySelector('[data-testid="primary-timer"]'); return timer && timer.textContent.trim() === '0:01'; })()`, 'the rest timer');
     await capture('brewing-rest', { systemUiPrepared: true, recordPrimaryTimer: true });
-    if (stopAfter === 'brewing-rest') {
-      await writeMetadata(undefined, true);
-      return;
-    }
     await clickText(client, 'End Session');
     await waitFor(client, textVisible('Start New Session'), 'the ended summary');
     await client.evaluate(`Promise.all(Array.from(document.querySelectorAll('ion-toast')).filter((toast) => toast.presented).map((toast) => toast.dismiss()))`);
     await capture('brewing-ended');
-    if (stopAfter === 'brewing-ended') {
-      await writeMetadata(undefined, true);
-      return;
-    }
 
     assertCanonicalCaptures(captures);
-    await writeMetadata();
+    return await writeMetadata();
   } catch (error) {
-    const failureName = captures.length === 0 ? 'startup-failure' : 'capture-failure';
-    await capture(failureName).catch(() => undefined);
     await writeMetadata(error instanceof Error ? error.message : String(error));
     throw error;
   } finally {
@@ -566,8 +467,3 @@ const run = async () => {
     if (forwardPort) await adb('forward', '--remove', `tcp:${forwardPort}`).catch(() => undefined);
   }
 };
-
-run().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});

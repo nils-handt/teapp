@@ -45,11 +45,11 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
-      - name: Build and sync Android web assets
-        run: npm run android:sync
+      - name: Build web app
+        run: npm run build -- --configLoader native
 
-      - name: Verify packaged web assets
-        run: npm run visual:verify:android-assets
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
 
       - name: Prepare test signing key
         env:

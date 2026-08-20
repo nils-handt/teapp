@@ -1,14 +1,10 @@
-#!/usr/bin/env node
-
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
+import { resolve } from 'node:path';
 import { chromium } from 'playwright';
-import { captureVisualStateRecipe } from './capture-shared.mjs';
+import { captureWebJourney } from './capture-web-journey.mjs';
 
-const webViewReferenceViewport = { width: 411, height: 683 };
-const outputRootIndex = process.argv.indexOf('--output-root');
-const outputRoot = outputRootIndex >= 0 ? process.argv[outputRootIndex + 1] : undefined;
-if (outputRootIndex >= 0 && !outputRoot) throw new Error('--output-root requires a directory');
+const viewport = { width: 411, height: 683 };
 
 const getAvailablePort = async () => new Promise((resolvePort, reject) => {
   const server = createServer();
@@ -18,11 +14,10 @@ const getAvailablePort = async () => new Promise((resolvePort, reject) => {
     const address = server.address();
     if (!address || typeof address === 'string') {
       server.close();
-      reject(new Error('Could not resolve an available visual-test port'));
+      reject(new Error('Could not allocate a local preview port'));
       return;
     }
-    const { port } = address;
-    server.close(() => resolvePort(port));
+    server.close(() => resolvePort(address.port));
   });
 });
 
@@ -33,40 +28,42 @@ const waitForHttp = async (url, timeoutMs = 30_000) => {
       const response = await fetch(url);
       if (response.ok) return;
     } catch {
-      // The preview process may still be starting.
+      // Vite may still be starting.
     }
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise((resolveWait) => setTimeout(resolveWait, 200));
   }
-  throw new Error(`Timed out waiting for ${url}`);
+  throw new Error(`Timed out waiting for the Vite preview at ${url}`);
 };
 
-const run = async () => {
+export async function captureWeb({ outputRoot, fixturePath, source }) {
   const port = await getAvailablePort();
-  if (port === 5173) {
-    throw new Error('Visual capture must not use port 5173');
-  }
+  if (port === 5173) throw new Error('Visual parity must not use port 5173');
 
-  const preview = spawn(
-    process.execPath,
-    ['node_modules/vite/bin/vite.js', 'preview', '--configLoader', 'native', '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
-    { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] },
-  );
+  const preview = spawn(process.execPath, [
+    'node_modules/vite/bin/vite.js',
+    'preview',
+    '--configLoader', 'native',
+    '--host', '127.0.0.1',
+    '--port', String(port),
+    '--strictPort',
+  ], { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] });
   let previewOutput = '';
   preview.stdout.on('data', (chunk) => { previewOutput += chunk; });
   preview.stderr.on('data', (chunk) => { previewOutput += chunk; });
 
   let browser;
+  let context;
   try {
     const url = `http://127.0.0.1:${port}`;
     await waitForHttp(url);
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({
+    context = await browser.newContext({
       colorScheme: 'light',
       deviceScaleFactor: 1,
       locale: 'en-US',
       reducedMotion: 'reduce',
       timezoneId: 'UTC',
-      viewport: webViewReferenceViewport,
+      viewport,
     });
     const page = await context.newPage();
     page.on('console', (message) => {
@@ -74,28 +71,22 @@ const run = async () => {
     });
     page.on('pageerror', (error) => console.error(`[browser] ${error.message}`));
     await page.goto(url, { waitUntil: 'domcontentloaded' });
-    await captureVisualStateRecipe({
+    return await captureWebJourney({
+      browserVersion: browser.version(),
+      fixturePath,
+      metadataPath: resolve(outputRoot, 'metadata/web.json'),
       page,
-      target: 'web',
-      ...(outputRoot ? { outputRoot } : {}),
-      extraMetadata: {
-        browserVersion: browser.version(),
-        viewport: webViewReferenceViewport,
-      },
+      screenshotDirectory: resolve(outputRoot, 'web'),
+      source,
     });
-    await context.close();
   } catch (error) {
     if (preview.exitCode !== null) {
       throw new Error(`Vite preview exited with code ${preview.exitCode}:\n${previewOutput}`, { cause: error });
     }
     throw error;
   } finally {
-    await browser?.close();
-    preview.kill('SIGTERM');
+    await context?.close().catch(() => undefined);
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
   }
-};
-
-run().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+}
