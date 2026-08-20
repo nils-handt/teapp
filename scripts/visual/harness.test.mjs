@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withAndroidCaptureResources } from './capture-android.mjs';
 import {
   assertCompatibleAspectRatio,
   assertCompatibleCaptureMetadata,
@@ -64,6 +65,23 @@ emulator-5556 offline transport_id:2
       acknowledgedAvdName: 'Teapp_API_36_1',
       actualAvdName: 'Teapp_API_36_1',
     })).not.toThrow();
+  });
+});
+
+describe('Android capture resource lifecycle', () => {
+  it('cleans up resources allocated before the initial CDP connection fails', async () => {
+    const events = [];
+
+    await expect(withAndroidCaptureResources({
+      cleanup: async () => { events.push('cleanup'); },
+      connect: async () => {
+        events.push('forward-created');
+        throw new Error('CDP connection failed');
+      },
+      run: async () => { events.push('capture'); },
+    })).rejects.toThrow('CDP connection failed');
+
+    expect(events).toEqual(['forward-created', 'cleanup']);
   });
 });
 

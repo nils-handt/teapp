@@ -223,6 +223,15 @@ const dismissSystemUiDialog = async () => {
   await sleep(350);
 };
 
+export const withAndroidCaptureResources = async ({ cleanup, connect, run }) => {
+  try {
+    await connect();
+    return await run();
+  } finally {
+    await cleanup();
+  }
+};
+
 export const captureAndroid = async ({ avdName, fixturePath, outputRoot, serial: selectedSerial, source }) => {
   serial = selectedSerial;
   ({ text: adb, buffer: adbBuffer } = createAdb(serial));
@@ -263,7 +272,6 @@ export const captureAndroid = async ({ avdName, fixturePath, outputRoot, serial:
     await client.send('Runtime.enable');
     await client.send('Page.enable');
   };
-  await connectWebView();
   const captures = [];
 
   const metadataPath = resolve(outputRoot, 'metadata/android.json');
@@ -349,7 +357,7 @@ export const captureAndroid = async ({ avdName, fixturePath, outputRoot, serial:
   const textVisible = (text) => `window.__teappVisual.deepElements().some((element) => window.__teappVisual.visible(element) && (element.textContent || '').trim() === ${JSON.stringify(text)})`;
   const roleVisible = (role) => `window.__teappVisual.visibleCss('[role="${role}"]')`;
 
-  try {
+  const runCaptureJourney = async () => {
     await waitFor(client, `document.querySelector('ion-app')`, 'the Ionic app');
     await installDomDriver(client);
     await waitForFonts(client);
@@ -459,11 +467,21 @@ export const captureAndroid = async ({ avdName, fixturePath, outputRoot, serial:
 
     assertCanonicalCaptures(captures);
     return await writeMetadata();
-  } catch (error) {
-    await writeMetadata(error instanceof Error ? error.message : String(error));
-    throw error;
-  } finally {
-    client?.close();
-    if (forwardPort) await adb('forward', '--remove', `tcp:${forwardPort}`).catch(() => undefined);
-  }
+  };
+
+  return withAndroidCaptureResources({
+    cleanup: async () => {
+      client?.close();
+      if (forwardPort) await adb('forward', '--remove', `tcp:${forwardPort}`).catch(() => undefined);
+    },
+    connect: connectWebView,
+    run: async () => {
+      try {
+        return await runCaptureJourney();
+      } catch (error) {
+        await writeMetadata(error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    },
+  });
 };
