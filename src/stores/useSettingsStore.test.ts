@@ -44,6 +44,24 @@ describe('useSettingsStore', () => {
     expect(settingsStore.getState().hasSeenTutorial).toBe(false);
     expect(settingsStore.getState().settingsLoaded).toBe(false);
     expect(settingsStore.getState().isTutorialOpen).toBe(false);
+    expect(settingsStore.getState().brewingTimerNotificationEnabled).toBe(false);
+  });
+
+  it('persists and restores the background brewing timer preference', async () => {
+    settingsStore.getState().updateSettings({ brewingTimerNotificationEnabled: true });
+
+    expect(settingsRepository.saveSettingsState).toHaveBeenCalledWith({
+      brewingTimerNotificationEnabled: true,
+    });
+
+    settingsStore.setState(initialSettingsStoreValues);
+    vi.mocked(settingsRepository.getAllSettings).mockResolvedValue({
+      brewingTimerNotificationEnabled: 'true',
+    });
+
+    await settingsStore.getState().loadSettings();
+
+    expect(settingsStore.getState().brewingTimerNotificationEnabled).toBe(true);
   });
 
   it('updates persisted settings without touching the logger when logger settings are absent', () => {

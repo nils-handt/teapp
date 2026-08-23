@@ -20,6 +20,7 @@ export interface SettingsStoreValues {
   logLevel: LogLevel;
   logToFileEnabled: boolean;
   weightLoggerEnabled: boolean;
+  brewingTimerNotificationEnabled: boolean;
   playbackSpeed: number;
   hasSeenTutorial: boolean;
   statisticsPeriod: StatisticsPeriod;
@@ -45,6 +46,7 @@ export type PersistedSettingsStoreValues = Pick<
   | 'logLevel'
   | 'logToFileEnabled'
   | 'weightLoggerEnabled'
+  | 'brewingTimerNotificationEnabled'
   | 'playbackSpeed'
   | 'hasSeenTutorial'
   | 'statisticsPeriod'
@@ -56,6 +58,7 @@ export const initialSettingsStoreValues: SettingsStoreValues = {
   logLevel: DEFAULT_LOGGER_CONFIG.minLevel,
   logToFileEnabled: DEFAULT_LOGGER_CONFIG.enableFileLogging,
   weightLoggerEnabled: false,
+  brewingTimerNotificationEnabled: false,
   playbackSpeed: 1,
   hasSeenTutorial: false,
   statisticsPeriod: 'total',
@@ -106,6 +109,9 @@ export const settingsStore = createStore<SettingsStore>()((set) => ({
     }
     if (allSettings['weightLoggerEnabled']) {
       loadedSettings.weightLoggerEnabled = allSettings['weightLoggerEnabled'] === 'true';
+    }
+    if (allSettings['brewingTimerNotificationEnabled']) {
+      loadedSettings.brewingTimerNotificationEnabled = allSettings['brewingTimerNotificationEnabled'] === 'true';
     }
     if (allSettings['playbackSpeed']) {
       loadedSettings.playbackSpeed = Number(allSettings['playbackSpeed']);

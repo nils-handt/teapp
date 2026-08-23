@@ -33,6 +33,10 @@ const pwaUpdateMocks = vi.hoisted(() => ({
     },
 }));
 
+const brewingTimerNotificationMocks = vi.hoisted(() => ({
+    useBrewingTimerNotification: vi.fn(),
+}));
+
 // Mock dependencies
 vi.mock('./services/BluetoothScaleService', () => ({
     bluetoothScaleService: {
@@ -42,6 +46,10 @@ vi.mock('./services/BluetoothScaleService', () => ({
 
 vi.mock('./hooks/useBrewingSync', () => ({
     useBrewingSync: vi.fn(),
+}));
+
+vi.mock('./hooks/useBrewingTimerNotification', () => ({
+    useBrewingTimerNotification: brewingTimerNotificationMocks.useBrewingTimerNotification,
 }));
 
 vi.mock('./hooks/usePwaUpdate', () => ({
@@ -78,6 +86,12 @@ vi.mock('@capacitor/core', () => ({
     Capacitor: {
         getPlatform: platformMocks.getPlatform,
     },
+    registerPlugin: vi.fn(() => ({
+        getSupport: vi.fn(),
+        requestPermission: vi.fn(),
+        show: vi.fn(),
+        cancel: vi.fn(),
+    })),
 }));
 
 // Mock Ionic components to avoid issues with web components in JSDOM not being fully supported or needing setup
@@ -151,6 +165,7 @@ describe('App', () => {
         pwaUpdateMocks.state.hasUpdateAvailable = false;
         pwaUpdateMocks.state.status = 'idle';
         tutorialRenderState.render.mockClear();
+        brewingTimerNotificationMocks.useBrewingTimerNotification.mockClear();
         vi.clearAllMocks();
     });
 
@@ -175,6 +190,16 @@ describe('App', () => {
 
         expect(restoreSpy).toHaveBeenCalled();
         expect(loadSettingsSpy).toHaveBeenCalled();
+    });
+
+    it('activates background brewing timer coordination from the persisted preference', async () => {
+        settingsStore.setState({ brewingTimerNotificationEnabled: true });
+
+        await act(async () => {
+            render(<App />);
+        });
+
+        expect(brewingTimerNotificationMocks.useBrewingTimerNotification).toHaveBeenCalledWith(true);
     });
 
     it('opens the tutorial after settings finish loading for first-time users', async () => {

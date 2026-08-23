@@ -14,6 +14,7 @@ import FirstRunTutorial from './components/FirstRunTutorial';
 import { useShallow } from 'zustand/react/shallow';
 import { bleAdapter } from './services/bluetooth/adapters/BleAdapter';
 import { usePwaUpdate } from './hooks/usePwaUpdate';
+import { useBrewingTimerNotification } from './hooks/useBrewingTimerNotification';
 
 const logger = createLogger('App');
 
@@ -27,12 +28,14 @@ const App: React.FC = () => {
     markTutorialSeen,
     openTutorial,
     settingsLoaded,
+    brewingTimerNotificationEnabled,
   } = useSettingsStore(useShallow((state) => ({
     hasSeenTutorial: state.hasSeenTutorial,
     isTutorialOpen: state.isTutorialOpen,
     markTutorialSeen: state.markTutorialSeen,
     openTutorial: state.openTutorial,
     settingsLoaded: state.settingsLoaded,
+    brewingTimerNotificationEnabled: state.brewingTimerNotificationEnabled,
   })));
 
   useEffect(() => {
@@ -60,6 +63,7 @@ const App: React.FC = () => {
   }, [hasSeenTutorial, isTutorialOpen, openTutorial, settingsLoaded]);
 
   useBrewingSync(); // Activate global state sync
+  useBrewingTimerNotification(brewingTimerNotificationEnabled);
 
   const shouldShowUpdatePrompt = !pwaUpdate.hasOfflineReadyMessage && pwaUpdate.hasUpdateAvailable;
   const pwaUpdatePromptMessage = pwaUpdate.status === 'update-deferred'

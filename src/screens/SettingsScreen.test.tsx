@@ -43,6 +43,8 @@ const testState = vi.hoisted(() => {
             promptInstall: vi.fn().mockResolvedValue(false),
             status: 'unsupported' as 'unsupported' | 'available' | 'installing' | 'installed' | 'dismissed',
         },
+        platform: 'web',
+        requestBrewingTimerNotificationPermission: vi.fn().mockResolvedValue('standard-notification'),
         updateSettings: vi.fn(),
     };
 });
@@ -53,6 +55,7 @@ type SettingsUpdate = Partial<{
     logToFileEnabled: boolean;
     playbackSpeed: number;
     weightLoggerEnabled: boolean;
+    brewingTimerNotificationEnabled: boolean;
 }>;
 
 type SettingsScreenSettingsSeed = {
@@ -62,6 +65,7 @@ type SettingsScreenSettingsSeed = {
     playbackSpeed: SettingsStoreValues['playbackSpeed'];
     updateSettings: (settings: SettingsUpdate) => void;
     weightLoggerEnabled: SettingsStoreValues['weightLoggerEnabled'];
+    brewingTimerNotificationEnabled: SettingsStoreValues['brewingTimerNotificationEnabled'];
 };
 
 type SettingsScreenScaleSeed = {
@@ -130,6 +134,18 @@ vi.mock('../utils/fileUtils', () => ({
 
 vi.mock('../hooks/usePwaInstall', () => ({
     usePwaInstall: () => testState.pwaInstall,
+}));
+
+vi.mock('@capacitor/core', () => ({
+    Capacitor: {
+        getPlatform: () => testState.platform,
+    },
+}));
+
+vi.mock('../services/BrewingTimerNotification', () => ({
+    brewingTimerNotification: {
+        requestPermission: testState.requestBrewingTimerNotificationPermission,
+    },
 }));
 
 vi.mock('../services/logging', () => ({
@@ -213,6 +229,7 @@ const renderScreen = (
             settingsStore.setState(settings);
         },
         weightLoggerEnabled: false,
+        brewingTimerNotificationEnabled: false,
         ...settingsOverrides,
     });
 
@@ -226,6 +243,8 @@ describe('SettingsScreen', () => {
         testState.pwaInstall.canPrompt = false;
         testState.pwaInstall.promptInstall.mockResolvedValue(false);
         testState.pwaInstall.status = 'unsupported';
+        testState.platform = 'web';
+        testState.requestBrewingTimerNotificationPermission.mockResolvedValue('standard-notification');
         settingsStore.setState(initialSettingsStoreValues);
         scaleStore.setState(initialScaleStoreState);
         testState.updateSettings.mockImplementation(() => undefined);
@@ -237,6 +256,41 @@ describe('SettingsScreen', () => {
         fireEvent.click(screen.getByRole('button', { name: /Dev Mode/i }));
 
         expect(testState.updateSettings).toHaveBeenCalledWith({ devMode: true });
+    });
+
+    it('enables the background brewing timer on Android after notification permission succeeds', async () => {
+        testState.platform = 'android';
+        renderScreen();
+
+        fireEvent.click(screen.getByRole('button', { name: /Show brewing timer outside Teapp/i }));
+
+        await waitFor(() => {
+            expect(testState.requestBrewingTimerNotificationPermission).toHaveBeenCalledTimes(1);
+            expect(testState.updateSettings).toHaveBeenCalledWith({
+                brewingTimerNotificationEnabled: true,
+            });
+        });
+    });
+
+    it('leaves the background brewing timer disabled when notification permission is denied', async () => {
+        testState.platform = 'android';
+        testState.requestBrewingTimerNotificationPermission.mockResolvedValue('disabled');
+        renderScreen();
+
+        fireEvent.click(screen.getByRole('button', { name: /Show brewing timer outside Teapp/i }));
+
+        await waitFor(() => {
+            expect(testState.requestBrewingTimerNotificationPermission).toHaveBeenCalledTimes(1);
+        });
+        expect(testState.updateSettings).not.toHaveBeenCalledWith({
+            brewingTimerNotificationEnabled: true,
+        });
+    });
+
+    it('does not show the Android brewing timer setting on web', () => {
+        renderScreen();
+
+        expect(screen.queryByText('Show brewing timer outside Teapp')).toBeNull();
     });
 
     it('toggles the nested settings when their rows are clicked', () => {

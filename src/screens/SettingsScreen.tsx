@@ -26,6 +26,8 @@ import { useScaleStore } from '../stores/useScaleStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { reloadAfterRestore } from '../utils/reloadAfterRestore';
+import { Capacitor } from '@capacitor/core';
+import { brewingTimerNotification } from '../services/BrewingTimerNotification';
 import {
   zenListPageClass,
   zenListSectionHeaderClass,
@@ -70,6 +72,7 @@ const SettingsScreen: React.FC = () => {
     logLevel,
     logToFileEnabled,
     weightLoggerEnabled,
+    brewingTimerNotificationEnabled,
     playbackSpeed,
     openTutorial,
     updateSettings
@@ -78,6 +81,7 @@ const SettingsScreen: React.FC = () => {
     logLevel: state.logLevel,
     logToFileEnabled: state.logToFileEnabled,
     weightLoggerEnabled: state.weightLoggerEnabled,
+    brewingTimerNotificationEnabled: state.brewingTimerNotificationEnabled,
     playbackSpeed: state.playbackSpeed,
     openTutorial: state.openTutorial,
     updateSettings: state.updateSettings,
@@ -104,6 +108,22 @@ const SettingsScreen: React.FC = () => {
     if (isLogLevel(value)) {
       updateSettings({ logLevel: value });
     }
+  };
+
+  const handleBrewingTimerNotificationToggle = async (enabled: boolean) => {
+    if (!enabled) {
+      updateSettings({ brewingTimerNotificationEnabled: false });
+      return;
+    }
+
+    const support = await brewingTimerNotification.requestPermission();
+    if (support === 'promoted-live-update' || support === 'standard-notification') {
+      updateSettings({ brewingTimerNotificationEnabled: true });
+      setToastMessage('Background brewing timer enabled');
+      return;
+    }
+
+    setToastMessage('Enable Teapp notifications in Android settings to show the brewing timer');
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,6 +236,19 @@ const SettingsScreen: React.FC = () => {
                 )}
               </IonLabel>
             </IonItem>
+          </IonList>
+        )}
+
+        {Capacitor.getPlatform() === 'android' && (
+          <IonList className={zenListSurfaceClass} data-testid="settings-android-notifications">
+            <IonListHeader className={zenListSectionHeaderClass}>
+              <IonLabel>Android Notifications</IonLabel>
+            </IonListHeader>
+            <ToggleSettingItem
+              label="Show brewing timer outside Teapp"
+              checked={brewingTimerNotificationEnabled}
+              onToggle={handleBrewingTimerNotificationToggle}
+            />
           </IonList>
         )}
 
