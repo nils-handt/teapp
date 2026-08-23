@@ -7,6 +7,7 @@ export const VISUAL_STATE_NAMES = Object.freeze([
   'history-filters',
   'statistics',
   'session-detail',
+  'tea-edit-modal',
   'brewing-idle',
   'brewing-setup-modal',
   'brewing-setup',

@@ -411,6 +411,13 @@ export const captureAndroid = async ({ avdName, fixturePath, outputRoot, serial:
     await clickCss(client, 'ion-item-sliding ion-item');
     await waitFor(client, textVisible('Session overview'), 'session detail');
     await capture('session-detail');
+    await clickCss(client, 'section button:has(h2)');
+    await waitFor(client, roleVisible('dialog'), 'tea editor');
+    await clickText(client, 'Edit Tea');
+    await waitFor(client, `window.__teappVisual.visibleCss('[role="dialog"] input[aria-label="Name"]')`, 'the tea edit form');
+    await capture('tea-edit-modal');
+    await clickText(client, 'Cancel');
+    await waitFor(client, `!${roleVisible('dialog')}`, 'the tea editor to close');
 
     await openTab('brewing');
     await waitFor(client, textVisible('START SESSION'), 'the brewing idle state');

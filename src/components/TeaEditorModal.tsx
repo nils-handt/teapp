@@ -182,7 +182,7 @@ const TeaEditorModal: React.FC<TeaEditorModalProps> = ({
                 aria-selected={activeTab === 'existing'}
                 onClick={openExistingTeaTab}
                 className={cn(
-                    'tea-mode-tab border-r-4 border-black text-sm transition',
+                    'tea-mode-tab text-sm transition',
                     activeTab === 'existing'
                         ? 'bg-[#fffdf8] font-medium text-zen-text'
                         : 'text-zen-muted',

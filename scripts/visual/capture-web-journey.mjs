@@ -165,6 +165,13 @@ export async function captureWebJourney({
     await page.getByText('Session overview', { exact: true }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: 'Delete session', exact: true }).waitFor({ state: 'visible' });
     await capture('session-detail');
+    await page.locator('section button').filter({ has: page.locator('h2') }).first().click();
+    await page.getByRole('dialog').waitFor({ state: 'visible' });
+    await page.getByRole('tab', { name: 'Edit Tea', exact: true }).click();
+    await page.getByLabel('Name', { exact: true }).waitFor({ state: 'visible' });
+    await capture('tea-edit-modal');
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
 
     await openTab(page, 'brewing');
     await page.getByRole('button', { name: 'START SESSION', exact: true }).waitFor({ state: 'visible' });

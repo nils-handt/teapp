@@ -16,6 +16,7 @@ import {
   VISUAL_FIXTURE,
   VISUAL_FIXTURE_PATH,
   VISUAL_OUTPUT_ROOT,
+  VISUAL_STATE_NAMES,
 } from './state-manifest.mjs';
 
 const step = async (label, action) => {
@@ -54,12 +55,12 @@ export async function runVisualParity() {
     'assembleDebug', '--no-daemon',
   ], { cwd: resolve('android') }));
 
-  const webMetadata = await step('capturing 13 production web states', () => captureWeb({
+  const webMetadata = await step(`capturing ${VISUAL_STATE_NAMES.length} production web states`, () => captureWeb({
     fixturePath: VISUAL_FIXTURE_PATH,
     outputRoot: VISUAL_OUTPUT_ROOT,
     source,
   }));
-  const androidMetadata = await step('capturing 13 Android API 36 states', () => captureAndroid({
+  const androidMetadata = await step(`capturing ${VISUAL_STATE_NAMES.length} Android API 36 states`, () => captureAndroid({
     avdName: target.avdName,
     fixturePath: VISUAL_FIXTURE_PATH,
     outputRoot: VISUAL_OUTPUT_ROOT,
