@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner, Table, TableColumn } from 'typeorm';
+import { createUuid } from '../../utils/createUuid';
 
 type LegacyTeaNameRow = {
     name: string;
@@ -7,14 +8,6 @@ type LegacyTeaNameRow = {
 
 type ExistingTeaRow = {
     teaId: string;
-};
-
-const createId = () => {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-        return crypto.randomUUID();
-    }
-
-    return `tea-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
 export class AddTeaEntity1720000000000 implements MigrationInterface {
@@ -63,7 +56,7 @@ export class AddTeaEntity1720000000000 implements MigrationInterface {
                 'SELECT teaId FROM teas WHERE LOWER(name) = ? LIMIT 1',
                 [row.normalizedName],
             ) as ExistingTeaRow[];
-            const teaId = existingRows[0]?.teaId ?? createId();
+            const teaId = existingRows[0]?.teaId ?? createUuid();
 
             if (!existingRows[0]) {
                 await queryRunner.query(

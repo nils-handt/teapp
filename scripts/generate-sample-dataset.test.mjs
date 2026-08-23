@@ -42,16 +42,64 @@ describe('generateSampleDataset', () => {
 
         expect(new Set(infusionIds).size).toBe(infusionIds.length);
     });
+
+    it('creates byte-stable seeded visual fixtures with mock scale enabled', () => {
+        const options = {
+            sessions: 8,
+            teas: 4,
+            vessels: 2,
+            seed: 'visual-parity-v1',
+            now: '2026-08-11T12:00:00.000Z',
+            mockScale: true,
+        };
+
+        const first = generateSampleDataset(options);
+        const second = generateSampleDataset(options);
+        const settings = tableValues(first, 'settings');
+
+        expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+        expect(settings).toContainEqual(['useMockScale', 'true']);
+    });
+
+    it('rejects invalid fixed dates', () => {
+        expect(() => generateSampleDataset({ now: 'not-a-date' })).toThrow('--now must be an ISO date or date-time with timezone');
+        expect(() => generateSampleDataset({ now: '2026-08-11T12:00:00' })).toThrow('--now must be an ISO date or date-time with timezone');
+    });
+
+    it('does not enable the mock scale by default', () => {
+        expect(tableValues(generateSampleDataset({ seed: 'default-settings' }), 'settings'))
+            .not.toContainEqual(['useMockScale', 'true']);
+    });
 });
 
 describe('parseArgs', () => {
     it('supports inline and separated option values', () => {
-        expect(parseArgs(['--sessions=10', '--teas', '3', '--vessels', '1', '--seed', 'demo', '--output', 'sample.json'])).toEqual({
+        expect(parseArgs([
+            '--sessions=10',
+            '--teas', '3',
+            '--vessels', '1',
+            '--seed', 'demo',
+            '--now', '2026-08-11T12:00:00.000Z',
+            '--mock-scale',
+            '--output', 'sample.json',
+        ])).toEqual({
             sessions: 10,
             teas: 3,
             vessels: 1,
             seed: 'demo',
+            now: '2026-08-11T12:00:00.000Z',
+            mockScale: true,
             output: 'sample.json',
         });
+    });
+
+    it('rejects invalid fixed dates from the CLI', () => {
+        expect(() => parseArgs(['--now', 'not-a-date'])).toThrow('--now must be an ISO date or date-time with timezone');
+        expect(() => parseArgs(['--now', '2026-08-11T12:00:00'])).toThrow('--now must be an ISO date or date-time with timezone');
+    });
+
+    it('rejects missing option values and boolean assignments', () => {
+        expect(() => parseArgs(['--seed', '--mock-scale'])).toThrow('Missing value for --seed');
+        expect(() => parseArgs(['--mock-scale=false'])).toThrow('--mock-scale does not accept a value');
     });
 });

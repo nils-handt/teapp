@@ -225,7 +225,7 @@ const FirstRunTutorial: React.FC<FirstRunTutorialProps> = ({ isOpen, onDismiss }
                     id={index === currentPage ? 'first-run-tutorial-title' : undefined}
                     data-active={index === currentPage ? 'true' : 'false'}
                     className={cn(
-                      'mt-[10px] mb-3 text-[1.85rem] leading-[1.1]',
+                      'mt-[10px] mb-3 text-2xl leading-[1.2] font-normal',
                       index === currentPage ? 'text-[#223026]' : 'text-[#96a094]',
                     )}
                   >

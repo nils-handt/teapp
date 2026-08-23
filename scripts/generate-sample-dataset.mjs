@@ -260,6 +260,7 @@ export const generateSampleDataset = ({
     vessels = DEFAULT_OPTIONS.vessels,
     seed,
     now = new Date(),
+    mockScale = false,
 } = {}) => {
     validateOptions({ sessions, teas, vessels });
 
@@ -317,7 +318,7 @@ export const generateSampleDataset = ({
     )));
     const infusionRows = [];
     const sessionRows = [];
-    const nowMs = new Date(now).getTime();
+    const nowMs = parseNow(now).getTime();
 
     for (let index = 0; index < sessions; index += 1) {
         const tea = teaRecords[teaIndexes[index]];
@@ -387,6 +388,7 @@ export const generateSampleDataset = ({
                 ['playbackSpeed', '1'],
                 ['hasSeenTutorial', 'true'],
                 ['statisticsPeriod', 'total'],
+                ...(mockScale ? [['useMockScale', 'true']] : []),
             ],
             vessels: vesselRows,
             infusions: infusionRows,
@@ -412,19 +414,39 @@ const parseCount = (name, value) => {
     return parsed;
 };
 
+const parseNow = (value) => {
+    const hasDeterministicStringFormat = typeof value !== 'string'
+        || /^\d{4}-\d{2}-\d{2}$/.test(value)
+        || /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+    const parsed = new Date(value);
+    if (!hasDeterministicStringFormat || Number.isNaN(parsed.getTime())) {
+        throw new Error('--now must be an ISO date or date-time with timezone');
+    }
+    return parsed;
+};
+
 export const parseArgs = (argv) => {
     const options = { ...DEFAULT_OPTIONS };
     let output;
     let seed;
+    let now;
+    let mockScale = false;
 
     for (let index = 0; index < argv.length; index += 1) {
         const argument = argv[index];
         const [inlineName, inlineValue] = argument.split('=', 2);
         const name = inlineName;
         const value = inlineValue ?? argv[index + 1];
+        const valueOptions = ['--sessions', '--teas', '--vessels', '--seed', '--now', '--output'];
 
         if (name === '--help' || name === '-h') {
             return { help: true };
+        }
+        if (valueOptions.includes(name) && inlineValue === undefined && (value === undefined || value.startsWith('--'))) {
+            throw new Error(`Missing value for ${name}`);
+        }
+        if (name === '--mock-scale' && inlineValue !== undefined) {
+            throw new Error('--mock-scale does not accept a value');
         }
         if (name === '--sessions') {
             options.sessions = parseCount('sessions', value);
@@ -437,6 +459,11 @@ export const parseArgs = (argv) => {
                 throw new Error('Missing value for --seed');
             }
             seed = value;
+        } else if (name === '--now') {
+            parseNow(value);
+            now = value;
+        } else if (name === '--mock-scale') {
+            mockScale = true;
         } else if (name === '--output') {
             if (value === undefined || value === '') {
                 throw new Error('Missing value for --output');
@@ -446,12 +473,12 @@ export const parseArgs = (argv) => {
             throw new Error(`Unknown option: ${argument}`);
         }
 
-        if (inlineValue === undefined && (name === '--sessions' || name === '--teas' || name === '--vessels' || name === '--seed' || name === '--output')) {
+        if (inlineValue === undefined && (name === '--sessions' || name === '--teas' || name === '--vessels' || name === '--seed' || name === '--now' || name === '--output')) {
             index += 1;
         }
     }
 
-    return { ...options, output, seed };
+    return { ...options, output, seed, now, mockScale };
 };
 
 const helpText = `Generate a restore-compatible Teapp sample backup.
@@ -464,6 +491,8 @@ Options:
   --teas <number>      Number of tea entities (default: 5)
   --vessels <number>   Number of brewing vessels (default: 3)
   --seed <value>       Repeatable pseudo-random values and IDs
+  --now <date>         Fixed ISO date or date-time with timezone
+  --mock-scale         Enable the mock scale in the restored settings
   --output <file>      Output path (default: teapp_sample_<timestamp>.json)
   --help               Show this help
 `;

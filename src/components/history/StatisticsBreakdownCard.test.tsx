@@ -17,6 +17,7 @@ describe('StatisticsBreakdownCard', () => {
         const tabs = screen.getAllByRole('tab');
         expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, 0, 0]);
         expect(tabs.every((tab) => tab.className.includes('tea-mode-tab'))).toBe(true);
+        expect(tabs.every((tab) => !tab.className.includes('border-black'))).toBe(true);
         expect(screen.getByRole('tablist').className).toContain('grid-cols-3');
         expect(screen.getByRole('tablist').className).toContain('-mt-[22px]');
     });

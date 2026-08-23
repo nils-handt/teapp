@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 type KeyboardShowEvent = CustomEvent<{ keyboardHeight?: number }>;
 const KEYBOARD_OPEN_CLASS = 'zen-modal-keyboard-open';
@@ -23,6 +23,15 @@ export const useModalKeyboardAvoidance = (
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const restingAppHeightRef = useRef(0);
 
+  // A conditionally mounted modal has no closed render from which to retain a
+  // baseline. Sample during the layout phase, before the operating system can
+  // complete the asynchronous resize triggered by a committed autofocus input.
+  useLayoutEffect(() => {
+    if (!isOpen || restingAppHeightRef.current === 0) {
+      restingAppHeightRef.current = getAppLayoutHeight();
+    }
+  }, [isOpen]);
+
   const scrollFocusedFieldIntoView = useCallback(() => {
     if (keyboardHeight > 0) {
       scrollActiveFieldIntoView(bodyRef);
@@ -37,7 +46,13 @@ export const useModalKeyboardAvoidance = (
       return undefined;
     }
 
-    restingAppHeightRef.current = getAppLayoutHeight();
+    // Keep the height sampled while the modal was closed. An autofocus input
+    // can resize the WebView before this open-state effect runs; sampling here
+    // would then mistake the keyboard-reduced height for the resting height and
+    // apply the native keyboard inset a second time.
+    if (restingAppHeightRef.current === 0) {
+      restingAppHeightRef.current = getAppLayoutHeight();
+    }
 
     const handleKeyboardShow = (event: Event) => {
       const { keyboardHeight: nextKeyboardHeight = 0 } = (event as KeyboardShowEvent).detail ?? {};
@@ -47,6 +62,15 @@ export const useModalKeyboardAvoidance = (
       document.documentElement.classList.add(KEYBOARD_OPEN_CLASS);
       scrollActiveFieldIntoView(bodyRef);
     };
+    window.addEventListener('ionKeyboardDidShow', handleKeyboardShow);
+
+    return () => {
+      window.removeEventListener('ionKeyboardDidShow', handleKeyboardShow);
+      document.documentElement.classList.remove(KEYBOARD_OPEN_CLASS);
+    };
+  }, [bodyRef, isOpen]);
+
+  useEffect(() => {
     const handleKeyboardHide = () => {
       setKeyboardHeight(0);
       setIsKeyboardOpen(false);
@@ -55,23 +79,9 @@ export const useModalKeyboardAvoidance = (
         restingAppHeightRef.current = getAppLayoutHeight();
       });
     };
-    const updateRestingAppHeight = () => {
-      if (!document.documentElement.classList.contains(KEYBOARD_OPEN_CLASS)) {
-        restingAppHeightRef.current = getAppLayoutHeight();
-      }
-    };
-
-    window.addEventListener('ionKeyboardDidShow', handleKeyboardShow);
     window.addEventListener('ionKeyboardDidHide', handleKeyboardHide);
-    window.addEventListener('resize', updateRestingAppHeight);
-
-    return () => {
-      window.removeEventListener('ionKeyboardDidShow', handleKeyboardShow);
-      window.removeEventListener('ionKeyboardDidHide', handleKeyboardHide);
-      window.removeEventListener('resize', updateRestingAppHeight);
-      document.documentElement.classList.remove(KEYBOARD_OPEN_CLASS);
-    };
-  }, [bodyRef, isOpen]);
+    return () => window.removeEventListener('ionKeyboardDidHide', handleKeyboardHide);
+  }, []);
 
   return {
     keyboardHeight,

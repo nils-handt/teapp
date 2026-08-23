@@ -32,6 +32,7 @@ describe('TeaEditorModal', () => {
         expect(screen.getByRole('tab', { name: 'Existing Tea' }).className).toContain('tea-mode-tab');
         expect(screen.getByRole('tab', { name: 'New Tea' }).className).toContain('tea-mode-tab');
         expect(screen.getByRole('tab', { name: 'Existing Tea' }).className).toContain('bg-[#fffdf8]');
+        expect(screen.getAllByRole('tab').every((tab) => !tab.className.includes('border-black'))).toBe(true);
         expect(screen.getByRole('tablist', { name: 'Tea mode' }).className).not.toContain('border-b-4');
         expect(screen.queryByRole('heading', { name: 'Tea' })).toBeNull();
         expect(screen.getByLabelText('Search existing teas').getAttribute('autocomplete')).toBe('off');

@@ -1,7 +1,5 @@
-@layer theme, components, utilities;
-
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
 
 @theme {
   --color-zen-text: #243126;
@@ -26,6 +24,7 @@
 }
 
 :root {
+  --ion-font-family: "Roboto", sans-serif;
   --zen-background: linear-gradient(180deg, #f7f3eb 0%, #eef3ea 100%);
   --zen-danger-gradient: linear-gradient(180deg, #fad3ce 0%, #f4c4bc 100%);
   --zen-tutorial-background: linear-gradient(180deg, #fffdf7 0%, #f3efe2 100%);
@@ -216,7 +215,7 @@ ion-button.zen-history-header-button {
   padding: 8px;
 }
 
-.zen-list-search {
+ion-searchbar.zen-list-search {
   min-height: 44px;
   padding: 0;
   --background: rgba(255, 255, 255, 0.68);
@@ -274,7 +273,7 @@ ion-button.zen-history-header-button {
   }
 }
 
-.zen-list-surface {
+ion-list.zen-list-surface {
   margin: 16px;
   padding: 0;
   overflow: hidden;
@@ -285,7 +284,7 @@ ion-button.zen-history-header-button {
 }
 
 @media (min-width: 1024px) {
-  .zen-list-surface {
+  ion-list.zen-list-surface {
     max-width: 900px;
     margin-inline: auto;
   }
@@ -425,6 +424,7 @@ ion-button[data-zen-variant="soft"] {
 
 .tea-mode-tab {
   padding: 13px 12px;
+  line-height: 1;
 }
 
 .zen-tutorial-button {

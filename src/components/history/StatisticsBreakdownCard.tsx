@@ -36,7 +36,7 @@ const StatisticsBreakdownCard: React.FC<StatisticsBreakdownCardProps> = ({ ranki
                 aria-label="Statistics breakdown"
                 className="-mx-[22px] -mt-[22px] grid grid-cols-3 bg-[#f4f4f1]"
             >
-                {TABS.map((tab, index) => {
+                {TABS.map((tab) => {
                     const selected = activeTab === tab.key;
                     const tabId = `${id}-${tab.key}-tab`;
 
@@ -51,7 +51,6 @@ const StatisticsBreakdownCard: React.FC<StatisticsBreakdownCardProps> = ({ ranki
                             onClick={() => selectTab(tab.key)}
                             className={cn(
                                 'tea-mode-tab text-sm transition',
-                                index < TABS.length - 1 && 'border-r-4 border-black',
                                 selected
                                     ? 'bg-[#fffdf8] font-medium text-zen-text'
                                     : 'text-zen-muted',

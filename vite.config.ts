@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import legacy from '@vitejs/plugin-legacy'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'fs'
@@ -8,6 +9,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { Plugin, ResolvedConfig } from 'vite'
 import ts from 'typescript'
+import postcssLogical from 'postcss-logical'
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url))
 const normalizedRootDir = rootDir.replace(/\\/g, '/')
@@ -119,6 +121,13 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       ...basePlugins,
+      ...(!isTestMode ? [legacy({
+        // Android 7's WebView supports ESM, but needs both syntax lowering and
+        // runtime polyfills for APIs used by Ionic and the application.
+        modernTargets: ['Chrome >= 69'],
+        modernPolyfills: true,
+        renderLegacyChunks: false,
+      })] : []),
       VitePWA({
         disable: !isPwaMode,
         registerType: 'prompt',
@@ -193,6 +202,11 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: true,
       chunkSizeWarningLimit: 1800,
+    },
+    css: {
+      postcss: {
+        plugins: [postcssLogical()],
+      },
     },
     optimizeDeps: {
       entries: ['index.html'],

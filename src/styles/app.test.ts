@@ -46,4 +46,23 @@ describe('app header layout', () => {
     expect(historyRule).toMatch(/--zen-autocomplete-background\s*:\s*var\(--color-zen-panel-strong\)/);
     expect(menuRule).toMatch(/background\s*:\s*var\(--zen-autocomplete-background, #fffdf8\)/);
   });
+
+  it('keeps app-owned list and search surfaces above late Ionic mode defaults', () => {
+    const searchRule = appCss.match(/ion-searchbar\.zen-list-search\s*{([^}]*)}/)?.[1] ?? '';
+    const listRule = appCss.match(/ion-list\.zen-list-surface\s*{([^}]*)}/)?.[1] ?? '';
+
+    expect(searchRule).toMatch(/padding\s*:\s*0/);
+    expect(searchRule).toMatch(/--border-radius\s*:\s*16px/);
+    expect(searchRule).toMatch(/--box-shadow\s*:\s*none/);
+    expect(listRule).toMatch(/margin\s*:\s*16px/);
+    expect(listRule).toMatch(/padding\s*:\s*0/);
+    expect(listRule).toMatch(/background\s*:\s*var\(--color-zen-panel\)/);
+  });
+
+  it('keeps shared tea tabs at their compact pre-cascade line height', () => {
+    const tabRule = appCss.match(/\.tea-mode-tab\s*{([^}]*)}/)?.[1] ?? '';
+
+    expect(tabRule).toMatch(/padding\s*:\s*13px 12px/);
+    expect(tabRule).toMatch(/line-height\s*:\s*1/);
+  });
 });

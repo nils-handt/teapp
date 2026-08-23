@@ -21,6 +21,33 @@ vi.mock('@ionic/react', () => ({
 }));
 
 describe('FirstRunTutorial', () => {
+  it('keeps every carousel page at a stable independently scrollable height', () => {
+    render(<FirstRunTutorial isOpen={true} onDismiss={vi.fn()} />);
+
+    const track = screen.getByTestId('tutorial-track');
+    const pages = Array.from(track.querySelectorAll(':scope > section'));
+    const pageBodies = pages.map((page) => page.firstElementChild as HTMLElement);
+
+    expect(pages).toHaveLength(4);
+    pageBodies.forEach((body) => {
+      expect(body.className).toContain('h-[min(52dvh,440px)]');
+      expect(body.className).toContain('overflow-y-auto');
+      expect(body.className).not.toContain('max-h-[min(52vh,440px)]');
+    });
+
+    const activeBody = pages[0].firstElementChild as HTMLElement;
+    const longerHiddenBody = screen
+      .getByText('Returning the vessel after pouring ends the brewing timer automatically')
+      .closest('section')?.firstElementChild as HTMLElement;
+
+    expect(longerHiddenBody).not.toBe(activeBody);
+    expect(longerHiddenBody.parentElement?.getAttribute('aria-hidden')).toBe('true');
+    longerHiddenBody.scrollTop = 24;
+    expect(longerHiddenBody.scrollTop).toBe(24);
+    expect(activeBody.scrollTop).toBe(0);
+    expect(track.style.height).toBe('');
+  });
+
   const getCurrentTitle = () => document.getElementById('first-run-tutorial-title')?.textContent;
 
   beforeEach(() => {
