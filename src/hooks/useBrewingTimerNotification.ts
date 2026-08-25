@@ -1,14 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { App } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { useShallow } from 'zustand/react/shallow';
 import {
   brewingTimerNotification,
   selectBrewingTimerNotificationSnapshot,
   type BrewingTimerNotification,
   type BrewingTimerNotificationSnapshot,
 } from '../services/BrewingTimerNotification';
-import { useBrewingStore } from '../stores/useBrewingStore';
+import { brewingStore } from '../stores/useBrewingStore';
 
 const semanticKey = (snapshot: BrewingTimerNotificationSnapshot): string => [
   snapshot.sessionId,
@@ -30,7 +29,10 @@ class BrewingTimerNotificationController {
 
   public reconcileStartup(): Promise<void> {
     this.presentedKey = null;
-    return this.enqueue(() => this.notification.cancel());
+    return this.enqueue(async () => {
+      await this.notification.cancel();
+      await this.notification.flushDiagnostics();
+    });
   }
 
   public update(
@@ -56,7 +58,10 @@ class BrewingTimerNotificationController {
     this.appActive = appActive;
     if (appActive) {
       this.presentedKey = null;
-      return this.enqueue(() => this.notification.cancel());
+      return this.enqueue(async () => {
+        await this.notification.cancel();
+        await this.notification.flushDiagnostics();
+      });
     }
 
     return this.reconcileBackground();
@@ -97,13 +102,17 @@ export const useBrewingTimerNotification = (enabled: boolean): void => {
   }
   const controller = controllerRef.current;
 
-  const snapshot = useBrewingStore(useShallow((state) => (
-    selectBrewingTimerNotificationSnapshot(state)
-  )));
-
   useEffect(() => {
-    void controller.update(enabled, snapshot);
-  }, [controller, enabled, snapshot]);
+    const updateFromStore = () => {
+      void controller.update(
+        enabled,
+        selectBrewingTimerNotificationSnapshot(brewingStore.getState()),
+      );
+    };
+
+    updateFromStore();
+    return brewingStore.subscribe(updateFromStore);
+  }, [controller, enabled]);
 
   useEffect(() => {
     let disposed = false;

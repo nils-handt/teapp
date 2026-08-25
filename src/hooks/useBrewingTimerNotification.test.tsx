@@ -28,6 +28,7 @@ const singletonNotificationMocks = vi.hoisted(() => ({
   requestPermission: vi.fn().mockResolvedValue('standard-notification'),
   show: vi.fn().mockResolvedValue(undefined),
   cancel: vi.fn().mockResolvedValue(undefined),
+  flushDiagnostics: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@capacitor/app', () => ({
@@ -55,6 +56,7 @@ const createNotification = (): BrewingTimerNotification => ({
   requestPermission: vi.fn().mockResolvedValue('standard-notification'),
   show: vi.fn().mockResolvedValue(undefined),
   cancel: vi.fn().mockResolvedValue(undefined),
+  flushDiagnostics: vi.fn().mockResolvedValue(undefined),
 });
 
 afterEach(() => {
@@ -185,6 +187,32 @@ const HookHarness = ({ enabled }: { enabled: boolean }) => {
 };
 
 describe('useBrewingTimerNotification', () => {
+  it('does not rerender the application root for ordinary timer ticks', async () => {
+    const renderSpy = vi.fn();
+    const RenderCountingHarness = ({ enabled }: { enabled: boolean }) => {
+      renderSpy();
+      useBrewingTimerNotification(enabled);
+      return null;
+    };
+
+    brewingStore.setState({
+      activeSession: { sessionId: 'session-render-count' } as BrewingSession,
+      currentInfusion: { infusionNumber: 1 } as Infusion,
+      brewingPhase: BrewingPhase.INFUSION,
+      timerValue: 0,
+    });
+
+    render(<RenderCountingHarness enabled />);
+    await waitFor(() => expect(appMocks.addListener).toHaveBeenCalled());
+
+    act(() => {
+      brewingStore.setState({ timerValue: 100 });
+      brewingStore.setState({ timerValue: 200 });
+    });
+
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('projects application brewing state when Capacitor reports the app in the background', async () => {
     brewingStore.setState({
       activeSession: { sessionId: 'session-hook' } as BrewingSession,

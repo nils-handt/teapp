@@ -19,11 +19,18 @@ export type BrewingTimerNotificationSupport =
   | 'disabled'
   | 'unsupported-platform';
 
+export type BrewingTimerDiagnosticRecord = {
+  timestamp: string;
+  event: string;
+  details: Record<string, unknown>;
+};
+
 export interface BrewingTimerNotification {
   getSupport(): Promise<BrewingTimerNotificationSupport>;
   requestPermission(): Promise<BrewingTimerNotificationSupport>;
   show(snapshot: BrewingTimerNotificationSnapshot): Promise<void>;
   cancel(): Promise<void>;
+  flushDiagnostics(): Promise<void>;
 }
 
 type NativeBrewingTimerNotification = {
@@ -31,6 +38,7 @@ type NativeBrewingTimerNotification = {
   requestPermission(): Promise<{ support: BrewingTimerNotificationSupport }>;
   show(snapshot: BrewingTimerNotificationSnapshot): Promise<void>;
   cancel(): Promise<void>;
+  drainDiagnostics(): Promise<{ records: BrewingTimerDiagnosticRecord[] }>;
 };
 
 const nativeBrewingTimerNotification = registerPlugin<NativeBrewingTimerNotification>(
@@ -39,12 +47,21 @@ const nativeBrewingTimerNotification = registerPlugin<NativeBrewingTimerNotifica
 
 const isAndroid = (): boolean => Capacitor.getPlatform() === 'android';
 
+const flushNativeDiagnostics = async (): Promise<void> => {
+  const { records } = await nativeBrewingTimerNotification.drainDiagnostics();
+  for (const record of records) {
+    logger.debug('Android brewing timer diagnostic', record);
+  }
+};
+
 export const brewingTimerNotification: BrewingTimerNotification = {
   async getSupport() {
     if (!isAndroid()) return 'unsupported-platform';
 
     try {
-      return (await nativeBrewingTimerNotification.getSupport()).support;
+      const support = (await nativeBrewingTimerNotification.getSupport()).support;
+      await flushNativeDiagnostics();
+      return support;
     } catch (error) {
       logger.error('Failed to determine brewing timer notification support', error);
       return 'disabled';
@@ -55,7 +72,9 @@ export const brewingTimerNotification: BrewingTimerNotification = {
     if (!isAndroid()) return 'unsupported-platform';
 
     try {
-      return (await nativeBrewingTimerNotification.requestPermission()).support;
+      const support = (await nativeBrewingTimerNotification.requestPermission()).support;
+      await flushNativeDiagnostics();
+      return support;
     } catch (error) {
       logger.error('Failed to request brewing timer notification permission', error);
       return 'disabled';
@@ -67,6 +86,7 @@ export const brewingTimerNotification: BrewingTimerNotification = {
 
     try {
       await nativeBrewingTimerNotification.show(snapshot);
+      await flushNativeDiagnostics();
     } catch (error) {
       logger.error('Failed to show brewing timer notification', error);
     }
@@ -77,8 +97,19 @@ export const brewingTimerNotification: BrewingTimerNotification = {
 
     try {
       await nativeBrewingTimerNotification.cancel();
+      await flushNativeDiagnostics();
     } catch (error) {
       logger.error('Failed to cancel brewing timer notification', error);
+    }
+  },
+
+  async flushDiagnostics() {
+    if (!isAndroid()) return;
+
+    try {
+      await flushNativeDiagnostics();
+    } catch (error) {
+      logger.error('Failed to flush brewing timer notification diagnostics', error);
     }
   },
 };

@@ -5,6 +5,11 @@ import {
   selectBrewingTimerNotificationSnapshot,
 } from './BrewingTimerNotification';
 
+const loggerMocks = vi.hoisted(() => ({
+  debug: vi.fn(),
+  error: vi.fn(),
+}));
+
 const capacitorMocks = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   plugin: {
@@ -12,12 +17,23 @@ const capacitorMocks = vi.hoisted(() => ({
     requestPermission: vi.fn().mockResolvedValue({ support: 'standard-notification' }),
     show: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn().mockResolvedValue(undefined),
+    drainDiagnostics: vi.fn().mockResolvedValue({
+      records: [{
+        timestamp: '2026-08-25T12:00:00.000Z',
+        event: 'notification-posted',
+        details: { hasPromotableCharacteristics: true, promoted: false },
+      }],
+    }),
   },
 }));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: capacitorMocks.getPlatform },
   registerPlugin: () => capacitorMocks.plugin,
+}));
+
+vi.mock('./logging', () => ({
+  createLogger: () => loggerMocks,
 }));
 
 beforeEach(() => {
@@ -125,10 +141,12 @@ describe('brewingTimerNotification', () => {
     await expect(brewingTimerNotification.requestPermission()).resolves.toBe('unsupported-platform');
     await expect(brewingTimerNotification.show(snapshot)).resolves.toBeUndefined();
     await expect(brewingTimerNotification.cancel()).resolves.toBeUndefined();
+    await expect(brewingTimerNotification.flushDiagnostics()).resolves.toBeUndefined();
     expect(capacitorMocks.plugin.getSupport).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.requestPermission).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.show).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.cancel).not.toHaveBeenCalled();
+    expect(capacitorMocks.plugin.drainDiagnostics).not.toHaveBeenCalled();
   });
 
   it('delegates notification operations to the Android bridge', async () => {
@@ -150,12 +168,29 @@ describe('brewingTimerNotification', () => {
     expect(capacitorMocks.plugin.cancel).toHaveBeenCalledTimes(1);
   });
 
+  it('drains native Android diagnostics through the existing application logger', async () => {
+    capacitorMocks.getPlatform.mockReturnValue('android');
+
+    await brewingTimerNotification.flushDiagnostics();
+
+    expect(capacitorMocks.plugin.drainDiagnostics).toHaveBeenCalledTimes(1);
+    expect(loggerMocks.debug).toHaveBeenCalledWith(
+      'Android brewing timer diagnostic',
+      {
+        timestamp: '2026-08-25T12:00:00.000Z',
+        event: 'notification-posted',
+        details: { hasPromotableCharacteristics: true, promoted: false },
+      },
+    );
+  });
+
   it('contains Android bridge failures so brewing can continue', async () => {
     capacitorMocks.getPlatform.mockReturnValue('android');
     capacitorMocks.plugin.getSupport.mockRejectedValueOnce(new Error('bridge unavailable'));
     capacitorMocks.plugin.requestPermission.mockRejectedValueOnce(new Error('permission failure'));
     capacitorMocks.plugin.show.mockRejectedValueOnce(new Error('show failure'));
     capacitorMocks.plugin.cancel.mockRejectedValueOnce(new Error('cancel failure'));
+    capacitorMocks.plugin.drainDiagnostics.mockRejectedValueOnce(new Error('diagnostics failure'));
 
     await expect(brewingTimerNotification.getSupport()).resolves.toBe('disabled');
     await expect(brewingTimerNotification.requestPermission()).resolves.toBe('disabled');
@@ -167,5 +202,6 @@ describe('brewingTimerNotification', () => {
       running: true,
     })).resolves.toBeUndefined();
     await expect(brewingTimerNotification.cancel()).resolves.toBeUndefined();
+    await expect(brewingTimerNotification.flushDiagnostics()).resolves.toBeUndefined();
   });
 });
