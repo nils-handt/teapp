@@ -38,6 +38,7 @@ const testState = vi.hoisted(() => {
         push: vi.fn(),
         setMockMode,
         shareFile: vi.fn(),
+        createLogExport: vi.fn(),
         pwaInstall: {
             canPrompt: false,
             promptInstall: vi.fn().mockResolvedValue(false),
@@ -112,6 +113,11 @@ type ToggleProps = {
     onIonChange?: (event: ToggleChangeEvent) => void;
 };
 
+type ToastProps = {
+    isOpen?: boolean;
+    message?: string;
+};
+
 vi.mock('react-router', () => ({
     useHistory: () => ({ push: testState.push }),
 }));
@@ -130,6 +136,10 @@ vi.mock('../services/BackupService', () => ({
 
 vi.mock('../utils/fileUtils', () => ({
     shareFile: testState.shareFile,
+}));
+
+vi.mock('../services/logging/logExport', () => ({
+    createLogExport: testState.createLogExport,
 }));
 
 vi.mock('../hooks/usePwaInstall', () => ({
@@ -192,7 +202,7 @@ vi.mock('@ionic/react', () => ({
     ),
     IonSelectOption: ({ children, value }: PropsWithChildren<{ value: number | string }>) => <option value={value}>{children}</option>,
     IonTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    IonToast: () => null,
+    IonToast: ({ isOpen, message }: ToastProps) => isOpen ? <div role="status">{message}</div> : null,
     IonToggle: ({ checked = false, onClick, onIonChange }: ToggleProps) => (
         <input
             type="checkbox"
@@ -245,6 +255,8 @@ describe('SettingsScreen', () => {
         testState.pwaInstall.status = 'unsupported';
         testState.platform = 'web';
         testState.requestBrewingTimerNotificationPermission.mockResolvedValue('standard-notification');
+        testState.createLogExport.mockResolvedValue(null);
+        testState.shareFile.mockResolvedValue(undefined);
         settingsStore.setState(initialSettingsStoreValues);
         scaleStore.setState(initialScaleStoreState);
         testState.updateSettings.mockImplementation(() => undefined);
@@ -301,6 +313,51 @@ describe('SettingsScreen', () => {
 
         expect(testState.updateSettings).toHaveBeenNthCalledWith(1, { logToFileEnabled: true });
         expect(testState.updateSettings).toHaveBeenNthCalledWith(2, { weightLoggerEnabled: true });
+    });
+
+    it('exports saved logs through the developer settings action', async () => {
+        testState.createLogExport.mockResolvedValue({
+            data: '{"message":"diagnostic"}\n',
+            fileName: 'teapp_logs_2026-08-25T19-04-05-678Z.jsonl',
+            sourceFiles: ['app-2026-08-25.log'],
+        });
+        testState.shareFile.mockResolvedValue(undefined);
+        renderScreen({ devMode: true });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export Logs' }));
+
+        await waitFor(() => {
+            expect(testState.shareFile).toHaveBeenCalledWith(
+                'teapp_logs_2026-08-25T19-04-05-678Z.jsonl',
+                '{"message":"diagnostic"}\n',
+                'text/plain'
+            );
+        });
+        expect(screen.getByRole('status').textContent).toBe('Logs ready to share');
+    });
+
+    it('reports when no saved logs are available to export', async () => {
+        renderScreen({ devMode: true });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export Logs' }));
+
+        expect((await screen.findByRole('status')).textContent).toBe('No saved logs found');
+        expect(testState.shareFile).not.toHaveBeenCalled();
+    });
+
+    it('reports when the log share fails', async () => {
+        testState.createLogExport.mockResolvedValue({
+            data: '{"message":"diagnostic"}\n',
+            fileName: 'teapp_logs_2026-08-25T19-04-05-678Z.jsonl',
+            sourceFiles: ['app-2026-08-25.log'],
+        });
+        testState.shareFile.mockRejectedValue(new Error('share failed'));
+        renderScreen({ devMode: true });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export Logs' }));
+
+        expect((await screen.findByRole('status')).textContent).toBe('Log export failed');
+        expect(testState.shareFile).toHaveBeenCalledTimes(1);
     });
 
     it('toggles mock mode when the row is clicked', async () => {

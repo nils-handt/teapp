@@ -21,6 +21,7 @@ import { bluetoothScaleService } from '../services/BluetoothScaleService';
 import { backupService, isBackupData, type BackupData } from '../services/BackupService';
 import { shareFile } from '../utils/fileUtils';
 import { createLogger, isLogLevel, LOG_LEVELS } from '../services/logging';
+import { createLogExport } from '../services/logging/logExport';
 import { useShallow } from 'zustand/react/shallow';
 import { useScaleStore } from '../stores/useScaleStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
@@ -157,6 +158,22 @@ const SettingsScreen: React.FC = () => {
     } catch (error) {
       logger.error('Backup failed', error);
       setToastMessage('Backup failed');
+    }
+  };
+
+  const handleExportLogs = async () => {
+    try {
+      const logExport = await createLogExport();
+      if (!logExport) {
+        setToastMessage('No saved logs found');
+        return;
+      }
+
+      await shareFile(logExport.fileName, logExport.data, 'text/plain');
+      setToastMessage('Logs ready to share');
+    } catch (error) {
+      logger.error('Log export failed', error);
+      setToastMessage('Log export failed');
     }
   };
 
@@ -328,6 +345,10 @@ const SettingsScreen: React.FC = () => {
                 checked={logToFileEnabled}
                 onToggle={(checked) => updateSettings({ logToFileEnabled: checked })}
               />
+
+              <IonItem button onClick={handleExportLogs}>
+                <IonLabel>Export Logs</IonLabel>
+              </IonItem>
 
               {isMockMode && (
                 <IonCard className="zen-list-inline-card">
