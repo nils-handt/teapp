@@ -4,10 +4,8 @@ import android.Manifest;
 import android.app.ActivityManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
@@ -15,7 +13,6 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
-import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.JSObject;
@@ -26,8 +23,6 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
-import com.teapp.app.MainActivity;
-import com.teapp.app.R;
 
 @CapacitorPlugin(
     name = "BrewingTimerNotification",
@@ -35,14 +30,10 @@ import com.teapp.app.R;
 )
 public final class BrewingTimerNotificationPlugin extends Plugin {
     private static final String TAG = "BrewingTimerNotif";
-    private static final String CHANNEL_ID = "brewing_timer";
-    private static final int NOTIFICATION_ID = 4_201;
-    private static final int ACTIVE_COLOR = 0xFF566B5B;
-    private static final int REST_COLOR = 0xFF9AA399;
 
     @Override
     public void load() {
-        createNotificationChannel();
+        BrewingTimerNotificationFactory.createChannel(getContext());
         recordLifecycle("plugin-loaded");
     }
 
@@ -66,6 +57,35 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void prepare(PluginCall call) {
+        JSObject snapshotObject = call.getObject("snapshot");
+        if (snapshotObject == null) {
+            boolean cleared = BrewingTimerPreparedSnapshotStore.clear(getContext());
+            BrewingTimerForegroundService.stop(getContext());
+            NotificationManagerCompat.from(getContext()).cancel(BrewingTimerNotificationFactory.NOTIFICATION_ID);
+            record("foreground-service-preparation-cleared", new JSObject().put("persisted", cleared));
+            call.resolve();
+            return;
+        }
+
+        try {
+            BrewingTimerPreparedSnapshot snapshot = preparedSnapshot(snapshotObject, System.currentTimeMillis());
+            boolean persisted = BrewingTimerPreparedSnapshotStore.save(getContext(), snapshot);
+            JSObject details = new JSObject();
+            details.put("sessionId", snapshot.sessionId());
+            details.put("phase", snapshot.phase());
+            details.put("infusionNumber", snapshot.infusionNumber());
+            details.put("running", snapshot.running());
+            details.put("persisted", persisted);
+            record("foreground-service-prepared", details);
+        } catch (IllegalArgumentException exception) {
+            Log.w(TAG, "Ignoring an incomplete brewing timer preparation", exception);
+            recordFailure("foreground-service-preparation-rejected", exception);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
     public void show(PluginCall call) {
         BrewingTimerNotificationSupport support = currentSupport();
         if (
@@ -78,37 +98,20 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
         }
 
         try {
-            String sessionId = call.getString("sessionId");
-            String phase = call.getString("phase");
-            Integer infusionNumber = call.getInt("infusionNumber");
-            Double elapsedMillis = call.getDouble("elapsedMs");
-            Boolean running = call.getBoolean("running");
-            if (
-                sessionId == null ||
-                sessionId.trim().isEmpty() ||
-                phase == null ||
-                infusionNumber == null ||
-                elapsedMillis == null ||
-                !Double.isFinite(elapsedMillis) ||
-                running == null
-            ) {
-                Log.w(TAG, "Ignoring an incomplete brewing timer snapshot");
-                record("notification-rejected", new JSObject().put("reason", "incomplete-snapshot"));
-                call.resolve();
-                return;
-            }
-
-            BrewingTimerNotificationSpec spec = BrewingTimerNotificationSpec.from(
-                phase,
-                infusionNumber,
-                elapsedMillis.longValue(),
-                running,
-                System.currentTimeMillis()
-            );
-            createNotificationChannel();
-            android.app.Notification notification = buildNotification(spec);
+            BrewingTimerPreparedSnapshot snapshot = preparedSnapshot(call.getData(), System.currentTimeMillis());
+            BrewingTimerPreparedSnapshotStore.save(getContext(), snapshot);
+            BrewingTimerNotificationSpec spec = snapshot.notificationSpec(System.currentTimeMillis());
+            BrewingTimerNotificationFactory.createChannel(getContext());
+            android.app.Notification notification = BrewingTimerNotificationFactory.build(getContext(), spec);
             recordNotification("notification-built", notification, support, false);
-            NotificationManagerCompat.from(getContext()).notify(NOTIFICATION_ID, notification);
+            boolean serviceStartRequested = BrewingTimerForegroundService.start(getContext());
+            if (!serviceStartRequested) {
+                NotificationManagerCompat.from(getContext()).notify(
+                    BrewingTimerNotificationFactory.NOTIFICATION_ID,
+                    notification
+                );
+                record("notification-service-fallback-posted", new JSObject());
+            }
             recordActiveNotification("notification-posted", support);
             new Handler(Looper.getMainLooper()).postDelayed(
                 () -> recordActiveNotification("notification-promotion-observed", currentSupport()),
@@ -128,7 +131,8 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
     public void cancel(PluginCall call) {
         try {
             recordActiveNotification("notification-before-cancel", currentSupport());
-            NotificationManagerCompat.from(getContext()).cancel(NOTIFICATION_ID);
+            BrewingTimerForegroundService.stop(getContext());
+            NotificationManagerCompat.from(getContext()).cancel(BrewingTimerNotificationFactory.NOTIFICATION_ID);
             record("notification-cancelled", new JSObject());
         } catch (RuntimeException exception) {
             Log.w(TAG, "Unable to cancel brewing timer notification", exception);
@@ -144,6 +148,8 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
 
     @Override
     protected void handleOnResume() {
+        BrewingTimerForegroundService.stop(getContext());
+        NotificationManagerCompat.from(getContext()).cancel(BrewingTimerNotificationFactory.NOTIFICATION_ID);
         recordLifecycle("activity-resumed");
     }
 
@@ -155,71 +161,48 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
     @Override
     protected void handleOnStop() {
         recordLifecycle("activity-stopped");
+        BrewingTimerPreparedSnapshot snapshot = BrewingTimerPreparedSnapshotStore.load(getContext());
+        BrewingTimerNotificationSupport support = currentSupport();
+        if (
+            snapshot != null &&
+            support != BrewingTimerNotificationSupport.PERMISSION_REQUIRED &&
+            support != BrewingTimerNotificationSupport.DISABLED &&
+            support != BrewingTimerNotificationSupport.UNSUPPORTED_PLATFORM
+        ) {
+            boolean requested = BrewingTimerForegroundService.start(getContext());
+            record("foreground-service-background-start-requested", new JSObject().put("requested", requested));
+        } else {
+            JSObject details = new JSObject();
+            details.put("preparedSnapshot", snapshot != null);
+            details.put("support", support.bridgeValue());
+            record("foreground-service-background-start-skipped", details);
+        }
     }
 
-    private android.app.Notification buildNotification(BrewingTimerNotificationSpec spec) {
-        boolean rest = spec.appearance() == BrewingTimerNotificationSpec.Appearance.REST;
-        String contentText = spec.contentText();
-        if (spec.shortCriticalText() != null) {
-            contentText = contentText + " · " + spec.shortCriticalText();
+    private BrewingTimerPreparedSnapshot preparedSnapshot(JSObject data, long nowEpochMillis) {
+        String sessionId = data.getString("sessionId");
+        String phase = data.getString("phase");
+        Integer infusionNumber = data.getInteger("infusionNumber");
+        double elapsedMillis = data.optDouble("elapsedMs", Double.NaN);
+        Boolean running = data.getBool("running");
+        if (
+            sessionId == null ||
+            sessionId.trim().isEmpty() ||
+            phase == null ||
+            infusionNumber == null ||
+            !Double.isFinite(elapsedMillis) ||
+            running == null
+        ) {
+            throw new IllegalArgumentException("Incomplete brewing timer snapshot");
         }
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID)
-            .setSmallIcon(rest ? R.drawable.ic_notification_brewing_rest : R.drawable.ic_notification_brewing_active)
-            .setContentTitle(spec.title())
-            .setContentText(contentText)
-            .setContentIntent(contentIntent())
-            .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setDefaults(0)
-            .setSound(null)
-            .setVibrate(null)
-            .setAutoCancel(false)
-            .setColor(rest ? REST_COLOR : ACTIVE_COLOR)
-            .setRequestPromotedOngoing(true)
-            .setTimeoutAfter(BrewingTimerNotificationSpec.TIMEOUT_AFTER_MILLIS)
-            .setWhen(spec.whenEpochMillis())
-            .setShowWhen(spec.usesChronometer())
-            .setUsesChronometer(spec.usesChronometer())
-            .setChronometerCountDown(false);
-
-        if (spec.shortCriticalText() != null) {
-            builder.setShortCriticalText(spec.shortCriticalText());
-        }
-        return builder.build();
-    }
-
-    private PendingIntent contentIntent() {
-        Intent intent = new Intent(getContext(), MainActivity.class)
-            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        return PendingIntent.getActivity(
-            getContext(),
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        return BrewingTimerPreparedSnapshot.from(
+            sessionId,
+            phase,
+            infusionNumber,
+            (long) elapsedMillis,
+            running,
+            nowEpochMillis
         );
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return;
-        }
-        NotificationChannel channel = new NotificationChannel(
-            CHANNEL_ID,
-            "Brewing timer",
-            NotificationManager.IMPORTANCE_LOW
-        );
-        channel.setDescription("Shows the current infusion or rest timer");
-        channel.setSound(null, null);
-        channel.enableVibration(false);
-        channel.enableLights(false);
-        channel.setShowBadge(false);
-        NotificationManager manager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null) {
-            manager.createNotificationChannel(channel);
-        }
     }
 
     private void resolveSupport(PluginCall call) {
@@ -253,7 +236,7 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
 
     private void recordActiveNotification(String event, BrewingTimerNotificationSupport support) {
         for (StatusBarNotification active : NotificationManagerCompat.from(getContext()).getActiveNotifications()) {
-            if (active.getId() == NOTIFICATION_ID) {
+            if (active.getId() == BrewingTimerNotificationFactory.NOTIFICATION_ID) {
                 recordNotification(event, active.getNotification(), support, true);
                 return;
             }
@@ -307,7 +290,9 @@ public final class BrewingTimerNotificationPlugin extends Plugin {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
-            NotificationChannel channel = manager == null ? null : manager.getNotificationChannel(CHANNEL_ID);
+            NotificationChannel channel = manager == null
+                ? null
+                : manager.getNotificationChannel(BrewingTimerNotificationFactory.CHANNEL_ID);
             details.put("channelImportance", channel == null ? -1 : channel.getImportance());
         }
         return details;

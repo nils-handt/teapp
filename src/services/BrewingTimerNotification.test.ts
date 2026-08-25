@@ -15,6 +15,7 @@ const capacitorMocks = vi.hoisted(() => ({
   plugin: {
     getSupport: vi.fn().mockResolvedValue({ support: 'promoted-live-update' }),
     requestPermission: vi.fn().mockResolvedValue({ support: 'standard-notification' }),
+    prepare: vi.fn().mockResolvedValue(undefined),
     show: vi.fn().mockResolvedValue(undefined),
     cancel: vi.fn().mockResolvedValue(undefined),
     drainDiagnostics: vi.fn().mockResolvedValue({
@@ -139,11 +140,13 @@ describe('brewingTimerNotification', () => {
 
     await expect(brewingTimerNotification.getSupport()).resolves.toBe('unsupported-platform');
     await expect(brewingTimerNotification.requestPermission()).resolves.toBe('unsupported-platform');
+    await expect(brewingTimerNotification.prepare(snapshot)).resolves.toBeUndefined();
     await expect(brewingTimerNotification.show(snapshot)).resolves.toBeUndefined();
     await expect(brewingTimerNotification.cancel()).resolves.toBeUndefined();
     await expect(brewingTimerNotification.flushDiagnostics()).resolves.toBeUndefined();
     expect(capacitorMocks.plugin.getSupport).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.requestPermission).not.toHaveBeenCalled();
+    expect(capacitorMocks.plugin.prepare).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.show).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.cancel).not.toHaveBeenCalled();
     expect(capacitorMocks.plugin.drainDiagnostics).not.toHaveBeenCalled();
@@ -161,9 +164,11 @@ describe('brewingTimerNotification', () => {
 
     await expect(brewingTimerNotification.getSupport()).resolves.toBe('promoted-live-update');
     await expect(brewingTimerNotification.requestPermission()).resolves.toBe('standard-notification');
+    await brewingTimerNotification.prepare(snapshot);
     await brewingTimerNotification.show(snapshot);
     await brewingTimerNotification.cancel();
 
+    expect(capacitorMocks.plugin.prepare).toHaveBeenCalledWith({ snapshot });
     expect(capacitorMocks.plugin.show).toHaveBeenCalledWith(snapshot);
     expect(capacitorMocks.plugin.cancel).toHaveBeenCalledTimes(1);
   });
@@ -188,12 +193,14 @@ describe('brewingTimerNotification', () => {
     capacitorMocks.getPlatform.mockReturnValue('android');
     capacitorMocks.plugin.getSupport.mockRejectedValueOnce(new Error('bridge unavailable'));
     capacitorMocks.plugin.requestPermission.mockRejectedValueOnce(new Error('permission failure'));
+    capacitorMocks.plugin.prepare.mockRejectedValueOnce(new Error('prepare failure'));
     capacitorMocks.plugin.show.mockRejectedValueOnce(new Error('show failure'));
     capacitorMocks.plugin.cancel.mockRejectedValueOnce(new Error('cancel failure'));
     capacitorMocks.plugin.drainDiagnostics.mockRejectedValueOnce(new Error('diagnostics failure'));
 
     await expect(brewingTimerNotification.getSupport()).resolves.toBe('disabled');
     await expect(brewingTimerNotification.requestPermission()).resolves.toBe('disabled');
+    await expect(brewingTimerNotification.prepare(null)).resolves.toBeUndefined();
     await expect(brewingTimerNotification.show({
       sessionId: 'session-1',
       phase: 'infusion',

@@ -22,6 +22,8 @@ class BrewingTimerNotificationController {
   private snapshot: BrewingTimerNotificationSnapshot | null = null;
   private observedKey: string | null = null;
   private observedElapsedMs: number | null = null;
+  private prepared = false;
+  private preparedKey: string | null = null;
   private presentedKey: string | null = null;
   private operations: Promise<void> = Promise.resolve();
 
@@ -44,11 +46,21 @@ class BrewingTimerNotificationController {
       && this.observedKey === nextObservedKey
       && this.observedElapsedMs !== null
       && snapshot.elapsedMs < this.observedElapsedMs;
+    const preparedSnapshot = enabled ? snapshot : null;
+    const nextPreparedKey = preparedSnapshot ? semanticKey(preparedSnapshot) : null;
+    const shouldPrepare = !this.prepared
+      || this.preparedKey !== nextPreparedKey
+      || timerAnchorReset;
 
     this.enabled = enabled;
     this.snapshot = snapshot;
     this.observedKey = nextObservedKey;
     this.observedElapsedMs = snapshot?.elapsedMs ?? null;
+    if (shouldPrepare) {
+      this.prepared = true;
+      this.preparedKey = nextPreparedKey;
+      void this.enqueue(() => this.notification.prepare(preparedSnapshot));
+    }
     return this.reconcileBackground(timerAnchorReset);
   }
 

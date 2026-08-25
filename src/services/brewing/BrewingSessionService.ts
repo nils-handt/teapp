@@ -1,5 +1,5 @@
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { bufferTime, filter } from 'rxjs/operators';
+import { bufferTime, filter, tap } from 'rxjs/operators';
 import { bluetoothScaleService } from '../BluetoothScaleService';
 import { sessionRepository } from '../../repositories/SessionRepository';
 import { brewingVesselRepository } from '../../repositories/BrewingVesselRepository';
@@ -34,6 +34,9 @@ type SessionResetOptions = {
 class BrewingSessionService {
     private static instance: BrewingSessionService;
     private weightSubscription: Subscription | null = null;
+    private immediateWeights: number[] = [];
+    private immediateWeightPhase: BrewingPhase | null = null;
+    private skipNextBufferedWeightUpdate = false;
 
     // State via BehaviorSubjects
     public state$ = new BehaviorSubject<BrewingPhase>(BrewingPhase.IDLE);
@@ -63,6 +66,7 @@ class BrewingSessionService {
 
     // Configurable thresholds
     private readonly WEIGHT_UPDATE_BUFFER_MS = 500;
+    private readonly IMMEDIATE_WEIGHT_SAMPLE_WINDOW_SIZE = 5;
     private readonly TIMER_TICK_MS = 100;
 
     private readonly WATER_ADDITION_THRESHOLD = 5; // grams increase to detect water
@@ -338,10 +342,17 @@ class BrewingSessionService {
         if (this.weightSubscription) {
             this.weightSubscription.unsubscribe();
         }
+        this.resetImmediateWeightWindow();
         this.weightSubscription = bluetoothScaleService.weight$.pipe(
-            bufferTime(this.WEIGHT_UPDATE_BUFFER_MS), // todo depending on scale update rate this might not give enough data points for trend analysis - ideally we want something like to wait for at least 4 data points OR if the scale updates faster than every 100ms then a time based buffer is fine
-            filter(weights => weights.length > 0)
+            tap(weight => this.handleImmediateWeightSample(weight)),
+            bufferTime(this.WEIGHT_UPDATE_BUFFER_MS),
+            filter(weights => weights.length > 0),
         ).subscribe(weights => {
+            if (this.skipNextBufferedWeightUpdate) {
+                this.skipNextBufferedWeightUpdate = false;
+                return;
+            }
+
             const averageWeight = weights.reduce((a, b) => a + b, 0) / weights.length;
             const trend = this.analyzeTrend(weights);
             const analysisWeight = this.state$.value === BrewingPhase.SETUP && trend === WeightTrend.INCREASING
@@ -355,6 +366,55 @@ class BrewingSessionService {
         if (this.weightSubscription) {
             this.weightSubscription.unsubscribe();
             this.weightSubscription = null;
+        }
+        this.resetImmediateWeightWindow();
+        this.skipNextBufferedWeightUpdate = false;
+    }
+
+    private resetImmediateWeightWindow() {
+        this.immediateWeights = [];
+        this.immediateWeightPhase = null;
+    }
+
+    private handleImmediateWeightSample(weight: number) {
+        const phase = this.state$.value;
+        const isTimingCriticalPhase = phase === BrewingPhase.READY
+            || phase === BrewingPhase.REST
+            || phase === BrewingPhase.INFUSION
+            || phase === BrewingPhase.INFUSION_VESSEL_LIFTED;
+
+        if (!isTimingCriticalPhase) {
+            this.resetImmediateWeightWindow();
+            return;
+        }
+
+        if (this.immediateWeightPhase !== phase) {
+            this.immediateWeightPhase = phase;
+            this.immediateWeights = [];
+        }
+
+        this.immediateWeights.push(weight);
+        if (this.immediateWeights.length > this.IMMEDIATE_WEIGHT_SAMPLE_WINDOW_SIZE) {
+            this.immediateWeights.shift();
+        }
+        if (this.immediateWeights.length < this.IMMEDIATE_WEIGHT_SAMPLE_WINDOW_SIZE) return;
+
+        const trend = this.analyzeTrend(this.immediateWeights);
+        if (trend !== WeightTrend.STABLE && trend !== WeightTrend.INCREASING) return;
+
+        const averageWeight = this.immediateWeights.reduce((a, b) => a + b, 0)
+            / this.immediateWeights.length;
+        this.handleWeightUpdate(averageWeight, trend);
+
+        if (this.state$.value !== phase) {
+            logger.debug('Processed timing-critical phase change directly from scale samples', {
+                previousPhase: phase,
+                nextPhase: this.state$.value,
+                sampleCount: this.immediateWeights.length,
+                trend,
+            });
+            this.skipNextBufferedWeightUpdate = true;
+            this.resetImmediateWeightWindow();
         }
     }
 

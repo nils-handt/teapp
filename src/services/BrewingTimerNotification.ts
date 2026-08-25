@@ -28,6 +28,7 @@ export type BrewingTimerDiagnosticRecord = {
 export interface BrewingTimerNotification {
   getSupport(): Promise<BrewingTimerNotificationSupport>;
   requestPermission(): Promise<BrewingTimerNotificationSupport>;
+  prepare(snapshot: BrewingTimerNotificationSnapshot | null): Promise<void>;
   show(snapshot: BrewingTimerNotificationSnapshot): Promise<void>;
   cancel(): Promise<void>;
   flushDiagnostics(): Promise<void>;
@@ -36,6 +37,7 @@ export interface BrewingTimerNotification {
 type NativeBrewingTimerNotification = {
   getSupport(): Promise<{ support: BrewingTimerNotificationSupport }>;
   requestPermission(): Promise<{ support: BrewingTimerNotificationSupport }>;
+  prepare(options: { snapshot: BrewingTimerNotificationSnapshot | null }): Promise<void>;
   show(snapshot: BrewingTimerNotificationSnapshot): Promise<void>;
   cancel(): Promise<void>;
   drainDiagnostics(): Promise<{ records: BrewingTimerDiagnosticRecord[] }>;
@@ -78,6 +80,17 @@ export const brewingTimerNotification: BrewingTimerNotification = {
     } catch (error) {
       logger.error('Failed to request brewing timer notification permission', error);
       return 'disabled';
+    }
+  },
+
+  async prepare(snapshot) {
+    if (!isAndroid()) return;
+
+    try {
+      await nativeBrewingTimerNotification.prepare({ snapshot });
+      await flushNativeDiagnostics();
+    } catch (error) {
+      logger.error('Failed to prepare brewing timer background service', error);
     }
   },
 

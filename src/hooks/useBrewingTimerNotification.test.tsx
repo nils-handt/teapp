@@ -29,6 +29,7 @@ const singletonNotificationMocks = vi.hoisted(() => ({
   show: vi.fn().mockResolvedValue(undefined),
   cancel: vi.fn().mockResolvedValue(undefined),
   flushDiagnostics: vi.fn().mockResolvedValue(undefined),
+  prepare: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@capacitor/app', () => ({
@@ -57,6 +58,7 @@ const createNotification = (): BrewingTimerNotification => ({
   show: vi.fn().mockResolvedValue(undefined),
   cancel: vi.fn().mockResolvedValue(undefined),
   flushDiagnostics: vi.fn().mockResolvedValue(undefined),
+  prepare: vi.fn().mockResolvedValue(undefined),
 });
 
 afterEach(() => {
@@ -81,12 +83,23 @@ describe('createBrewingTimerNotificationController', () => {
 
     await controller.update(true, infusionSnapshot);
     expect(notification.show).not.toHaveBeenCalled();
+    expect(notification.prepare).toHaveBeenCalledWith(infusionSnapshot);
 
     await controller.setAppActive(false);
     expect(notification.show).toHaveBeenCalledWith(infusionSnapshot);
 
     await controller.setAppActive(true);
     expect(notification.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears prepared native service state when the preference is disabled', async () => {
+    const notification = createNotification();
+    const controller = createBrewingTimerNotificationController(notification);
+
+    await controller.update(true, infusionSnapshot);
+    await controller.update(false, infusionSnapshot);
+
+    expect(notification.prepare).toHaveBeenLastCalledWith(null);
   });
 
   it('does not repost for ordinary elapsed-time ticks', async () => {
@@ -100,6 +113,7 @@ describe('createBrewingTimerNotificationController', () => {
 
     expect(notification.show).toHaveBeenCalledTimes(1);
     expect(notification.show).toHaveBeenCalledWith(infusionSnapshot);
+    expect(notification.prepare).toHaveBeenCalledTimes(1);
   });
 
   it('reposts when elapsed time decreases within the same phase', async () => {
@@ -113,6 +127,10 @@ describe('createBrewingTimerNotificationController', () => {
 
     expect(notification.show).toHaveBeenCalledTimes(2);
     expect(notification.show).toHaveBeenLastCalledWith({
+      ...infusionSnapshot,
+      elapsedMs: 200,
+    });
+    expect(notification.prepare).toHaveBeenLastCalledWith({
       ...infusionSnapshot,
       elapsedMs: 200,
     });

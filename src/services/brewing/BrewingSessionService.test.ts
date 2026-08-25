@@ -551,6 +551,23 @@ describe('BrewingSessionService', () => {
         expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION_VESSEL_LIFTED);
     });
 
+    it('processes brewing transitions from incoming samples without timer callbacks', () => {
+        brewingSessionService.startSession('Background Tea');
+        brewingSessionService.manuallyStartInfusion();
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION);
+
+        for (let sample = 0; sample < 5; sample++) bluetoothScaleService.weight$.next(200);
+        for (let sample = 0; sample < 5; sample++) bluetoothScaleService.weight$.next(0);
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.INFUSION_VESSEL_LIFTED);
+
+        for (let sample = 0; sample < 5 && brewingSessionService.state$.value !== BrewingPhase.REST; sample++) {
+            bluetoothScaleService.weight$.next(10);
+        }
+
+        expect(brewingSessionService.state$.value).toBe(BrewingPhase.REST);
+    });
+
     it('should end infusion when poured out and vessel returned', () => {
         // ... Reach INFUSION
         brewingSessionService.startSession('Test Tea');
