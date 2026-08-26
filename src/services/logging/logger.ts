@@ -36,7 +36,8 @@ const LOG_LEVEL_PRIORITIES: Record<LogLevel, number> = {
 
 const FILE_LOG_DIRECTORY = 'logs';
 const FILE_LOG_PREFIX = 'app';
-const DIRECTORY_ALREADY_EXISTS_MESSAGE = 'Current directory does already exist.';
+const WEB_DIRECTORY_ALREADY_EXISTS_MESSAGE = 'Current directory does already exist.';
+const NATIVE_DIRECTORY_ALREADY_EXISTS_CODE = 'OS-PLUG-FILE-0010';
 
 export const DEFAULT_LOGGER_CONFIG: LoggerConfig = {
   minLevel: 'debug',
@@ -143,6 +144,13 @@ const reportFileSinkFailure = (error: unknown): void => {
   console.log('[LOGGER_FILE_SINK] Failed to write log entry', serializeMetadataValue(error));
 };
 
+const isDirectoryAlreadyExistsError = (error: unknown): boolean =>
+  (error instanceof Error && error.message === WEB_DIRECTORY_ALREADY_EXISTS_MESSAGE)
+  || (typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === NATIVE_DIRECTORY_ALREADY_EXISTS_CODE);
+
 const ensureLogDirectory = async (): Promise<void> => {
   try {
     await Filesystem.mkdir({
@@ -151,7 +159,7 @@ const ensureLogDirectory = async (): Promise<void> => {
       recursive: true,
     });
   } catch (error) {
-    if (!(error instanceof Error) || error.message !== DIRECTORY_ALREADY_EXISTS_MESSAGE) {
+    if (!isDirectoryAlreadyExistsError(error)) {
       throw error;
     }
   }

@@ -110,6 +110,28 @@ describe('logger', () => {
         );
     });
 
+    it('keeps appending when the native log directory already exists', async () => {
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+        const logger = createLogger('FileSink');
+        filesystemMocks.mkdir
+            .mockResolvedValueOnce(undefined)
+            .mockRejectedValue({
+                code: 'OS-PLUG-FILE-0010',
+                message: "Directory at 'logs' already exists, cannot be overwritten.",
+            });
+
+        configureLogger({ enableFileLogging: true });
+        logger.info('First entry');
+        logger.info('Second entry');
+        await flushLoggerWrites();
+
+        expect(filesystemMocks.appendFile).toHaveBeenCalledTimes(2);
+        expect(consoleSpy).not.toHaveBeenCalledWith(
+            '[LOGGER_FILE_SINK] Failed to write log entry',
+            expect.anything()
+        );
+    });
+
     it('reports other log directory creation failures', async () => {
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
         const logger = createLogger('FileSink');
