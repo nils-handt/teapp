@@ -52,7 +52,6 @@ export const shareFile = async (
             });
 
             await Share.share({
-                title: 'Share File',
                 text: `Sharing file: ${fileName}`,
                 url: result.uri,
                 dialogTitle: 'Share File'
