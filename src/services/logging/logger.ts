@@ -36,6 +36,7 @@ const LOG_LEVEL_PRIORITIES: Record<LogLevel, number> = {
 
 const FILE_LOG_DIRECTORY = 'logs';
 const FILE_LOG_PREFIX = 'app';
+const DIRECTORY_ALREADY_EXISTS_MESSAGE = 'Current directory does already exist.';
 
 export const DEFAULT_LOGGER_CONFIG: LoggerConfig = {
   minLevel: 'debug',
@@ -142,15 +143,25 @@ const reportFileSinkFailure = (error: unknown): void => {
   console.log('[LOGGER_FILE_SINK] Failed to write log entry', serializeMetadataValue(error));
 };
 
+const ensureLogDirectory = async (): Promise<void> => {
+  try {
+    await Filesystem.mkdir({
+      path: FILE_LOG_DIRECTORY,
+      directory: Directory.Data,
+      recursive: true,
+    });
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== DIRECTORY_ALREADY_EXISTS_MESSAGE) {
+      throw error;
+    }
+  }
+};
+
 const appendLogEntryToFile = async (entry: LogEntry): Promise<void> => {
   const path = getLogFilePath(entry.timestamp);
   const line = `${JSON.stringify(entry)}\n`;
 
-  await Filesystem.mkdir({
-    path: FILE_LOG_DIRECTORY,
-    directory: Directory.Data,
-    recursive: true,
-  });
+  await ensureLogDirectory();
 
   try {
     await Filesystem.appendFile({

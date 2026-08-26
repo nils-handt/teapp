@@ -23,6 +23,9 @@ describe('logger', () => {
     beforeEach(() => {
         resetLoggerForTest();
         vi.clearAllMocks();
+        filesystemMocks.mkdir.mockReset().mockResolvedValue(undefined);
+        filesystemMocks.appendFile.mockReset().mockResolvedValue(undefined);
+        filesystemMocks.writeFile.mockReset().mockResolvedValue({ uri: 'file://log' });
     });
 
     afterEach(() => {
@@ -86,6 +89,41 @@ describe('logger', () => {
         expect(data).toContain('"scope":"FileSink"');
         expect(data).toContain('"message":"Persist this entry"');
         expect(data).toContain('"count":1');
+    });
+
+    it('keeps appending when the log directory already exists', async () => {
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+        const logger = createLogger('FileSink');
+        filesystemMocks.mkdir
+            .mockResolvedValueOnce(undefined)
+            .mockRejectedValue(new Error('Current directory does already exist.'));
+
+        configureLogger({ enableFileLogging: true });
+        logger.info('First entry');
+        logger.info('Second entry');
+        await flushLoggerWrites();
+
+        expect(filesystemMocks.appendFile).toHaveBeenCalledTimes(2);
+        expect(consoleSpy).not.toHaveBeenCalledWith(
+            '[LOGGER_FILE_SINK] Failed to write log entry',
+            expect.anything()
+        );
+    });
+
+    it('reports other log directory creation failures', async () => {
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+        const logger = createLogger('FileSink');
+        filesystemMocks.mkdir.mockRejectedValue(new Error('Permission denied.'));
+
+        configureLogger({ enableFileLogging: true });
+        logger.info('Blocked entry');
+        await flushLoggerWrites();
+
+        expect(filesystemMocks.appendFile).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            '[LOGGER_FILE_SINK] Failed to write log entry',
+            expect.objectContaining({ message: 'Permission denied.' })
+        );
     });
 
     it('serializes error metadata before sending it to the console sink', () => {
