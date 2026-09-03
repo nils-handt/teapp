@@ -51,6 +51,7 @@ Browser users should create a backup before clearing site data, changing browser
 
 - Only BOOKOO scales have been verified.
 - Bluetooth behavior depends on the browser, operating system, permissions, and whether Teapp remains in the foreground.
+- Samsung may restrict status-bar Live Updates to its own non-standard app allowlist. If the brewing timer remains a regular notification despite promotion being enabled, turn on **Developer options → More settings → Live notifications for all apps**. Android already provides a standard API for this; Samsung apparently felt it also needed a velvet rope.
 - Waste water can currently be added only during the brewing phase.
 
 ## Feedback and development
